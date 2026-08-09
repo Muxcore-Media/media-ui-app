@@ -1,0 +1,31 @@
+{
+  "name": "media-ui-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MuxCore consumer media SPA (clean extract)",
+  "type": "module",
+  "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "build:lib": "vite build --config vite.config.lib.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "preview": "vite preview --outDir dist-app"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.6",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tailwindcss": "^4.1.6",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.8",
+    "vite-plugin-dts": "^5.0.2"
+  }
+}

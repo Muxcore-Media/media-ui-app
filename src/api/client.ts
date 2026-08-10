@@ -1,4 +1,4 @@
-import type { ListResponse, MediaRequest, Movie, SearchResult, TVShow } from '../types'
+import type { Episode, ListResponse, MediaRequest, Movie, SearchResult, Season, TVShow } from '../types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
@@ -11,7 +11,16 @@ async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
     },
   })
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`)
+    let detail = `${res.status} ${res.statusText}`
+    try {
+      const body = (await res.json()) as { error?: string; code?: string }
+      if (body?.error) {
+        detail = body.code ? `${body.error} (${body.code})` : body.error
+      }
+    } catch {
+      /* plain-text error bodies are fine */
+    }
+    throw new Error(detail)
   }
   return res.json() as Promise<T>
 }
@@ -50,10 +59,46 @@ function normalizeMovie(raw: Record<string, unknown>): Movie {
   }
 }
 
+function normalizeEpisode(raw: Record<string, unknown>): Episode {
+  const id = String(raw.id ?? '')
+  const hasFile = Boolean(raw.has_file ?? raw.hasFile)
+  return {
+    id,
+    season_number: Number(raw.season_number ?? raw.seasonNumber ?? 0),
+    episode_number: Number(raw.episode_number ?? raw.episodeNumber ?? 0),
+    title: String(raw.title ?? raw.name ?? ''),
+    overview: String(raw.overview ?? ''),
+    runtime: Number(raw.runtime ?? 0),
+    has_file: hasFile,
+    stream_url: String(raw.stream_url ?? raw.streamUrl ?? (hasFile && id ? `/stream/tv/${id}` : '')),
+    air_date: raw.air_date != null || raw.airDate != null ? String(raw.air_date ?? raw.airDate) : undefined,
+  }
+}
+
+function normalizeSeason(raw: Record<string, unknown>): Season {
+  const eps = Array.isArray(raw.episodes) ? (raw.episodes as Record<string, unknown>[]).map(normalizeEpisode) : []
+  return {
+    id: String(raw.id ?? ''),
+    season_number: Number(raw.season_number ?? raw.seasonNumber ?? 0),
+    name: String(raw.name ?? ''),
+    episode_count: Number(raw.episode_count ?? raw.episodeCount ?? eps.length),
+    poster_url: posterURL(String(raw.poster_url ?? raw.posterUrl ?? raw.poster_path ?? ''), 'tv'),
+    episodes: eps,
+  }
+}
+
 function normalizeTV(raw: Record<string, unknown>): TVShow {
   const id = String(raw.id ?? raw.seriesId ?? '')
   const poster =
     String(raw.poster_url ?? raw.posterUrl ?? raw.poster ?? raw.poster_path ?? raw.posterPath ?? '')
+  const seasons = Array.isArray(raw.seasons) ? (raw.seasons as Record<string, unknown>[]).map(normalizeSeason) : undefined
+  const hasFile =
+    Boolean(raw.has_file ?? raw.hasFile) ||
+    Boolean(seasons?.some((s) => s.episodes.some((e) => e.has_file)))
+  const streamURL =
+    String(raw.stream_url ?? raw.streamUrl ?? '') ||
+    seasons?.flatMap((s) => s.episodes).find((e) => e.has_file)?.stream_url ||
+    ''
   return {
     id,
     title: String(raw.title ?? raw.name ?? ''),
@@ -62,12 +107,13 @@ function normalizeTV(raw: Record<string, unknown>): TVShow {
     vote_average: Number(raw.vote_average ?? raw.voteAverage ?? raw.voteAvg ?? 0),
     genres: Array.isArray(raw.genres) ? (raw.genres as string[]) : [],
     poster_url: posterURL(poster, 'tv'),
-    has_file: Boolean(raw.has_file ?? raw.hasFile),
-    stream_url: String(raw.stream_url ?? raw.streamUrl ?? ''),
+    has_file: hasFile,
+    stream_url: streamURL,
     created_at: String(raw.created_at ?? raw.createdAt ?? ''),
     tmdb_id: raw.tmdb_id != null || raw.tmdbId != null ? Number(raw.tmdb_id ?? raw.tmdbId) : undefined,
     backdrop_url: posterURL(String(raw.backdrop_url ?? raw.backdropUrl ?? raw.backdrop_path ?? ''), 'tv'),
     status: raw.status != null ? String(raw.status) : undefined,
+    seasons,
   }
 }
 
@@ -89,43 +135,25 @@ function asList<T>(data: unknown, map: (row: Record<string, unknown>) => T): Lis
 
 export const api = {
   async listMovies(page = 1, pageSize = 48): Promise<ListResponse<Movie>> {
-    // TODO: media-movies currently serves images only on HTTP; wire a JSON BFF or module endpoint.
-    try {
-      const data = await getJSON<unknown>(`/api/movies?page=${page}&page_size=${pageSize}`)
-      return asList(data, normalizeMovie)
-    } catch {
-      return { items: [], total: 0, page, page_size: pageSize }
-    }
+    const data = await getJSON<unknown>(`/api/movies?page=${page}&page_size=${pageSize}`)
+    return asList(data, normalizeMovie)
   },
 
-  async getMovie(id: string): Promise<Movie | null> {
-    try {
-      const data = await getJSON<Record<string, unknown>>(`/api/movies/${encodeURIComponent(id)}`)
-      const row = (data.movie || data.item || data) as Record<string, unknown>
-      return normalizeMovie(row)
-    } catch {
-      return null
-    }
+  async getMovie(id: string): Promise<Movie> {
+    const data = await getJSON<Record<string, unknown>>(`/api/movies/${encodeURIComponent(id)}`)
+    const row = (data.movie || data.item || data) as Record<string, unknown>
+    return normalizeMovie(row)
   },
 
   async listTVShows(page = 1, pageSize = 48): Promise<ListResponse<TVShow>> {
-    // TODO: media-tvshows currently lacks a consumer JSON list HTTP API; wire BFF when available.
-    try {
-      const data = await getJSON<unknown>(`/api/tv?page=${page}&page_size=${pageSize}`)
-      return asList(data, normalizeTV)
-    } catch {
-      return { items: [], total: 0, page, page_size: pageSize }
-    }
+    const data = await getJSON<unknown>(`/api/tv?page=${page}&page_size=${pageSize}`)
+    return asList(data, normalizeTV)
   },
 
-  async getTVShow(id: string): Promise<TVShow | null> {
-    try {
-      const data = await getJSON<Record<string, unknown>>(`/api/tv/${encodeURIComponent(id)}`)
-      const row = (data.show || data.series || data.item || data) as Record<string, unknown>
-      return normalizeTV(row)
-    } catch {
-      return null
-    }
+  async getTVShow(id: string): Promise<TVShow> {
+    const data = await getJSON<Record<string, unknown>>(`/api/tv/${encodeURIComponent(id)}`)
+    const row = (data.show || data.series || data.item || data) as Record<string, unknown>
+    return normalizeTV(row)
   },
 
   async search(query: string): Promise<SearchResult[]> {

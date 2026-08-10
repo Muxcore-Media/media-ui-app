@@ -43,7 +43,7 @@ export default function Movies() {
     setSearching(true)
     setMessage(null)
     try {
-      const found = await api.search(q)
+      const found = await api.search(q, 'movie')
       setResults(found)
       if (found.length === 0) setMessage('No TMDB matches.')
     } catch (err) {

@@ -8,15 +8,23 @@ export default function MovieDetail() {
   const { id = '' } = useParams()
   const [movie, setMovie] = useState<Movie | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
-      const item = await api.getMovie(id)
-      if (!cancelled) {
-        setMovie(item)
-        setLoading(false)
+      setError(null)
+      try {
+        const item = await api.getMovie(id)
+        if (!cancelled) setMovie(item)
+      } catch (err) {
+        if (!cancelled) {
+          setMovie(null)
+          setError(err instanceof Error ? err.message : 'Failed to load movie')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => {
@@ -35,7 +43,7 @@ export default function MovieDetail() {
   if (!movie) {
     return (
       <div className="space-y-3">
-        <p className="text-[var(--muted)]">Movie not found in library API.</p>
+        <p className="text-[var(--muted)]">{error || 'Movie not found in library API.'}</p>
         <Link to="/movies" className="text-[var(--accent)]">
           Back to movies
         </Link>

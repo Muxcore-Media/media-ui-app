@@ -11,14 +11,24 @@ export default function Movies() {
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const list = await api.listMovies()
-      if (!cancelled) {
-        setItems(list.items)
-        setLoading(false)
+      try {
+        const list = await api.listMovies()
+        if (!cancelled) {
+          setItems(list.items)
+          setError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load movies')
+          setItems([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => {
@@ -139,6 +149,10 @@ export default function Movies() {
           <div className="flex justify-center py-10">
             <Spinner />
           </div>
+        ) : error ? (
+          <p className="rounded-md border border-red-500/40 bg-[var(--surface)] px-3 py-2 text-sm text-red-300">
+            {error}
+          </p>
         ) : items.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">
             No library items from the movies API yet. Use search to request titles.

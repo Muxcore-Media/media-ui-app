@@ -5,7 +5,7 @@ import Player from './Player'
 
 function renderPlayer(search: string) {
   return render(
-    <MemoryRouter initialEntries={[`/player${search}`]}>
+    <MemoryRouter initialEntries={[`/player${search}`]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route path="/player" element={<Player />} />
       </Routes>

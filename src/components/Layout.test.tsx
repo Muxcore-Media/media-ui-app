@@ -5,7 +5,7 @@ import Layout from './Layout'
 
 function renderLayout() {
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={['/']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<div>home body</div>} />

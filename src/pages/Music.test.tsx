@@ -32,7 +32,7 @@ describe('Music consumer section', () => {
     } satisfies LibraryListResponse)
 
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Music />
       </MemoryRouter>,
     )
@@ -52,7 +52,7 @@ describe('Music consumer section', () => {
     } satisfies LibraryListResponse)
 
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Music />
       </MemoryRouter>,
     )

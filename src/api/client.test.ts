@@ -81,6 +81,7 @@ describe('api smoke (library + request + auth errors)', () => {
 
     const results = await api.search('Fight Club')
     expect(results[0]?.title).toBe('Fight Club')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('type=movie')
 
     const req = await api.requestMovie({
       tmdbId: 550,

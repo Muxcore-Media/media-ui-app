@@ -70,6 +70,7 @@ export interface SearchResult {
   overview: string
   poster: string
   voteAvg: number
+  type?: MediaKind
 }
 
 export interface MediaRequest {
@@ -83,4 +84,28 @@ export interface MediaRequest {
   status: string
   createdAt: string
   updatedAt: string
+}
+
+export interface LibraryRow {
+  id: string
+  name?: string
+  title?: string
+  path?: string
+  year?: number
+  publisher?: string
+  narrator?: string
+  asin?: string
+  monitored?: boolean
+}
+
+export interface LibraryListResponse {
+  items: LibraryRow[]
+  total: number
+  page?: number
+  page_size?: number
+  available?: boolean
+  coming_soon?: boolean
+  message?: string
+  library?: string
+  code?: string
 }

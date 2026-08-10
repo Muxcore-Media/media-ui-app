@@ -15,7 +15,7 @@ export default function Layout() {
           <NavLink to="/" className="text-lg font-bold tracking-tight">
             MuxCore <span className="text-[var(--accent)]">Media</span>
           </NavLink>
-          <nav className="flex flex-1 items-center gap-1">
+          <nav className="flex flex-1 flex-wrap items-center gap-1">
             <NavLink to="/" end className={linkClass}>
               Home
             </NavLink>
@@ -24,6 +24,18 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/tv" className={linkClass}>
               TV
+            </NavLink>
+            <NavLink to="/music" className={linkClass}>
+              Music
+            </NavLink>
+            <NavLink to="/books" className={linkClass}>
+              Books
+            </NavLink>
+            <NavLink to="/comics" className={linkClass}>
+              Comics
+            </NavLink>
+            <NavLink to="/audiobooks" className={linkClass}>
+              Audiobooks
             </NavLink>
           </nav>
           <a

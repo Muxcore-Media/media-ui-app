@@ -9,15 +9,19 @@ export default function TVShowDetail() {
   const [show, setShow] = useState<TVShow | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [jellyfinURL, setJellyfinURL] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       setError(null)
+      setJellyfinURL(null)
       try {
         const item = await api.getTVShow(id)
         if (!cancelled) setShow(item)
+        const jf = await api.jellyfinPlayURL(id)
+        if (!cancelled) setJellyfinURL(jf)
       } catch (err) {
         if (!cancelled) {
           setShow(null)
@@ -71,6 +75,16 @@ export default function TVShowDetail() {
           </p>
         </div>
         <p className="max-w-3xl leading-relaxed text-[var(--muted)]">{show.overview || 'No overview.'}</p>
+        {jellyfinURL && (
+          <a
+            href={jellyfinURL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--accent-2)] hover:border-[var(--accent)]"
+          >
+            Open in Jellyfin
+          </a>
+        )}
         {show.seasons && show.seasons.length > 0 ? (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Episodes</h2>

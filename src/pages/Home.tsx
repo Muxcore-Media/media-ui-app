@@ -31,7 +31,8 @@ export default function Home() {
       <section className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">Your library</h1>
         <p className="max-w-2xl text-[var(--muted)]">
-          Browse movies and TV, search through request-media (fixture or live TMDB), and play titles that are ready.
+          Browse movies and TV, search TMDB from either page, and play titles that are ready. Series such as When
+          Calls the Heart are requested as TV, not movies.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link

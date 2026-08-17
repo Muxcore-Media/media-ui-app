@@ -1,15 +1,4 @@
-import type {
-  Episode,
-  LibraryListResponse,
-  LibraryRow,
-  ListResponse,
-  MediaKind,
-  MediaRequest,
-  Movie,
-  SearchResult,
-  Season,
-  TVShow,
-} from '../types'
+import type { Episode, ListResponse, MediaRequest, Movie, SearchResult, Season, TVShow } from '../types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
@@ -167,11 +156,29 @@ export const api = {
     return normalizeTV(row)
   },
 
-  async search(query: string, kind: MediaKind = 'movie'): Promise<SearchResult[]> {
+  async search(query: string): Promise<SearchResult[]> {
     const data = await getJSON<{ results?: SearchResult[]; error?: string }>(
-      `/api/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(kind)}`,
+      `/api/search?q=${encodeURIComponent(query)}`,
     )
-    return data.results || []
+    return (data.results || []).map((row) => ({
+      ...row,
+      mediaType: row.mediaType === 'tv' ? 'tv' : 'movie',
+    }))
+  },
+
+  async requestTitle(input: {
+    tmdbId: number
+    title: string
+    year: number
+    overview: string
+    poster: string
+    mediaType: 'movie' | 'tv'
+  }): Promise<{ requestId: string; movieId?: string; seriesId?: string; status: string }> {
+    return getJSON('/api/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
   },
 
   async requestMovie(input: {
@@ -188,55 +195,19 @@ export const api = {
     })
   },
 
-  async requestTV(input: {
-    tmdbId: number
-    title: string
-    year: number
-    overview?: string
-    poster?: string
-  }): Promise<{ requestId: string; seriesId: string; status: string }> {
-    return getJSON('/api/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...input, mediaType: 'tv' }),
-    })
-  },
-
   async listRequests(): Promise<MediaRequest[]> {
     return getJSON<MediaRequest[]>('/api/requests')
   },
 
-  async listMusic(): Promise<LibraryListResponse> {
-    return listLibrary('/api/music')
+  /** Jellyfin web deep-link for a MuxCore library id (404 when unlinked). */
+  async jellyfinPlayURL(muxId: string): Promise<string | null> {
+    try {
+      const data = await getJSON<{ url?: string }>(`/api/jellyfin/play?mux_id=${encodeURIComponent(muxId)}`)
+      return data.url || null
+    } catch {
+      return null
+    }
   },
-
-  async listBooks(): Promise<LibraryListResponse> {
-    return listLibrary('/api/books')
-  },
-
-  async listComics(): Promise<LibraryListResponse> {
-    return listLibrary('/api/comics')
-  },
-
-  async listAudiobooks(): Promise<LibraryListResponse> {
-    return listLibrary('/api/audiobooks')
-  },
-}
-
-async function listLibrary(path: string): Promise<LibraryListResponse> {
-  const data = await getJSON<LibraryListResponse>(path)
-  const items = Array.isArray(data.items) ? (data.items as LibraryRow[]) : []
-  return {
-    items,
-    total: Number(data.total ?? items.length),
-    page: data.page,
-    page_size: data.page_size,
-    available: data.available,
-    coming_soon: data.coming_soon,
-    message: data.message,
-    library: data.library,
-    code: data.code,
-  }
 }
 
 export { posterURL, normalizeMovie, normalizeTV }

@@ -9,15 +9,19 @@ export default function MovieDetail() {
   const [movie, setMovie] = useState<Movie | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [jellyfinURL, setJellyfinURL] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       setLoading(true)
       setError(null)
+      setJellyfinURL(null)
       try {
         const item = await api.getMovie(id)
         if (!cancelled) setMovie(item)
+        const jf = await api.jellyfinPlayURL(id)
+        if (!cancelled) setJellyfinURL(jf)
       } catch (err) {
         if (!cancelled) {
           setMovie(null)
@@ -80,16 +84,28 @@ export default function MovieDetail() {
             ))}
           </div>
         )}
-        {movie.has_file && movie.stream_url ? (
-          <Link
-            to={`/player?src=${encodeURIComponent(movie.stream_url)}&title=${encodeURIComponent(movie.title)}`}
-            className="inline-flex rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
-          >
-            Play
-          </Link>
-        ) : (
-          <p className="text-sm text-[var(--muted)]">Not available to stream yet.</p>
-        )}
+        <div className="flex flex-wrap gap-3">
+          {movie.has_file && movie.stream_url ? (
+            <Link
+              to={`/player?src=${encodeURIComponent(movie.stream_url)}&title=${encodeURIComponent(movie.title)}`}
+              className="inline-flex rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black"
+            >
+              Play
+            </Link>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Not available to stream yet.</p>
+          )}
+          {jellyfinURL && (
+            <a
+              href={jellyfinURL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--accent-2)] hover:border-[var(--accent)]"
+            >
+              Open in Jellyfin
+            </a>
+          )}
+        </div>
       </div>
     </div>
   )

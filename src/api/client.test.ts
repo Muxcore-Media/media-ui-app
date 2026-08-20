@@ -54,6 +54,27 @@ describe('api smoke (library + request + auth errors)', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/movies?')
   })
 
+  it('listMovies passes library filter query', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [{ id: 'mv1', title: 'MV', library_type: 'musicvideos' }],
+          total: 1,
+          page: 1,
+          page_size: 48,
+          library: 'musicvideos',
+          filter_mode: 'config',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    const list = await api.listMovies(1, 48, { library: 'musicvideos' })
+    expect(String(fetchMock.mock.calls[0][0])).toContain('library=musicvideos')
+    expect(list.library).toBe('musicvideos')
+    expect(list.filter_mode).toBe('config')
+    expect(list.items[0].library_type).toBe('musicvideos')
+  })
+
   it('surfaces JSON auth errors instead of silent empty lists', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: 'unauthorized', code: 'auth.required' }), {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Spinner from '../components/Spinner'
 import type { LibraryListResponse, LibraryRow } from '../types'
 
@@ -9,6 +10,7 @@ type Props = {
   primaryLabel: (row: LibraryRow) => string
   secondaryLabel?: (row: LibraryRow) => string
   emptyReadyMessage: string
+  rowHref?: (row: LibraryRow) => string
 }
 
 export default function LibrarySection({
@@ -18,6 +20,7 @@ export default function LibrarySection({
   primaryLabel,
   secondaryLabel,
   emptyReadyMessage,
+  rowHref,
 }: Props) {
   const [items, setItems] = useState<LibraryRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -88,19 +91,28 @@ export default function LibrarySection({
         </p>
       ) : (
         <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]" data-testid="library-list">
-          {items.map((row) => (
-            <li key={row.id} className="flex items-start justify-between gap-4 px-4 py-3">
-              <div className="min-w-0">
-                <p className="font-medium truncate">{primaryLabel(row)}</p>
-                {secondaryLabel ? (
-                  <p className="text-xs text-[var(--muted)] truncate">{secondaryLabel(row)}</p>
+          {items.map((row) => {
+            const href = rowHref?.(row)
+            return (
+              <li key={row.id} className="flex items-start justify-between gap-4 px-4 py-3">
+                <div className="min-w-0">
+                  {href ? (
+                    <Link to={href} className="font-medium truncate text-[var(--accent)] hover:underline">
+                      {primaryLabel(row)}
+                    </Link>
+                  ) : (
+                    <p className="font-medium truncate">{primaryLabel(row)}</p>
+                  )}
+                  {secondaryLabel ? (
+                    <p className="text-xs text-[var(--muted)] truncate">{secondaryLabel(row)}</p>
+                  ) : null}
+                </div>
+                {row.year ? (
+                  <span className="shrink-0 text-xs text-[var(--muted)]">{row.year}</span>
                 ) : null}
-              </div>
-              {row.year ? (
-                <span className="shrink-0 text-xs text-[var(--muted)]">{row.year}</span>
-              ) : null}
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

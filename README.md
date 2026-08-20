@@ -5,11 +5,23 @@ Clean MuxCore **consumer** SPA (Vite + React). Shipable extract of the former `m
 Org repo: [`Muxcore-Media/media-ui-app`](https://github.com/Muxcore-Media/media-ui-app).  
 The polluted dump [`Muxcore-Media/media-ui`](https://github.com/Muxcore-Media/media-ui) stays quarantined — do not treat that root as the product SPA.
 
+## Product role
+
+**End state:** this app **replaces** Jellyfin’s consumer web client (browse **and** playback). See workspace [`MASTER-ROADMAP.md`](../MASTER-ROADMAP.md) §1 Playback.
+
+**Near-term:** installs may hand off play to the `jellyfin` bridge so households work before native OSD/transcode parity is done. Agents must keep improving `/player` toward replacement — do not treat JF handoff as the final architecture.
+
 ## Features
 
-- Browse movies / TV (via MVP BFF `mediauiprox` → `media-movies` / `media-tvshows`)
-- Search + request (`/api/search`, `/api/request` → `request-media`)
-- Playback when a movie has an attached file (`has_file` + `/stream/movies/{id}`)
+- Home with continue watching, favorites, ready-to-play, and recent requests
+- Global search (library + TMDB request)
+- Browse movies / TV with genre filter, sort, ready-only
+- Collections, upcoming air dates, playlists, queue
+- Favorites, mark watched, playback resume (browser userdata)
+- User settings: display / home / playback / subtitles / controls
+- Music / books / comics / audiobooks library lists (via mediauiprox)
+- Live TV + Quick Connect route placeholders
+- Playback via `/player` (keyboard shortcuts, resume, skip-intro preference)
 - Auth via auth-local (login redirect + session cookie on the BFF)
 - **Logout** header link → `/logout`
 

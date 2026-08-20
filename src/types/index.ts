@@ -16,6 +16,10 @@ export interface Movie {
   backdrop_url?: string
   tagline?: string
   status?: string
+  collection_id?: number
+  collection_name?: string
+  root_folder_path?: string
+  library_type?: string
 }
 
 export interface Episode {
@@ -61,6 +65,8 @@ export interface ListResponse<T> {
   total: number
   page: number
   page_size: number
+  library?: string
+  filter_mode?: 'config' | 'heuristic' | string
 }
 
 export interface SearchResult {
@@ -85,3 +91,50 @@ export interface MediaRequest {
   createdAt: string
   updatedAt: string
 }
+
+/** Soft library rows from mediauiprox /api/{music|books|comics|audiobooks}. */
+export interface LibraryRow {
+  id: string
+  name?: string
+  title?: string
+  path?: string
+  year?: number
+  publisher?: string
+  [key: string]: unknown
+}
+
+export interface LibraryListResponse {
+  items: LibraryRow[]
+  total: number
+  page?: number
+  page_size?: number
+  available?: boolean
+  coming_soon?: boolean
+  message?: string
+  library?: string
+  error?: string
+  code?: string
+}
+
+export interface MusicTrack {
+  id: string
+  album_id?: string
+  artist_id?: string
+  title: string
+  path?: string
+  stream_url?: string
+}
+
+export interface MusicAlbum {
+  id: string
+  artist_id?: string
+  title: string
+  year?: number
+  tracks?: MusicTrack[]
+}
+
+export interface MusicArtistDetail {
+  artist: { id: string; name: string; path?: string; monitored?: boolean }
+  albums: MusicAlbum[]
+}
+

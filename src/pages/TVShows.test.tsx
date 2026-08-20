@@ -16,6 +16,7 @@ vi.mock('../api/client', async () => {
       listTVShows: (...args: unknown[]) => listTVShows(...args),
       search: (...args: unknown[]) => search(...args),
       requestTV: (...args: unknown[]) => requestTV(...args),
+      requestTitle: (...args: unknown[]) => requestTV(...args),
     },
   }
 })
@@ -74,12 +75,10 @@ describe('TVShows library list', () => {
     renderTV()
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Fixture Series/i })).toHaveAttribute(
-        'href',
-        '/tv/s1',
-      )
+      const links = screen.getAllByRole('link', { name: /Fixture Series/i })
+      expect(links[0]).toHaveAttribute('href', '/tv/s1')
     })
-    expect(screen.getByText('No poster')).toBeInTheDocument()
+    expect(screen.getAllByText('No poster').length).toBeGreaterThan(0)
   })
 
   it('consumer TV search + request uses fixture Breaking Bad offline', async () => {
@@ -97,30 +96,30 @@ describe('TVShows library list', () => {
         overview: 'chem',
         poster: '/bb.jpg',
         voteAvg: 8.9,
-        type: 'tv',
+        mediaType: 'tv',
       },
     ])
     requestTV.mockResolvedValueOnce({ requestId: 'r2', seriesId: 's1', status: 'added' })
 
     renderTV()
-    await waitFor(() => screen.getByPlaceholderText(/Breaking Bad/i))
+    await waitFor(() => screen.getByPlaceholderText(/When Calls the Heart/i))
 
-    fireEvent.change(screen.getByPlaceholderText(/Breaking Bad/i), {
+    fireEvent.change(screen.getByPlaceholderText(/When Calls the Heart/i), {
       target: { value: 'Breaking Bad' },
     })
     fireEvent.click(screen.getByRole('button', { name: /^Search$/i }))
 
     await waitFor(() => {
-      expect(search).toHaveBeenCalledWith('Breaking Bad', 'tv')
+      expect(search).toHaveBeenCalledWith('Breaking Bad')
     })
-    await waitFor(() => screen.getByRole('button', { name: /^Request$/i }))
-    fireEvent.click(screen.getByRole('button', { name: /^Request$/i }))
+    await waitFor(() => screen.getByRole('button', { name: /^Request series$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Request series$/i }))
 
     await waitFor(() => {
       expect(requestTV).toHaveBeenCalledWith(
-        expect.objectContaining({ tmdbId: 1396, title: 'Breaking Bad', year: 2008 }),
+        expect.objectContaining({ tmdbId: 1396, title: 'Breaking Bad', year: 2008, mediaType: 'tv' }),
       )
     })
-    expect(await screen.findByText(/Requested “Breaking Bad” \(added\)/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Requested “Breaking Bad” as series \(added\)/i)).toBeInTheDocument()
   })
 })

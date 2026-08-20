@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import Spinner from '../components/Spinner'
+import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata'
 import type { TVShow } from '../types'
 
 export default function TVShowDetail() {
@@ -10,6 +11,7 @@ export default function TVShowDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [jellyfinURL, setJellyfinURL] = useState<string | null>(null)
+  const [fav, setFav] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -19,7 +21,10 @@ export default function TVShowDetail() {
       setJellyfinURL(null)
       try {
         const item = await api.getTVShow(id)
-        if (!cancelled) setShow(item)
+        if (!cancelled) {
+          setShow(item)
+          setFav(isFavorite(item.id))
+        }
         const jf = await api.jellyfinPlayURL(id)
         if (!cancelled) setJellyfinURL(jf)
       } catch (err) {
@@ -75,16 +80,35 @@ export default function TVShowDetail() {
           </p>
         </div>
         <p className="max-w-3xl leading-relaxed text-[var(--muted)]">{show.overview || 'No overview.'}</p>
-        {jellyfinURL && (
-          <a
-            href={jellyfinURL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--accent-2)] hover:border-[var(--accent)]"
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const on = toggleFavorite({
+                id: show.id,
+                kind: 'tv',
+                title: show.title,
+                poster_url: show.poster_url,
+                href: `/tv/${show.id}`,
+                year: show.year,
+              })
+              setFav(on)
+            }}
+            className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold"
           >
-            Open in Jellyfin
-          </a>
-        )}
+            {fav ? '★ Favorited' : '☆ Favorite'}
+          </button>
+          {jellyfinURL && (
+            <a
+              href={jellyfinURL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--accent-2)] hover:border-[var(--accent)]"
+            >
+              Open in Jellyfin
+            </a>
+          )}
+        </div>
         {show.seasons && show.seasons.length > 0 ? (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Episodes</h2>
@@ -94,32 +118,55 @@ export default function TVShowDetail() {
                   {season.name || `Season ${season.season_number}`}
                 </h3>
                 <ul className="space-y-2">
-                  {season.episodes.map((ep) => (
-                    <li
-                      key={ep.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                    >
-                      <div>
-                        <span className="font-medium">
-                          S{String(ep.season_number).padStart(2, '0')}E
-                          {String(ep.episode_number).padStart(2, '0')}
-                        </span>
-                        {ep.title ? ` · ${ep.title}` : ''}
-                      </div>
-                      {ep.has_file && ep.stream_url ? (
-                        <Link
-                          to={`/player?src=${encodeURIComponent(ep.stream_url)}&title=${encodeURIComponent(
-                            `${show.title} S${ep.season_number}E${ep.episode_number}`,
-                          )}`}
-                          className="rounded-md bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black"
-                        >
-                          Play
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-[var(--muted)]">No file</span>
-                      )}
-                    </li>
-                  ))}
+                  {season.episodes.map((ep) => {
+                    const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
+                    const playTo =
+                      ep.has_file && ep.stream_url
+                        ? `/player?src=${encodeURIComponent(ep.stream_url)}&title=${encodeURIComponent(epTitle)}&id=${encodeURIComponent(ep.id)}&kind=episode&poster=${encodeURIComponent(show.poster_url || '')}&back=${encodeURIComponent(`/tv/${show.id}`)}`
+                        : null
+                    return (
+                      <li
+                        key={ep.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
+                      >
+                        <div>
+                          <span className="font-medium">
+                            S{String(ep.season_number).padStart(2, '0')}E
+                            {String(ep.episode_number).padStart(2, '0')}
+                          </span>
+                          {ep.title ? ` · ${ep.title}` : ''}
+                        </div>
+                        {playTo ? (
+                          <div className="flex gap-2">
+                            <Link
+                              to={playTo}
+                              className="rounded-md bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black"
+                            >
+                              Play
+                            </Link>
+                            <button
+                              type="button"
+                              className="rounded-md border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                              onClick={() =>
+                                enqueue({
+                                  id: ep.id,
+                                  kind: 'episode',
+                                  title: epTitle,
+                                  href: playTo,
+                                  stream_url: ep.stream_url,
+                                  poster_url: show.poster_url,
+                                })
+                              }
+                            >
+                              Queue
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-[var(--muted)]">No file</span>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ))}

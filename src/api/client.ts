@@ -1,4 +1,15 @@
-import type { Episode, ListResponse, MediaRequest, Movie, SearchResult, Season, TVShow } from '../types'
+import type {
+  Episode,
+  LibraryListResponse,
+  LibraryRow,
+  ListResponse,
+  MediaRequest,
+  Movie,
+  MusicArtistDetail,
+  SearchResult,
+  Season,
+  TVShow,
+} from '../types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
@@ -56,6 +67,16 @@ function normalizeMovie(raw: Record<string, unknown>): Movie {
     backdrop_url: posterURL(String(raw.backdrop_url ?? raw.backdropUrl ?? raw.backdrop_path ?? ''), 'movie'),
     tagline: raw.tagline != null ? String(raw.tagline) : undefined,
     status: raw.status != null ? String(raw.status) : undefined,
+    collection_id: raw.collection_id != null || raw.collectionId != null ? Number(raw.collection_id ?? raw.collectionId) : undefined,
+    collection_name:
+      raw.collection_name != null || raw.collectionName != null
+        ? String(raw.collection_name ?? raw.collectionName)
+        : undefined,
+    root_folder_path:
+      raw.root_folder_path != null || raw.rootFolderPath != null
+        ? String(raw.root_folder_path ?? raw.rootFolderPath)
+        : undefined,
+    library_type: raw.library_type != null || raw.libraryType != null ? String(raw.library_type ?? raw.libraryType) : undefined,
   }
 }
 
@@ -130,12 +151,25 @@ function asList<T>(data: unknown, map: (row: Record<string, unknown>) => T): Lis
     total: Number(obj.total ?? items.length),
     page: Number(obj.page ?? 1),
     page_size: Number(obj.page_size ?? obj.pageSize ?? items.length),
+    library: obj.library != null ? String(obj.library) : undefined,
+    filter_mode: obj.filter_mode != null || obj.filterMode != null ? String(obj.filter_mode ?? obj.filterMode) : undefined,
   }
 }
 
 export const api = {
-  async listMovies(page = 1, pageSize = 48): Promise<ListResponse<Movie>> {
-    const data = await getJSON<unknown>(`/api/movies?page=${page}&page_size=${pageSize}`)
+  async listMovies(
+    page = 1,
+    pageSize = 48,
+    opts?: { library?: 'musicvideos' | 'homevideos' | string },
+  ): Promise<ListResponse<Movie>> {
+    const q = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+    })
+    if (opts?.library) {
+      q.set('library', opts.library)
+    }
+    const data = await getJSON<unknown>(`/api/movies?${q}`)
     return asList(data, normalizeMovie)
   },
 
@@ -208,6 +242,174 @@ export const api = {
       return null
     }
   },
+
+  async listMusic(): Promise<LibraryListResponse> {
+    return getLibraryList('/api/music')
+  },
+  async listBooks(): Promise<LibraryListResponse> {
+    return getLibraryList('/api/books')
+  },
+  async getBookAuthor(id: string): Promise<{
+    author: { id: string; name: string; path?: string }
+    books: Array<{
+      id: string
+      title: string
+      year?: number
+      isbn?: string
+      files?: Array<{ id: string; title: string; path: string; stream_url?: string }>
+    }>
+  }> {
+    return getJSON(`/api/books/${encodeURIComponent(id)}`)
+  },
+  async listComics(): Promise<LibraryListResponse> {
+    return getLibraryList('/api/comics')
+  },
+  async listAudiobooks(): Promise<LibraryListResponse> {
+    return getLibraryList('/api/audiobooks')
+  },
+
+  async getMusicArtist(id: string): Promise<MusicArtistDetail> {
+    return getJSON<MusicArtistDetail>(`/api/music/${encodeURIComponent(id)}`)
+  },
+
+  async getTrackLyrics(trackId: string): Promise<{ found: boolean; text: string; title?: string; format?: string }> {
+    return getJSON(`/api/music/tracks/${encodeURIComponent(trackId)}/lyrics`)
+  },
+
+  async listLiveTV(): Promise<{
+    channels: Array<{
+      id: string
+      name: string
+      number: string
+      url?: string
+      category?: string
+      now_playing?: { title: string; start: string; end: string }
+    }>
+    recordings?: Array<{
+      id: string
+      channel_id: string
+      title: string
+      start: string
+      end: string
+      status: string
+      path?: string
+    }>
+    timers?: Array<{
+      id: string
+      channel_id: string
+      title: string
+      start: string
+      end: string
+      series?: boolean
+    }>
+    guide?: Array<{
+      channel_id: string
+      title: string
+      start: string
+      end: string
+    }>
+    available: boolean
+  }> {
+    return getJSON('/api/livetv')
+  },
+
+  async createLiveTVTimer(input: {
+    channel_id: string
+    title: string
+    series?: boolean
+    start?: string
+    end?: string
+  }): Promise<{ ok: boolean }> {
+    return getJSON('/api/livetv/timers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+  },
+
+  async listCollections(): Promise<{ items: { id: string; name: string; movie_count: number }[] }> {
+    return getJSON('/api/collections')
+  },
+
+  async getCollection(id: string): Promise<{ id: string; name: string; movies: import('../types').Movie[] }> {
+    const raw = await getJSON<{ id: string; name: string; movies: Record<string, unknown>[] }>(
+      `/api/collections/${encodeURIComponent(id)}`,
+    )
+    return {
+      id: raw.id,
+      name: raw.name,
+      movies: (raw.movies || []).map((m) => normalizeMovie(m)),
+    }
+  },
+
+  async approveQuickConnect(code: string): Promise<{ ok: boolean; message?: string }> {
+    return getJSON('/api/quickconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+  },
+
+  async getUserdata(): Promise<{
+    progress: Record<string, unknown>
+    favorites: Record<string, unknown>
+    prefs?: unknown
+  }> {
+    return getJSON('/api/userdata')
+  },
+
+  async putUserdata(blob: {
+    progress: Record<string, unknown>
+    favorites: Record<string, unknown>
+    prefs?: unknown
+  }): Promise<void> {
+    await getJSON('/api/userdata', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(blob),
+    })
+  },
+}
+
+async function getLibraryList(path: string): Promise<LibraryListResponse> {
+  const data = await getJSON<Record<string, unknown>>(path)
+  const rows = Array.isArray(data.items) ? (data.items as Record<string, unknown>[]) : []
+  const items: LibraryRow[] = rows.map((row) => ({
+    ...row,
+    id: String(row.id ?? row.name ?? row.title ?? Math.random()),
+    name: row.name != null ? String(row.name) : undefined,
+    title: row.title != null ? String(row.title) : undefined,
+    path: row.path != null ? String(row.path) : undefined,
+    year: row.year != null ? Number(row.year) : undefined,
+  }))
+  return {
+    items,
+    total: Number(data.total ?? items.length),
+    page: Number(data.page ?? 1),
+    page_size: Number(data.page_size ?? data.pageSize ?? items.length),
+    available: data.available !== false,
+    coming_soon: Boolean(data.coming_soon),
+    message: data.message != null ? String(data.message) : undefined,
+    library: data.library != null ? String(data.library) : undefined,
+    error: data.error != null ? String(data.error) : undefined,
+    code: data.code != null ? String(data.code) : undefined,
+  }
+}
+
+export type PlaybackResolve = {
+  stream_url: string
+  mode: 'direct' | 'transcode' | string
+  resume_enabled: boolean
+  transcoder_enabled: boolean
+  prefer_direct_play: boolean
+  max_bitrate_mbps: string
+  trickplay_enabled: boolean
+  transcoder_available: boolean
+}
+
+export async function resolvePlayback(src: string): Promise<PlaybackResolve> {
+  const q = new URLSearchParams({ src })
+  return getJSON<PlaybackResolve>(`/api/playback/resolve?${q}`)
 }
 
 export { posterURL, normalizeMovie, normalizeTV }

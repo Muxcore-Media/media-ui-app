@@ -5,6 +5,7 @@ import Music from './Music'
 import type { LibraryListResponse } from '../types'
 
 const listMusic = vi.fn()
+const getMusicArtist = vi.fn()
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
@@ -13,6 +14,7 @@ vi.mock('../api/client', async () => {
     api: {
       ...actual.api,
       listMusic: (...args: unknown[]) => listMusic(...args),
+      getMusicArtist: (...args: unknown[]) => getMusicArtist(...args),
     },
   }
 })
@@ -20,9 +22,11 @@ vi.mock('../api/client', async () => {
 describe('Music consumer section', () => {
   beforeEach(() => {
     listMusic.mockReset()
+    getMusicArtist.mockReset()
+    getMusicArtist.mockResolvedValue({ artist: { id: 'ar1', name: 'Björk' }, albums: [] })
   })
 
-  it('shows coming soon when BFF reports module unavailable', async () => {
+  it('shows unavailable message when BFF reports module unavailable', async () => {
     listMusic.mockResolvedValueOnce({
       items: [],
       total: 0,
@@ -38,10 +42,9 @@ describe('Music consumer section', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId('library-coming-soon')).toBeInTheDocument()
+      expect(screen.getByText(/Coming soon — enable library-plus/i)).toBeInTheDocument()
     })
     expect(listMusic).toHaveBeenCalled()
-    expect(screen.getByText(/Coming soon — enable library-plus/i)).toBeInTheDocument()
   })
 
   it('renders fixture artists from BFF list payload', async () => {
@@ -58,8 +61,7 @@ describe('Music consumer section', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Björk')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Björk' })).toHaveAttribute('href', '/music/ar1')
     })
-    expect(screen.getByTestId('library-list')).toBeInTheDocument()
   })
 })

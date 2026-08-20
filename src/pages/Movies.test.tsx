@@ -16,6 +16,7 @@ vi.mock('../api/client', async () => {
       listMovies: (...args: unknown[]) => listMovies(...args),
       search: (...args: unknown[]) => search(...args),
       requestMovie: (...args: unknown[]) => requestMovie(...args),
+      requestTitle: (...args: unknown[]) => requestMovie(...args),
     },
   }
 })
@@ -77,12 +78,10 @@ describe('Movies library list', () => {
     renderMovies()
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: /Fight Club/i })).toHaveAttribute(
-        'href',
-        '/movies/m1',
-      )
+      const links = screen.getAllByRole('link', { name: /Fight Club/i })
+      expect(links[0]).toHaveAttribute('href', '/movies/m1')
     })
-    expect(screen.getByText('Ready')).toBeInTheDocument()
+    expect(screen.getAllByText('Ready').length).toBeGreaterThan(0)
   })
 
   it('surfaces auth/BFF errors instead of empty library', async () => {
@@ -110,28 +109,30 @@ describe('Movies library list', () => {
         overview: 'soap',
         poster: '/p.jpg',
         voteAvg: 8.4,
-        type: 'movie',
+        mediaType: 'movie',
       },
     ])
     requestMovie.mockResolvedValueOnce({ requestId: 'r1', movieId: 'm1', status: 'added' })
 
     renderMovies()
-    await waitFor(() => screen.getByPlaceholderText(/Fight Club/i))
+    await waitFor(() => screen.getByPlaceholderText(/When Calls the Heart/i))
 
-    fireEvent.change(screen.getByPlaceholderText(/Fight Club/i), { target: { value: 'Fight Club' } })
+    fireEvent.change(screen.getByPlaceholderText(/When Calls the Heart/i), {
+      target: { value: 'Fight Club' },
+    })
     fireEvent.click(screen.getByRole('button', { name: /^Search$/i }))
 
     await waitFor(() => {
-      expect(search).toHaveBeenCalledWith('Fight Club', 'movie')
+      expect(search).toHaveBeenCalledWith('Fight Club')
     })
-    await waitFor(() => screen.getByRole('button', { name: /^Request$/i }))
-    fireEvent.click(screen.getByRole('button', { name: /^Request$/i }))
+    await waitFor(() => screen.getByRole('button', { name: /^Request movie$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Request movie$/i }))
 
     await waitFor(() => {
       expect(requestMovie).toHaveBeenCalledWith(
-        expect.objectContaining({ tmdbId: 550, title: 'Fight Club', year: 1999 }),
+        expect.objectContaining({ tmdbId: 550, title: 'Fight Club', year: 1999, mediaType: 'movie' }),
       )
     })
-    expect(await screen.findByText(/Requested “Fight Club” \(added\)/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Requested “Fight Club” as movie \(added\)/i)).toBeInTheDocument()
   })
 })

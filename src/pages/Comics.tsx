@@ -9,8 +9,8 @@ export default function Comics() {
       title="Comics"
       description="Series library from media-comics via mediauiprox GET /api/comics."
       load={load}
-      primaryLabel={(row) => row.title || row.name || row.id}
-      secondaryLabel={(row) => row.publisher || row.path || ''}
+      primaryLabel={(row) => String(row.title || row.name || row.id)}
+      secondaryLabel={(row) => String(row.publisher ?? row.path ?? '')}
       emptyReadyMessage="No series in the comics library yet. Scan a library root in media-comics."
     />
   )

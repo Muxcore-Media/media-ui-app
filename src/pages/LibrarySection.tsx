@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import Spinner from '../components/Spinner'
+import { Clock, Library } from 'lucide-react'
+import { Badge } from '../components/ui/Badge'
+import { ShelfSkeleton } from '../components/ui/Skeleton'
 import type { LibraryListResponse, LibraryRow } from '../types'
 
 type Props = {
@@ -59,57 +61,58 @@ export default function LibrarySection({
   return (
     <div className="space-y-6" data-testid={`${title.toLowerCase()}-page`}>
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="text-sm text-[var(--muted)]">{description}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">{title}</h1>
+        <p className="text-sm text-[var(--text-secondary)]">{description}</p>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-10">
-          <Spinner />
-        </div>
+        <ShelfSkeleton count={4} />
       ) : error ? (
         <p
-          className="rounded-md border border-red-500/40 bg-[var(--surface)] px-3 py-2 text-sm text-red-300"
+          className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--danger-color)]"
           data-testid="library-error"
         >
           {error}
         </p>
       ) : comingSoon || !available ? (
         <div
-          className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-6 space-y-2"
+          className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center"
           data-testid="library-coming-soon"
         >
-          <p className="font-semibold">Coming soon</p>
-          <p className="text-sm text-[var(--muted)]">
+          <Clock className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
+          <p className="font-semibold text-[var(--text-primary)]">Coming soon</p>
+          <p className="max-w-sm text-sm text-[var(--text-secondary)]">
             {message ||
-              `This section called the live ${title.toLowerCase()} API; the module is not reachable yet. Enable the library-plus spool tag to populate it.`}
+              `${title} isn't available yet. Check back soon.`}
           </p>
         </div>
       ) : items.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]" data-testid="library-empty">
-          {emptyReadyMessage}
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center" data-testid="library-empty">
+          <Library className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
+          <p className="max-w-sm text-sm text-[var(--text-secondary)]">{emptyReadyMessage}</p>
+        </div>
       ) : (
-        <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]" data-testid="library-list">
+        <ul
+          className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+          data-testid="library-list"
+        >
           {items.map((row) => {
             const href = rowHref?.(row)
             return (
-              <li key={row.id} className="flex items-start justify-between gap-4 px-4 py-3">
+              <li key={row.id} className="flex items-start justify-between gap-4 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
                 <div className="min-w-0">
                   {href ? (
-                    <Link to={href} className="font-medium truncate text-[var(--accent)] hover:underline">
+                    <Link to={href} className="truncate font-medium text-[var(--accent-color)] hover:underline">
                       {primaryLabel(row)}
                     </Link>
                   ) : (
-                    <p className="font-medium truncate">{primaryLabel(row)}</p>
+                    <p className="truncate font-medium text-[var(--text-primary)]">{primaryLabel(row)}</p>
                   )}
                   {secondaryLabel ? (
-                    <p className="text-xs text-[var(--muted)] truncate">{secondaryLabel(row)}</p>
+                    <p className="truncate text-xs text-[var(--text-tertiary)]">{secondaryLabel(row)}</p>
                   ) : null}
                 </div>
-                {row.year ? (
-                  <span className="shrink-0 text-xs text-[var(--muted)]">{row.year}</span>
-                ) : null}
+                {row.year ? <Badge tone="neutral" className="shrink-0">{row.year}</Badge> : null}
               </li>
             )
           })}

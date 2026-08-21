@@ -7,9 +7,12 @@ import type {
   Movie,
   MusicArtistDetail,
   SearchResult,
+  DiscoverDetail,
   Season,
   TVShow,
 } from '../types'
+import type { Capabilities, FeatureKey, LibraryKey } from '../lib/capabilities'
+import { DEFAULT_CAPABILITIES } from '../lib/capabilities'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
@@ -156,7 +159,23 @@ function asList<T>(data: unknown, map: (row: Record<string, unknown>) => T): Lis
   }
 }
 
+function mergeCapabilities(raw: { libraries?: Record<string, boolean>; features?: Record<string, boolean> }): Capabilities {
+  const libraries = { ...DEFAULT_CAPABILITIES.libraries }
+  const features = { ...DEFAULT_CAPABILITIES.features }
+  for (const key of Object.keys(libraries) as LibraryKey[]) {
+    if (typeof raw.libraries?.[key] === 'boolean') libraries[key] = raw.libraries[key]
+  }
+  for (const key of Object.keys(features) as FeatureKey[]) {
+    if (typeof raw.features?.[key] === 'boolean') features[key] = raw.features[key]
+  }
+  return { libraries, features }
+}
+
 export const api = {
+  async getCapabilities(): Promise<Capabilities> {
+    return mergeCapabilities(await getJSON('/api/capabilities'))
+  },
+
   async listMovies(
     page = 1,
     pageSize = 48,
@@ -198,6 +217,15 @@ export const api = {
       ...row,
       mediaType: row.mediaType === 'tv' ? 'tv' : 'movie',
     }))
+  },
+
+  async getDiscoverDetail(type: 'movie' | 'tv', id: number): Promise<DiscoverDetail> {
+    const data = await getJSON<DiscoverDetail>(`/api/discover/${type}/${id}`)
+    return {
+      ...data,
+      mediaType: data.mediaType === 'tv' ? 'tv' : 'movie',
+      genres: Array.isArray(data.genres) ? data.genres : [],
+    }
   },
 
   async requestTitle(input: {
@@ -410,6 +438,20 @@ export type PlaybackResolve = {
 export async function resolvePlayback(src: string): Promise<PlaybackResolve> {
   const q = new URLSearchParams({ src })
   return getJSON<PlaybackResolve>(`/api/playback/resolve?${q}`)
+}
+
+export type PlaybackSubtitleTrack = {
+  id: string
+  label: string
+  language?: string
+  srclang?: string
+  src: string
+  default?: boolean
+}
+
+export async function fetchPlaybackSubtitles(src: string): Promise<{ tracks: PlaybackSubtitleTrack[] }> {
+  const q = new URLSearchParams({ src })
+  return getJSON<{ tracks: PlaybackSubtitleTrack[] }>(`/api/playback/subtitles?${q}`)
 }
 
 export { posterURL, normalizeMovie, normalizeTV }

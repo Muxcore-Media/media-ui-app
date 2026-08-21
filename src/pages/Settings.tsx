@@ -1,5 +1,6 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { Gauge, Home as HomeIcon, Keyboard, LogOut, Monitor, Subtitles, User } from 'lucide-react'
 import {
   applyTheme,
   getPreferences,
@@ -8,9 +9,17 @@ import {
 } from '../lib/userdata'
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded-md px-3 py-2 text-sm font-medium ${
-    isActive ? 'bg-[var(--accent)] text-black' : 'text-[var(--muted)] hover:bg-[var(--surface-2)]'
+  `flex items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium transition ${
+    isActive
+      ? 'bg-[var(--accent-color)] text-black'
+      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]'
   }`
+
+const paneClass = 'max-w-xl space-y-4 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5'
+const inputClass =
+  'w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-3 py-2 text-sm outline-none focus:border-[var(--accent-color)]'
+const saveBtnClass =
+  'rounded-[var(--radius-md)] bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]'
 
 function usePrefs(): [UserPreferences, (p: Partial<UserPreferences>) => void] {
   const [prefs, setPrefs] = useState(getPreferences)
@@ -24,22 +33,32 @@ function usePrefs(): [UserPreferences, (p: Partial<UserPreferences>) => void] {
 
 function ProfilePane() {
   return (
-    <div className="max-w-xl space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <h2 className="font-semibold">Profile</h2>
-      <p className="text-sm text-[var(--muted)]">
-        Sign-in identity comes from auth-local via the media BFF. Preferences, progress, favorites, and
-        queue sync to the server userdata store when the BFF is available; this browser keeps a local cache
-        for offline use.
+    <div className={paneClass}>
+      <h2 className="font-semibold text-[var(--text-primary)]">Profile</h2>
+      <p className="text-sm text-[var(--text-secondary)]">
+        Your profile, watch progress, favorites, and queue sync across your devices when you&apos;re signed in.
       </p>
-      <a href="/logout" className="inline-flex rounded-md border border-[var(--border)] px-3 py-2 text-sm">
-        Log out
-      </a>
-      <a href="/forgot-password" className="inline-flex rounded-md border border-[var(--border)] px-3 py-2 text-sm">
-        Forgot password
-      </a>
-      <a href="/quickconnect" className="inline-flex rounded-md border border-[var(--border)] px-3 py-2 text-sm">
-        Quick Connect
-      </a>
+      <div className="flex flex-wrap gap-2">
+        <a
+          href="/logout"
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--accent-color)] hover:text-[var(--text-primary)]"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Log out
+        </a>
+        <a
+          href="/forgot-password"
+          className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--accent-color)] hover:text-[var(--text-primary)]"
+        >
+          Forgot password
+        </a>
+        <a
+          href="/quickconnect"
+          className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--accent-color)] hover:text-[var(--text-primary)]"
+        >
+          Quick Connect
+        </a>
+      </div>
     </div>
   )
 }
@@ -58,35 +77,31 @@ function DisplayPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+    <form onSubmit={onSubmit} className={paneClass}>
       <label className="block space-y-1 text-sm">
-        <span>Theme</span>
-        <select
-          name="theme"
-          defaultValue={prefs.display.theme}
-          className="w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2"
-        >
+        <span className="text-[var(--text-secondary)]">Theme</span>
+        <select name="theme" defaultValue={prefs.display.theme} className={inputClass}>
           <option value="dark">Dark</option>
           <option value="light">Light</option>
           <option value="system">System</option>
         </select>
       </label>
       <label className="block space-y-1 text-sm">
-        <span>Library page size</span>
+        <span className="text-[var(--text-secondary)]">Titles per page</span>
         <input
           name="libraryPageSize"
           type="number"
           min={12}
           max={200}
           defaultValue={prefs.display.libraryPageSize}
-          className="w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2"
+          className={inputClass}
         />
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="showWatchedIndicators" type="checkbox" defaultChecked={prefs.display.showWatchedIndicators} />
         Show watched indicators
       </label>
-      <button type="submit" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+      <button type="submit" className={saveBtnClass}>
         Save
       </button>
     </form>
@@ -108,21 +123,21 @@ function HomePane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+    <form onSubmit={onSubmit} className={paneClass}>
       {(
         [
           ['showContinueWatching', 'Continue watching', prefs.home.showContinueWatching],
           ['showFavorites', 'Favorites row', prefs.home.showFavorites],
-          ['showRecentRequests', 'Recent requests', prefs.home.showRecentRequests],
-          ['showNextUp', 'Next up / ready to play', prefs.home.showNextUp],
+          ['showRecentRequests', 'In progress on home', prefs.home.showRecentRequests],
+          ['showNextUp', 'Next up', prefs.home.showNextUp],
         ] as const
       ).map(([name, label, checked]) => (
-        <label key={name} className="flex items-center gap-2 text-sm">
+        <label key={name} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <input name={name} type="checkbox" defaultChecked={checked} />
           {label}
         </label>
       ))}
-      <button type="submit" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+      <button type="submit" className={saveBtnClass}>
         Save
       </button>
     </form>
@@ -143,27 +158,20 @@ function PlaybackPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <label className="flex items-center gap-2 text-sm">
+    <form onSubmit={onSubmit} className={paneClass}>
+      <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="autoplayNext" type="checkbox" defaultChecked={prefs.playback.autoplayNext} />
         Autoplay next episode
       </label>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="rememberPosition" type="checkbox" defaultChecked={prefs.playback.rememberPosition} />
         Remember playback position
       </label>
       <label className="block space-y-1 text-sm">
-        <span>Skip intro (seconds)</span>
-        <input
-          name="skipIntroSec"
-          type="number"
-          min={0}
-          max={300}
-          defaultValue={prefs.playback.skipIntroSec}
-          className="w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2"
-        />
+        <span className="text-[var(--text-secondary)]">Skip intro (seconds)</span>
+        <input name="skipIntroSec" type="number" min={0} max={300} defaultValue={prefs.playback.skipIntroSec} className={inputClass} />
       </label>
-      <button type="submit" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+      <button type="submit" className={saveBtnClass}>
         Save
       </button>
     </form>
@@ -184,32 +192,24 @@ function SubtitlesPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <label className="flex items-center gap-2 text-sm">
+    <form onSubmit={onSubmit} className={paneClass}>
+      <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="enabled" type="checkbox" defaultChecked={prefs.subtitles.enabled} />
         Prefer subtitles when available
       </label>
       <label className="block space-y-1 text-sm">
-        <span>Preferred language (ISO 639-2/B)</span>
-        <input
-          name="language"
-          defaultValue={prefs.subtitles.language}
-          className="w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2"
-        />
+        <span className="text-[var(--text-secondary)]">Subtitle language</span>
+        <input name="language" defaultValue={prefs.subtitles.language} className={inputClass} />
       </label>
       <label className="block space-y-1 text-sm">
-        <span>Text size</span>
-        <select
-          name="textSize"
-          defaultValue={prefs.subtitles.textSize}
-          className="w-full rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2"
-        >
+        <span className="text-[var(--text-secondary)]">Text size</span>
+        <select name="textSize" defaultValue={prefs.subtitles.textSize} className={inputClass}>
           <option value="sm">Small</option>
           <option value="md">Medium</option>
           <option value="lg">Large</option>
         </select>
       </label>
-      <button type="submit" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+      <button type="submit" className={saveBtnClass}>
         Save
       </button>
     </form>
@@ -228,16 +228,12 @@ function ControlsPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          name="enableKeyboardShortcuts"
-          type="checkbox"
-          defaultChecked={prefs.controls.enableKeyboardShortcuts}
-        />
+    <form onSubmit={onSubmit} className={paneClass}>
+      <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+        <input name="enableKeyboardShortcuts" type="checkbox" defaultChecked={prefs.controls.enableKeyboardShortcuts} />
         Keyboard shortcuts in the player (Space, ←/→, F)
       </label>
-      <button type="submit" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+      <button type="submit" className={saveBtnClass}>
         Save
       </button>
     </form>
@@ -260,28 +256,34 @@ export default function Settings() {
   return (
     <div className="space-y-6" data-testid="settings-page">
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Jellyfin-equivalent user preferences (display, home, playback, subtitles, controls).
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Settings</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Manage your profile, playback, and display preferences.
         </p>
       </div>
-      <nav className="flex flex-wrap gap-1 border-b border-[var(--border)] pb-3">
+      <nav className="flex flex-wrap gap-1 border-b border-[var(--border-subtle)] pb-3">
         <NavLink to="/settings" end className={tabClass}>
+          <User className="h-4 w-4" aria-hidden="true" />
           Profile
         </NavLink>
         <NavLink to="/settings/display" className={tabClass}>
+          <Monitor className="h-4 w-4" aria-hidden="true" />
           Display
         </NavLink>
         <NavLink to="/settings/home" className={tabClass}>
+          <HomeIcon className="h-4 w-4" aria-hidden="true" />
           Home
         </NavLink>
         <NavLink to="/settings/playback" className={tabClass}>
+          <Gauge className="h-4 w-4" aria-hidden="true" />
           Playback
         </NavLink>
         <NavLink to="/settings/subtitles" className={tabClass}>
+          <Subtitles className="h-4 w-4" aria-hidden="true" />
           Subtitles
         </NavLink>
         <NavLink to="/settings/controls" className={tabClass}>
+          <Keyboard className="h-4 w-4" aria-hidden="true" />
           Controls
         </NavLink>
       </nav>

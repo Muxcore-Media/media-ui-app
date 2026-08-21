@@ -42,7 +42,7 @@ describe('MusicVideos / HomeVideos library pages', () => {
       expect(screen.getByText('Artist - Official Music Video')).toBeInTheDocument()
     })
     expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'musicvideos' })
-    expect(screen.getByText(/path prefixes/i)).toBeInTheDocument()
+    expect(screen.getByText(/Music videos from your library/i)).toBeInTheDocument()
   })
 
   it('loads home videos via ?library=homevideos', async () => {
@@ -65,6 +65,6 @@ describe('MusicVideos / HomeVideos library pages', () => {
       expect(screen.getByText('Vacation 2019')).toBeInTheDocument()
     })
     expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'homevideos' })
-    expect(screen.getByText(/heuristic fallback/i)).toBeInTheDocument()
+    expect(screen.getByText(/Personal videos from your library/i)).toBeInTheDocument()
   })
 })

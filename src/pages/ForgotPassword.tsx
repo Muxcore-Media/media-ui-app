@@ -25,7 +25,7 @@ export default function ForgotPassword() {
       }
       setDone(
         data.message ||
-          'Request recorded. Contact your administrator — they can reset your password from Admin → Users.',
+          'Request submitted. Your administrator will reset your password soon.',
       )
       setUsername('')
       setNote('')
@@ -38,64 +38,72 @@ export default function ForgotPassword() {
 
   return (
     <div className="mx-auto max-w-md space-y-4" data-testid="forgot-password-page">
-      <h1 className="text-2xl font-bold">Forgot password</h1>
-      <p className="text-sm text-[var(--muted)]">
-        MuxCore uses auth-local for credentials. There is no email reset unless you configure fixture SMTP.
-        Submit your username so an admin can reset it from Admin → Users.
+      <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Forgot password</h1>
+      <p className="text-sm text-[var(--text-secondary)]">
+        Enter your username and we&apos;ll notify your administrator to reset your password.
       </p>
 
       {done && (
         <p
-          className="rounded-md border border-emerald-800/40 bg-[var(--surface)] px-4 py-3 text-sm text-emerald-200"
+          className="rounded-[var(--radius-md)] border border-[var(--success)]/40 bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--success)]"
           data-testid="forgot-password-success"
         >
           {done}
         </p>
       )}
       {error && (
-        <p className="rounded-md border border-[var(--danger)]/40 bg-[var(--surface)] px-4 py-3 text-sm text-[var(--danger)]">
+        <p className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--danger-color)]">
           {error}
         </p>
       )}
 
-      <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+      <form
+        onSubmit={onSubmit}
+        className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
+      >
         <label className="block space-y-1 text-sm">
-          <span className="text-[var(--muted)]">Username</span>
+          <span className="text-[var(--text-secondary)]">Username</span>
           <input
             name="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
             autoComplete="username"
-            className="w-full rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2"
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm outline-none focus:border-[var(--accent-color)]"
             data-testid="forgot-password-username"
           />
         </label>
         <label className="block space-y-1 text-sm">
-          <span className="text-[var(--muted)]">Optional note for admin</span>
+          <span className="text-[var(--text-secondary)]">Message (optional)</span>
           <textarea
             name="note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            className="w-full rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2"
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm outline-none focus:border-[var(--accent-color)]"
           />
         </label>
         <button
           type="submit"
           disabled={busy || !username.trim()}
-          className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+          className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)] disabled:opacity-50"
           data-testid="forgot-password-submit"
         >
-          {busy ? 'Submitting…' : 'Request admin reset'}
+          {busy ? 'Submitting…' : 'Send reset request'}
         </button>
       </form>
 
       <div className="flex flex-wrap gap-3">
-        <a href="/login" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+        <a
+          href="/login"
+          className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+        >
           Back to login
         </a>
-        <a href="/quickconnect" className="rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold">
+        <a
+          href="/quickconnect"
+          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+        >
           Quick Connect
         </a>
       </div>

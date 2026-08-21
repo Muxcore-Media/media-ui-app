@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Search as SearchIcon } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
-import Spinner from '../components/Spinner'
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import type { Movie, TVShow } from '../types'
 
 /** Jellyfin “mixed” library: movies + TV in one grid. */
@@ -40,35 +41,39 @@ export default function Mixed() {
   return (
     <div className="space-y-6" data-testid="mixed-page">
       <div>
-        <h1 className="text-2xl font-bold">Mixed</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Movies and TV in one view (Jellyfin mixed library).{' '}
-          <Link to="/search" className="text-[var(--accent)]">
-            Global search
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Mixed</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Movies and TV shows in one place.{' '}
+          <Link to="/search" className="text-[var(--accent-color)]">
+            Search everything
           </Link>
         </p>
       </div>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Filter…"
-        className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-      />
+      <div className="relative max-w-md">
+        <SearchIcon
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]"
+          aria-hidden="true"
+        />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Filter…"
+          className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 pl-9 text-sm outline-none focus:border-[var(--accent-color)]"
+        />
+      </div>
       {loading ? (
-        <div className="flex justify-center py-10">
-          <Spinner />
-        </div>
+        <PosterGridSkeleton />
       ) : error ? (
-        <p className="text-sm text-red-300">{error}</p>
+        <p className="text-sm text-[var(--danger-color)]">{error}</p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <PosterGrid>
           {movieRows.map((item) => (
             <MediaCard key={`m-${item.id}`} item={item} type="movie" />
           ))}
           {showRows.map((item) => (
             <MediaCard key={`t-${item.id}`} item={item} type="tv" />
           ))}
-        </div>
+        </PosterGrid>
       )}
     </div>
   )

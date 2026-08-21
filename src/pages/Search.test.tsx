@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import Search from './Search'
+import { CapabilitiesContext, DEFAULT_CAPABILITIES } from '../lib/capabilities'
+
+const listMovies = vi.fn()
+const listTVShows = vi.fn()
+const search = vi.fn()
+const requestMovie = vi.fn()
+
+vi.mock('../api/client', async () => {
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  return {
+    ...actual,
+    api: {
+      listMovies: (...args: unknown[]) => listMovies(...args),
+      listTVShows: (...args: unknown[]) => listTVShows(...args),
+      listMusic: vi.fn().mockResolvedValue({ items: [] }),
+      listBooks: vi.fn().mockResolvedValue({ items: [] }),
+      listComics: vi.fn().mockResolvedValue({ items: [] }),
+      listAudiobooks: vi.fn().mockResolvedValue({ items: [] }),
+      search: (...args: unknown[]) => search(...args),
+      requestTitle: (...args: unknown[]) => requestMovie(...args),
+    },
+  }
+})
+
+function renderSearch(initial = '/search?q=Fight') {
+  return render(
+    <CapabilitiesContext.Provider value={{ caps: DEFAULT_CAPABILITIES, loading: false, error: null }}>
+      <MemoryRouter initialEntries={[initial]}>
+        <Routes>
+          <Route path="/search" element={<Search />} />
+        </Routes>
+      </MemoryRouter>
+    </CapabilitiesContext.Provider>,
+  )
+}
+
+describe('Search page', () => {
+  beforeEach(() => {
+    listMovies.mockReset()
+    listTVShows.mockReset()
+    search.mockReset()
+    requestMovie.mockReset()
+    listMovies.mockResolvedValue({ items: [] })
+    listTVShows.mockResolvedValue({ items: [] })
+  })
+
+  it('runs unified search from URL query', async () => {
+    search.mockResolvedValueOnce([
+      {
+        id: 550,
+        title: 'Fight Club',
+        year: 1999,
+        overview: 'soap',
+        poster: '/p.jpg',
+        voteAvg: 8.4,
+        mediaType: 'movie',
+      },
+    ])
+
+    renderSearch('/search?q=Fight%20Club')
+
+    await waitFor(() => {
+      expect(search).toHaveBeenCalledWith('Fight Club')
+    })
+    expect(await screen.findByText('Fight Club')).toBeInTheDocument()
+  })
+
+  it('filters scope to movies only', async () => {
+    search.mockResolvedValueOnce([
+      { id: 550, title: 'Fight Club', year: 1999, overview: '', poster: '', voteAvg: 8, mediaType: 'movie' },
+      { id: 1, title: 'Breaking Bad', year: 2008, overview: '', poster: '', voteAvg: 9, mediaType: 'tv' },
+    ])
+
+    renderSearch('/search?q=Fight&scope=movies')
+
+    await waitFor(() => expect(search).toHaveBeenCalled())
+    expect(screen.queryByText('Breaking Bad')).not.toBeInTheDocument()
+    expect(await screen.findByText('Fight Club')).toBeInTheDocument()
+  })
+
+  it('requests remote title', async () => {
+    search.mockResolvedValueOnce([
+      { id: 550, title: 'Fight Club', year: 1999, overview: '', poster: '', voteAvg: 8, mediaType: 'movie' },
+    ])
+    requestMovie.mockResolvedValueOnce({ status: 'requested' })
+
+    renderSearch('/search?q=Fight%20Club')
+    const btn = await screen.findByRole('button', { name: 'Request' })
+    fireEvent.click(btn)
+
+    await waitFor(() => {
+      expect(requestMovie).toHaveBeenCalledWith(
+        expect.objectContaining({ tmdbId: 550, title: 'Fight Club', mediaType: 'movie' }),
+      )
+    })
+  })
+})

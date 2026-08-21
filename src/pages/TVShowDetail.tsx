@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ExternalLink, ListPlus, Play, Star } from 'lucide-react'
 import { api } from '../api/client'
 import Spinner from '../components/Spinner'
+import { DetailHero } from '../components/media/DetailHero'
+import { Badge } from '../components/ui/Badge'
+import { Button } from '../components/ui/Button'
+import { IconButton } from '../components/ui/IconButton'
 import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata'
+import { buildEpisodePlayerHref } from '../lib/playHref'
 import type { TVShow } from '../types'
 
 export default function TVShowDetail() {
@@ -52,8 +58,8 @@ export default function TVShowDetail() {
   if (!show) {
     return (
       <div className="space-y-3">
-        <p className="text-[var(--muted)]">{error || 'TV show not found.'}</p>
-        <Link to="/tv" className="text-[var(--accent)]">
+        <p className="text-[var(--text-secondary)]">{error || 'TV show not found.'}</p>
+        <Link to="/tv" className="text-[var(--accent-color)]">
           Back to TV
         </Link>
       </div>
@@ -61,120 +67,121 @@ export default function TVShowDetail() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
-      <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-        {show.poster_url ? (
-          <img src={show.poster_url} alt={show.title} className="w-full object-cover" />
-        ) : (
-          <div className="flex aspect-[2/3] items-center justify-center text-sm text-[var(--muted)]">No poster</div>
-        )}
-      </div>
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold">{show.title}</h1>
-          <p className="text-[var(--muted)]">
-            {show.year || '—'}
-            {show.vote_average > 0 ? ` · ${show.vote_average.toFixed(1)}` : ''}
-            {show.status ? ` · ${show.status}` : ''}
-            {show.has_file ? ' · files available' : ''}
-          </p>
-        </div>
-        <p className="max-w-3xl leading-relaxed text-[var(--muted)]">{show.overview || 'No overview.'}</p>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              const on = toggleFavorite({
-                id: show.id,
-                kind: 'tv',
-                title: show.title,
-                poster_url: show.poster_url,
-                href: `/tv/${show.id}`,
-                year: show.year,
-              })
-              setFav(on)
-            }}
-            className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold"
-          >
-            {fav ? '★ Favorited' : '☆ Favorite'}
-          </button>
-          {jellyfinURL && (
-            <a
-              href={jellyfinURL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex rounded-md border border-[var(--border)] px-4 py-2 text-sm font-semibold text-[var(--accent-2)] hover:border-[var(--accent)]"
+    <div className="space-y-8">
+      <DetailHero
+        backdropUrl={show.backdrop_url}
+        posterUrl={show.poster_url}
+        title={show.title}
+        overview={show.overview || 'No overview.'}
+        meta={
+          <>
+            {show.has_file && <Badge tone="accent">Available</Badge>}
+            {show.vote_average > 0 && (
+              <Badge tone="neutral">
+                <Star className="h-3 w-3 fill-current" aria-hidden="true" />
+                {show.vote_average.toFixed(1)}
+              </Badge>
+            )}
+            <span>{show.year || '—'}</span>
+            {show.status ? <span>{show.status}</span> : null}
+            {show.genres.length > 0 && <span>{show.genres.slice(0, 3).join(' · ')}</span>}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant={fav ? 'primary' : 'secondary'}
+              icon={<Star className={fav ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden="true" />}
+              onClick={() => {
+                const on = toggleFavorite({
+                  id: show.id,
+                  kind: 'tv',
+                  title: show.title,
+                  poster_url: show.poster_url,
+                  href: `/tv/${show.id}`,
+                  year: show.year,
+                })
+                setFav(on)
+              }}
             >
-              Open in Jellyfin
-            </a>
-          )}
-        </div>
-        {show.seasons && show.seasons.length > 0 ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Episodes</h2>
-            {show.seasons.map((season) => (
-              <div key={season.id} className="space-y-2">
-                <h3 className="text-sm font-medium text-[var(--muted)]">
-                  {season.name || `Season ${season.season_number}`}
-                </h3>
-                <ul className="space-y-2">
-                  {season.episodes.map((ep) => {
-                    const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
-                    const playTo =
-                      ep.has_file && ep.stream_url
-                        ? `/player?src=${encodeURIComponent(ep.stream_url)}&title=${encodeURIComponent(epTitle)}&id=${encodeURIComponent(ep.id)}&kind=episode&poster=${encodeURIComponent(show.poster_url || '')}&back=${encodeURIComponent(`/tv/${show.id}`)}`
-                        : null
-                    return (
-                      <li
-                        key={ep.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-                      >
-                        <div>
-                          <span className="font-medium">
-                            S{String(ep.season_number).padStart(2, '0')}E
-                            {String(ep.episode_number).padStart(2, '0')}
+              {fav ? 'Favorited' : 'Favorite'}
+            </Button>
+            {jellyfinURL && (
+              <a
+                href={jellyfinURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--accent-color)] transition hover:border-[var(--accent-color)]"
+              >
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                Open in linked app
+              </a>
+            )}
+          </>
+        }
+      />
+
+      {show.seasons && show.seasons.length > 0 ? (
+        <div className="space-y-6">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Episodes</h2>
+          {show.seasons.map((season) => (
+            <div key={season.id} className="space-y-2">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                {season.name || `Season ${season.season_number}`}
+              </h3>
+              <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+                {season.episodes.map((ep) => {
+                  const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
+                  const playTo = buildEpisodePlayerHref(show, ep)
+                  return (
+                    <li key={ep.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
+                      <div className="min-w-0">
+                        <p className="text-sm">
+                          <span className="font-semibold text-[var(--text-primary)]">
+                            S{String(ep.season_number).padStart(2, '0')}E{String(ep.episode_number).padStart(2, '0')}
                           </span>
-                          {ep.title ? ` · ${ep.title}` : ''}
+                          {ep.title ? <span className="text-[var(--text-secondary)]"> · {ep.title}</span> : null}
+                        </p>
+                        {ep.overview && <p className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{ep.overview}</p>}
+                      </div>
+                      {playTo ? (
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={playTo}
+                            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+                          >
+                            <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                            Play
+                          </Link>
+                          <IconButton
+                            icon={<ListPlus className="h-4 w-4" aria-hidden="true" />}
+                            aria-label={`Add ${epTitle} to queue`}
+                            size="sm"
+                            onClick={() =>
+                              enqueue({
+                                id: ep.id,
+                                kind: 'episode',
+                                title: epTitle,
+                                href: playTo,
+                                stream_url: ep.stream_url,
+                                poster_url: show.poster_url,
+                              })
+                            }
+                          />
                         </div>
-                        {playTo ? (
-                          <div className="flex gap-2">
-                            <Link
-                              to={playTo}
-                              className="rounded-md bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-black"
-                            >
-                              Play
-                            </Link>
-                            <button
-                              type="button"
-                              className="rounded-md border border-[var(--border)] px-3 py-1 text-xs font-semibold"
-                              onClick={() =>
-                                enqueue({
-                                  id: ep.id,
-                                  kind: 'episode',
-                                  title: epTitle,
-                                  href: playTo,
-                                  stream_url: ep.stream_url,
-                                  poster_url: show.poster_url,
-                                })
-                              }
-                            >
-                              Queue
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-[var(--muted)]">No file</span>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-[var(--muted)]">No season metadata yet.</p>
-        )}
-      </div>
+                      ) : (
+                        <Badge tone="neutral">No file</Badge>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--text-secondary)]">No episodes listed yet.</p>
+      )}
     </div>
   )
 }

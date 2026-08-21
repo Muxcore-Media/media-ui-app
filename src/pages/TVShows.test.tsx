@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import TVShows from './TVShows'
 import type { ListResponse, TVShow } from '../types'
@@ -47,11 +47,11 @@ describe('TVShows library list', () => {
     renderTV()
 
     await waitFor(() => {
-      expect(screen.getByText(/No TV library items yet/i)).toBeInTheDocument()
+      expect(screen.getByText(/No TV shows ready to watch yet/i)).toBeInTheDocument()
     })
   })
 
-  it('renders fixture series cards from BFF list payload', async () => {
+  it('renders only watchable series in the library grid', async () => {
     listTVShows.mockResolvedValueOnce({
       items: [
         {
@@ -75,51 +75,9 @@ describe('TVShows library list', () => {
     renderTV()
 
     await waitFor(() => {
-      const links = screen.getAllByRole('link', { name: /Fixture Series/i })
-      expect(links[0]).toHaveAttribute('href', '/tv/s1')
+      expect(screen.getByText(/No TV shows ready to watch yet/i)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /View in progress/i })).toBeInTheDocument()
     })
-    expect(screen.getAllByText('No poster').length).toBeGreaterThan(0)
-  })
-
-  it('consumer TV search + request uses fixture Breaking Bad offline', async () => {
-    listTVShows.mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      page_size: 48,
-    } satisfies ListResponse<TVShow>)
-    search.mockResolvedValueOnce([
-      {
-        id: 1396,
-        title: 'Breaking Bad',
-        year: 2008,
-        overview: 'chem',
-        poster: '/bb.jpg',
-        voteAvg: 8.9,
-        mediaType: 'tv',
-      },
-    ])
-    requestTV.mockResolvedValueOnce({ requestId: 'r2', seriesId: 's1', status: 'added' })
-
-    renderTV()
-    await waitFor(() => screen.getByPlaceholderText(/When Calls the Heart/i))
-
-    fireEvent.change(screen.getByPlaceholderText(/When Calls the Heart/i), {
-      target: { value: 'Breaking Bad' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /^Search$/i }))
-
-    await waitFor(() => {
-      expect(search).toHaveBeenCalledWith('Breaking Bad')
-    })
-    await waitFor(() => screen.getByRole('button', { name: /^Request series$/i }))
-    fireEvent.click(screen.getByRole('button', { name: /^Request series$/i }))
-
-    await waitFor(() => {
-      expect(requestTV).toHaveBeenCalledWith(
-        expect.objectContaining({ tmdbId: 1396, title: 'Breaking Bad', year: 2008, mediaType: 'tv' }),
-      )
-    })
-    expect(await screen.findByText(/Requested “Breaking Bad” as series \(added\)/i)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Fixture Series/i })).not.toBeInTheDocument()
   })
 })

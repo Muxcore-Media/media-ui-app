@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../api/client'
-import Spinner from '../components/Spinner'
+import { ShelfSkeleton } from '../components/ui/Skeleton'
 import type { Episode, TVShow } from '../types'
 
 type UpcomingRow = {
@@ -83,39 +84,35 @@ export default function Upcoming() {
     <div className="space-y-6" data-testid="upcoming-page">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Upcoming</h1>
-          <p className="text-sm text-[var(--muted)]">
-            TV calendar from episode air dates (Jellyfin upcoming).
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Upcoming</h1>
+          <p className="text-sm text-[var(--text-secondary)]">See when new episodes are airing.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1">
           <button
             type="button"
-            className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
+            aria-label="Previous month"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]"
             onClick={() => setMonthOffset((n) => n - 1)}
           >
-            ←
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
-          <span className="min-w-[10rem] text-center text-sm font-medium">{view.label}</span>
+          <span className="min-w-[9rem] text-center text-sm font-medium text-[var(--text-primary)]">{view.label}</span>
           <button
             type="button"
-            className="rounded-md border border-[var(--border)] px-3 py-1 text-sm"
+            aria-label="Next month"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]"
             onClick={() => setMonthOffset((n) => n + 1)}
           >
-            →
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
-      {loading && (
-        <div className="flex justify-center py-10">
-          <Spinner />
-        </div>
-      )}
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {loading && <ShelfSkeleton count={4} />}
+      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
       {!loading && view.byDay.length === 0 && (
-        <p className="text-sm text-[var(--muted)]">
+        <p className="text-sm text-[var(--text-secondary)]">
           No air dates in {view.label}.{' '}
-          <Link to="/tv" className="text-[var(--accent)]">
+          <Link to="/tv" className="text-[var(--accent-color)]">
             Browse TV
           </Link>
         </p>
@@ -123,19 +120,27 @@ export default function Upcoming() {
       <div className="space-y-4">
         {view.byDay.map(([day, dayRows]) => (
           <section key={day} className="space-y-2">
-            <h2 className="text-sm font-semibold text-[var(--muted)]">{day}</h2>
-            <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{day}</h2>
+            <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
               {dayRows.map((r) => (
-                <li key={`${r.show.id}-${r.episode.id}`} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{r.show.title}</p>
-                    <p className="text-xs text-[var(--muted)]">
+                <li
+                  key={`${r.show.id}-${r.episode.id}`}
+                  className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]"
+                >
+                  <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-[var(--bg-elevated-2)]">
+                    {r.show.poster_url ? (
+                      <img src={r.show.poster_url} alt="" className="h-full w-full object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-[var(--text-primary)]">{r.show.title}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">
                       S{String(r.episode.season_number).padStart(2, '0')}E
                       {String(r.episode.episode_number).padStart(2, '0')}
                       {r.episode.title ? ` · ${r.episode.title}` : ''}
                     </p>
                   </div>
-                  <Link to={`/tv/${r.show.id}`} className="text-sm text-[var(--accent)]">
+                  <Link to={`/tv/${r.show.id}`} className="text-sm font-medium text-[var(--accent-color)] hover:underline">
                     Open
                   </Link>
                 </li>

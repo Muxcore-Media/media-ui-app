@@ -1,6 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { resolvePlayback } from '../api/client'
-import { getPreferences, getProgress, upsertProgress, type MediaKind } from '../lib/userdata'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Captions,
+  ListVideo,
+  Maximize,
+  Minimize,
+  PictureInPicture2,
+  Play,
+  Pause,
+  SkipForward,
+  Volume1,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
+import { api, fetchPlaybackSubtitles, resolvePlayback, type PlaybackSubtitleTrack } from '../api/client'
+import PlayerEpisodeDrawer from './player/PlayerEpisodeDrawer'
+import { buildEpisodePlayerHref } from '../lib/playHref'
+import { getPreferences, getProgress, nextEpisodeAfter, upsertProgress, type MediaKind } from '../lib/userdata'
+import type { TVShow } from '../types'
+import Spinner from './Spinner'
 
 type Props = {
   src: string
@@ -9,7 +28,10 @@ type Props = {
   mediaKind?: MediaKind
   posterUrl?: string
   href?: string
-  subtitleTracks?: { label: string; src: string; srclang?: string; default?: boolean }[]
+  showId?: string
+  seasonNumber?: number
+  episodeNumber?: number
+  subtitleTracks?: { label: string; src: string; srclang?: string; language?: string; default?: boolean }[]
 }
 
 type TrackInfo = { id: string; label: string; kind: 'audio' | 'text'; index: number }
@@ -24,21 +46,29 @@ function formatTime(sec: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
+const overlaySelectClass =
+  'max-w-[7rem] truncate rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-white outline-none focus:border-[var(--accent-color)]'
+
 export default function VideoPlayer({
   src,
   title,
   mediaId,
   mediaKind = 'movie',
   posterUrl,
-  href,
+  href = '/',
+  showId,
+  seasonNumber,
+  episodeNumber,
   subtitleTracks = [],
 }: Props) {
+  const navigate = useNavigate()
   const ref = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const prefs = getPreferences()
   const [playSrc, setPlaySrc] = useState(src)
   const [playMode, setPlayMode] = useState('direct')
   const [loading, setLoading] = useState(false)
+  const [remoteTracks, setRemoteTracks] = useState<PlaybackSubtitleTrack[]>([])
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -51,25 +81,66 @@ export default function VideoPlayer({
   const [audioIdx, setAudioIdx] = useState(0)
   const [textIdx, setTextIdx] = useState(-1)
   const [rate, setRate] = useState(1)
+  const [buffering, setBuffering] = useState(false)
+  const [pipSupported, setPipSupported] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [showData, setShowData] = useState<TVShow | null>(null)
+  const [upNextHref, setUpNextHref] = useState<string | null>(null)
+  const [upNextTitle, setUpNextTitle] = useState<string | null>(null)
   const resumeEnabled = prefs.playback.rememberPosition
+
+  useEffect(() => {
+    setPipSupported(Boolean(document.pictureInPictureEnabled))
+  }, [])
+
+  useEffect(() => {
+    const onFsChange = () => setFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  useEffect(() => {
+    if (!showId) {
+      setShowData(null)
+      return
+    }
+    let cancelled = false
+    void api.getTVShow(showId).then((show) => {
+      if (!cancelled) setShowData(show)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [showId])
 
   useEffect(() => {
     if (!src) {
       setPlaySrc('')
+      setRemoteTracks([])
       return
     }
     let cancelled = false
     setLoading(true)
-    resolvePlayback(src)
-      .then((res) => {
+    setPlaying(false)
+    setBuffering(false)
+    setCurrent(0)
+    setDuration(0)
+    Promise.all([
+      resolvePlayback(src),
+      fetchPlaybackSubtitles(src).catch(() => ({ tracks: [] as PlaybackSubtitleTrack[] })),
+    ])
+      .then(([res, subs]) => {
         if (cancelled) return
         setPlaySrc(res.stream_url || src)
         setPlayMode(res.mode || 'direct')
+        setRemoteTracks(subs.tracks ?? [])
       })
       .catch(() => {
         if (!cancelled) {
           setPlaySrc(src)
           setPlayMode('direct')
+          setRemoteTracks([])
         }
       })
       .finally(() => {
@@ -83,8 +154,15 @@ export default function VideoPlayer({
   const bumpControls = useCallback(() => {
     setShowControls(true)
     if (hideTimer.current) window.clearTimeout(hideTimer.current)
-    hideTimer.current = window.setTimeout(() => setShowControls(false), 3000)
+    hideTimer.current = window.setTimeout(() => setShowControls(false), 3500)
   }, [])
+
+  useEffect(() => {
+    bumpControls()
+    return () => {
+      if (hideTimer.current) window.clearTimeout(hideTimer.current)
+    }
+  }, [bumpControls])
 
   useEffect(() => {
     const el = ref.current
@@ -114,28 +192,11 @@ export default function VideoPlayer({
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const onMeta = () => setDuration(el.duration || 0)
-    const onTime = () => setCurrent(el.currentTime || 0)
-    const onPlay = () => setPlaying(true)
-    const onPause = () => setPlaying(false)
-    el.addEventListener('loadedmetadata', onMeta)
-    el.addEventListener('timeupdate', onTime)
-    el.addEventListener('play', onPlay)
-    el.addEventListener('pause', onPause)
-    return () => {
-      el.removeEventListener('loadedmetadata', onMeta)
-      el.removeEventListener('timeupdate', onTime)
-      el.removeEventListener('play', onPlay)
-      el.removeEventListener('pause', onPause)
-    }
-  }, [playSrc])
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
     const refreshTracks = () => {
       const audio: TrackInfo[] = []
-      const anyEl = el as HTMLVideoElement & { audioTracks?: { length: number; [i: number]: { label?: string; language?: string; enabled: boolean } } }
+      const anyEl = el as HTMLVideoElement & {
+        audioTracks?: { length: number; [i: number]: { label?: string; language?: string; enabled: boolean } }
+      }
       if (anyEl.audioTracks && anyEl.audioTracks.length > 0) {
         for (let i = 0; i < anyEl.audioTracks.length; i++) {
           const t = anyEl.audioTracks[i]
@@ -152,6 +213,7 @@ export default function VideoPlayer({
       const texts: TrackInfo[] = []
       for (let i = 0; i < el.textTracks.length; i++) {
         const t = el.textTracks[i]
+        if (t.kind === 'metadata') continue
         texts.push({
           id: `t${i}`,
           label: t.label || t.language || `Subtitle ${i + 1}`,
@@ -167,9 +229,44 @@ export default function VideoPlayer({
         setTextIdx((cur) => (cur >= 0 ? cur : match >= 0 ? match : 0))
       }
     }
+    const onMeta = () => setDuration(el.duration || 0)
+    const onTime = () => {
+      setCurrent(el.currentTime || 0)
+      setPlaying(!el.paused)
+    }
+    const onPlay = () => setPlaying(true)
+    const onPause = () => setPlaying(false)
+    const onWaiting = () => setBuffering(true)
+    const onPlaying = () => {
+      setPlaying(true)
+      setBuffering(false)
+    }
+    const onCanPlay = () => setBuffering(false)
+    const trackList = el.textTracks as TextTrackList & {
+      addEventListener?: (type: string, listener: () => void) => void
+      removeEventListener?: (type: string, listener: () => void) => void
+    }
+    trackList.addEventListener?.('addtrack', refreshTracks)
     el.addEventListener('loadedmetadata', refreshTracks)
+    el.addEventListener('loadedmetadata', onMeta)
+    el.addEventListener('timeupdate', onTime)
+    el.addEventListener('play', onPlay)
+    el.addEventListener('pause', onPause)
+    el.addEventListener('waiting', onWaiting)
+    el.addEventListener('playing', onPlaying)
+    el.addEventListener('canplay', onCanPlay)
     refreshTracks()
-    return () => el.removeEventListener('loadedmetadata', refreshTracks)
+    return () => {
+      trackList.removeEventListener?.('addtrack', refreshTracks)
+      el.removeEventListener('loadedmetadata', refreshTracks)
+      el.removeEventListener('loadedmetadata', onMeta)
+      el.removeEventListener('timeupdate', onTime)
+      el.removeEventListener('play', onPlay)
+      el.removeEventListener('pause', onPause)
+      el.removeEventListener('waiting', onWaiting)
+      el.removeEventListener('playing', onPlaying)
+      el.removeEventListener('canplay', onCanPlay)
+    }
   }, [playSrc, prefs.subtitles.enabled, prefs.subtitles.language])
 
   useEffect(() => {
@@ -238,6 +335,32 @@ export default function VideoPlayer({
     }
   }, [playSrc, src, mediaId, mediaKind, title, posterUrl, href, resumeEnabled])
 
+  const handleEnded = useCallback(() => {
+    if (mediaKind !== 'episode' || !showData || !mediaId) return
+    const next = nextEpisodeAfter(showData, mediaId)
+    if (!next) return
+    const nextHref = buildEpisodePlayerHref(showData, next)
+    if (!nextHref) return
+    const code = `S${String(next.season_number).padStart(2, '0')}E${String(next.episode_number).padStart(2, '0')}`
+    setUpNextTitle(next.title ? `${code} · ${next.title}` : code)
+    setUpNextHref(nextHref)
+    if (prefs.playback.autoplayNext) {
+      window.setTimeout(() => navigate(nextHref), 4500)
+    }
+  }, [mediaKind, showData, mediaId, prefs.playback.autoplayNext, navigate])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.addEventListener('ended', handleEnded)
+    return () => el.removeEventListener('ended', handleEnded)
+  }, [handleEnded, playSrc])
+
+  useEffect(() => {
+    setUpNextHref(null)
+    setUpNextTitle(null)
+  }, [playSrc, mediaId])
+
   useEffect(() => {
     if (!prefs.controls.enableKeyboardShortcuts) return
     const onKey = (e: KeyboardEvent) => {
@@ -245,6 +368,10 @@ export default function VideoPlayer({
       if (!el) return
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (drawerOpen && e.code === 'Escape') {
+        setDrawerOpen(false)
+        return
+      }
       if (e.code === 'Space') {
         e.preventDefault()
         if (el.paused) void el.play()
@@ -258,11 +385,13 @@ export default function VideoPlayer({
         else void containerRef.current?.requestFullscreen?.()
       } else if (e.code === 'KeyM') {
         setMuted((m) => !m)
+      } else if (e.code === 'KeyE' && showId) {
+        setDrawerOpen((open) => !open)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [prefs.controls.enableKeyboardShortcuts])
+  }, [prefs.controls.enableKeyboardShortcuts, drawerOpen, showId])
 
   const togglePlay = () => {
     const el = ref.current
@@ -280,29 +409,49 @@ export default function VideoPlayer({
 
   if (!src) {
     return (
-      <div className="flex aspect-video items-center justify-center rounded-lg border border-[var(--border)] bg-black text-[var(--muted)]">
-        No stream available
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black text-[var(--text-secondary)]">
+        <div className="space-y-4 text-center">
+          <p>This title isn&apos;t available to play.</p>
+          <Link to={href} className="text-[var(--accent-color)] hover:underline">
+            Go back
+          </Link>
+        </div>
       </div>
     )
   }
 
-  const sizeClass =
-    prefs.subtitles.textSize === 'sm' ? 'text-sm' : prefs.subtitles.textSize === 'lg' ? 'text-lg' : 'text-base'
+  const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2
+  const metaLine =
+    mediaKind === 'episode' && seasonNumber != null && episodeNumber != null
+      ? `S${String(seasonNumber).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`
+      : null
+
+  const captionTracks: {
+    label: string
+    src: string
+    srclang?: string
+    language?: string
+    default?: boolean
+  }[] = [...subtitleTracks, ...remoteTracks]
 
   return (
-    <div className="space-y-3" data-testid="video-player">
-      <div
-        ref={containerRef}
-        className="group relative overflow-hidden rounded-lg border border-[var(--border)] bg-black"
-        onMouseMove={bumpControls}
-        onMouseLeave={() => setShowControls(true)}
-      >
+    <div
+      ref={containerRef}
+      className="fixed inset-0 z-50 flex flex-col bg-black"
+      data-testid="video-player"
+      onMouseMove={bumpControls}
+      onTouchStart={bumpControls}
+    >
+      <div className="relative min-h-0 flex-1">
         {loading ? (
-          <div className="flex aspect-video items-center justify-center text-sm text-[var(--muted)]">Loading stream…</div>
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-white/70">
+            <Spinner className="h-8 w-8 text-[var(--accent-color)]" />
+            Loading…
+          </div>
         ) : (
           <video
             ref={ref}
-            className="aspect-video w-full"
+            className="h-full w-full object-contain"
             playsInline
             preload="metadata"
             title={title}
@@ -311,27 +460,81 @@ export default function VideoPlayer({
             data-subtitle-size={prefs.subtitles.textSize}
             onClick={togglePlay}
           >
-            {subtitleTracks.map((t) => (
+            {captionTracks.map((t) => (
               <track
                 key={t.src + t.label}
                 kind="subtitles"
                 src={t.src}
-                srcLang={t.srclang || prefs.subtitles.language}
+                srcLang={t.srclang || t.language || prefs.subtitles.language}
                 label={t.label}
-                default={Boolean(t.default)}
+                default={
+                  Boolean(t.default) ||
+                  (prefs.subtitles.enabled &&
+                    (t.srclang || t.language || '').toLowerCase() === prefs.subtitles.language.toLowerCase())
+                }
               />
             ))}
-            {prefs.subtitles.enabled && subtitleTracks.length === 0 ? (
-              <track kind="captions" label={prefs.subtitles.language} />
-            ) : null}
           </video>
         )}
 
+        {!loading && buffering && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30">
+            <Spinner className="h-12 w-12 text-white" />
+          </div>
+        )}
+
+        {!loading && !playing && !buffering && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              togglePlay()
+            }}
+            aria-label="Play"
+            className={`absolute inset-0 z-10 flex items-center justify-center bg-black/20 transition-opacity ${showControls ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          >
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-white/90 text-black shadow-2xl">
+              <Play className="h-9 w-9 fill-current" aria-hidden="true" />
+            </span>
+          </button>
+        )}
+
         <div
-          className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-3 pb-3 pt-10 transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'}`}
+          className={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/85 via-black/35 to-transparent px-4 pb-10 pt-4 transition-opacity duration-300 sm:px-6 ${showControls ? 'opacity-100' : 'opacity-0'}`}
+          data-testid="player-top-bar"
+        >
+          <div className="pointer-events-auto flex items-center gap-3">
+            <Link
+              to={href}
+              aria-label="Back"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition hover:bg-white/10"
+            >
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-base font-semibold text-white sm:text-lg">{title}</h1>
+              {metaLine ? <p className="text-xs text-white/60">{metaLine}</p> : null}
+            </div>
+            {showId && showData ? (
+              <button
+                type="button"
+                aria-label="Episodes"
+                aria-expanded={drawerOpen}
+                className="flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 text-sm text-white transition hover:bg-white/10"
+                onClick={() => setDrawerOpen((open) => !open)}
+              >
+                <ListVideo className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Episodes</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div
+          className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent px-4 pb-5 pt-16 transition-opacity duration-300 sm:px-6 ${showControls ? 'opacity-100' : 'opacity-0'}`}
           data-testid="player-osd-overlay"
         >
-          <div className="pointer-events-auto space-y-2">
+          <div className="pointer-events-auto space-y-3" data-testid="player-osd">
             <input
               type="range"
               min={0}
@@ -339,19 +542,51 @@ export default function VideoPlayer({
               step={0.1}
               value={Math.min(current, duration || 0)}
               onChange={(e) => seek(Number(e.target.value))}
-              className="w-full accent-[var(--accent)]"
+              className="w-full accent-[var(--accent-color)]"
               aria-label="Seek"
               data-testid="player-seek"
             />
-            <div className="flex flex-wrap items-center gap-3 text-xs text-white">
-              <button type="button" className="font-semibold" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
-                {playing ? 'Pause' : 'Play'}
+            <div className="flex flex-wrap items-center gap-2 text-white sm:gap-3">
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white/15"
+                onClick={togglePlay}
+                aria-label={playing ? 'Pause' : 'Play'}
+              >
+                {playing ? (
+                  <Pause className="h-5 w-5 fill-current" aria-hidden="true" />
+                ) : (
+                  <Play className="h-5 w-5 fill-current" aria-hidden="true" />
+                )}
               </button>
-              <span data-testid="player-time">
+
+              {prefs.playback.skipIntroSec > 0 && current < prefs.playback.skipIntroSec && (
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white/15"
+                  aria-label="Skip intro"
+                  onClick={() => {
+                    const el = ref.current
+                    if (el) el.currentTime = prefs.playback.skipIntroSec
+                  }}
+                >
+                  <SkipForward className="h-5 w-5" aria-hidden="true" />
+                </button>
+              )}
+
+              <span className="text-xs font-medium tabular-nums text-white/90" data-testid="player-time">
                 {formatTime(current)} / {formatTime(duration)}
               </span>
-              <label className="flex items-center gap-1">
-                <span className="text-white/70">Vol</span>
+
+              <label className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  aria-label={muted ? 'Unmute' : 'Mute'}
+                  onClick={() => setMuted((m) => !m)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-white/15"
+                >
+                  <VolumeIcon className="h-4 w-4" aria-hidden="true" />
+                </button>
                 <input
                   type="range"
                   min={0}
@@ -362,84 +597,123 @@ export default function VideoPlayer({
                     setMuted(false)
                     setVolume(Number(e.target.value))
                   }}
-                  className="w-20 accent-[var(--accent)]"
+                  className="hidden w-20 accent-[var(--accent-color)] sm:block"
                   aria-label="Volume"
                 />
               </label>
-              <button
-                type="button"
-                className="ml-auto rounded border border-white/30 px-2 py-0.5"
-                onClick={() => void containerRef.current?.requestFullscreen?.()}
+
+              <select
+                className={overlaySelectClass}
+                value={rate}
+                onChange={(e) => setRate(Number(e.target.value))}
+                aria-label="Playback speed"
               >
-                Fullscreen
-              </button>
+                {[0.75, 1, 1.25, 1.5, 2].map((r) => (
+                  <option key={r} value={r}>
+                    {r}×
+                  </option>
+                ))}
+              </select>
+
+              <label className="flex items-center gap-1 text-xs text-white/70">
+                <Captions className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <select
+                  className={overlaySelectClass}
+                  value={textIdx}
+                  onChange={(e) => setTextIdx(Number(e.target.value))}
+                  aria-label="Subtitles"
+                >
+                  <option value={-1}>Off</option>
+                  {textTracks.map((t) => (
+                    <option key={t.id} value={t.index}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {audioTracks.length > 1 ? (
+                <select
+                  className={overlaySelectClass}
+                  value={audioIdx}
+                  onChange={(e) => setAudioIdx(Number(e.target.value))}
+                  aria-label="Audio track"
+                >
+                  {audioTracks.map((t) => (
+                    <option key={t.id} value={t.index}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+
+              <span className="ml-auto flex items-center gap-1">
+                {playMode === 'transcode' ? (
+                  <span className="hidden text-[11px] text-white/50 sm:inline" data-testid="player-mode">
+                    Optimizing quality
+                  </span>
+                ) : (
+                  <span data-testid="player-mode" className="sr-only" />
+                )}
+                {pipSupported && (
+                  <button
+                    type="button"
+                    aria-label="Picture in picture"
+                    className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white/15"
+                    onClick={() => void ref.current?.requestPictureInPicture?.()}
+                  >
+                    <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  className="flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white/15"
+                  onClick={() => {
+                    if (document.fullscreenElement) void document.exitFullscreen()
+                    else void containerRef.current?.requestFullscreen?.()
+                  }}
+                >
+                  {fullscreen ? (
+                    <Minimize className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Maximize className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </span>
             </div>
           </div>
         </div>
-      </div>
 
-      <div
-        className={`flex flex-wrap items-end gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 ${sizeClass}`}
-        data-testid="player-osd"
-      >
-        <label className="space-y-1 text-xs">
-          <span className="text-[var(--muted)]">Audio</span>
-          <select
-            className="block rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm"
-            value={audioIdx}
-            onChange={(e) => setAudioIdx(Number(e.target.value))}
-          >
-            {audioTracks.map((t) => (
-              <option key={t.id} value={t.index}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-1 text-xs">
-          <span className="text-[var(--muted)]">Subtitles</span>
-          <select
-            className="block rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm"
-            value={textIdx}
-            onChange={(e) => setTextIdx(Number(e.target.value))}
-          >
-            <option value={-1}>Off</option>
-            {textTracks.map((t) => (
-              <option key={t.id} value={t.index}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-1 text-xs">
-          <span className="text-[var(--muted)]">Speed</span>
-          <select
-            className="block rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm"
-            value={rate}
-            onChange={(e) => setRate(Number(e.target.value))}
-          >
-            {[0.75, 1, 1.25, 1.5, 2].map((r) => (
-              <option key={r} value={r}>
-                {r}×
-              </option>
-            ))}
-          </select>
-        </label>
-        {prefs.playback.skipIntroSec > 0 && (
-          <button
-            type="button"
-            className="rounded-md border border-[var(--border)] px-3 py-1 text-xs font-semibold"
-            onClick={() => {
-              const el = ref.current
-              if (el) el.currentTime = prefs.playback.skipIntroSec
+        {upNextHref && upNextTitle ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-28 flex justify-center px-4">
+            <div className="pointer-events-auto flex max-w-md items-center gap-3 rounded-xl border border-white/15 bg-black/80 px-4 py-3 shadow-2xl backdrop-blur">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] uppercase tracking-wide text-white/50">Up next</p>
+                <p className="truncate text-sm text-white">{upNextTitle}</p>
+              </div>
+              <button
+                type="button"
+                className="rounded-full bg-[var(--accent-color)] px-4 py-2 text-sm font-medium text-black"
+                onClick={() => navigate(upNextHref)}
+              >
+                Play
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {drawerOpen && showData ? (
+          <PlayerEpisodeDrawer
+            show={showData}
+            currentEpisodeId={mediaId}
+            onClose={() => setDrawerOpen(false)}
+            onPick={(nextHref) => {
+              setDrawerOpen(false)
+              navigate(nextHref)
             }}
-          >
-            Skip intro
-          </button>
-        )}
-        <span className="text-xs text-[var(--muted)]" data-testid="player-mode">
-          {playMode === 'transcode' ? 'Transcode' : 'Direct play'}
-        </span>
+          />
+        ) : null}
       </div>
     </div>
   )

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Music2, Pause, Play } from 'lucide-react'
 import { api } from '../api/client'
-import Spinner from '../components/Spinner'
+import { ShelfSkeleton } from '../components/ui/Skeleton'
 import type { LibraryRow } from '../types'
 
 type FlatTrack = {
@@ -22,7 +23,6 @@ export default function Music() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [playing, setPlaying] = useState<string | null>(null)
-  const [q, setQ] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -68,21 +68,15 @@ export default function Music() {
     }
   }, [])
 
-  const filteredTracks = useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    if (!needle) return tracks
-    return tracks.filter(
-      (t) =>
-        t.title.toLowerCase().includes(needle) ||
-        t.artistName.toLowerCase().includes(needle) ||
-        t.albumTitle.toLowerCase().includes(needle),
-    )
-  }, [tracks, q])
+  const filteredTracks = tracks
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
-        <Spinner />
+      <div className="space-y-6" data-testid="music-page">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Music</h1>
+        </div>
+        <ShelfSkeleton count={4} />
       </div>
     )
   }
@@ -90,9 +84,9 @@ export default function Music() {
   return (
     <div className="space-y-6" data-testid="music-page">
       <div>
-        <h1 className="text-2xl font-bold">Music</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Artists, albums, songs, and playlists (see Playlists). HTTP stream + lyrics on artist pages.
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Music</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Browse artists, albums, and songs. Save favorites to playlists.
         </p>
       </div>
 
@@ -100,41 +94,45 @@ export default function Music() {
         <button
           type="button"
           onClick={() => setTab('artists')}
-          className={`rounded-md px-3 py-1.5 text-sm ${tab === 'artists' ? 'bg-[var(--accent)] font-semibold text-black' : 'border border-[var(--border)]'}`}
+          className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition ${tab === 'artists' ? 'bg-[var(--accent-color)] text-black' : 'border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
         >
           Artists
         </button>
         <button
           type="button"
           onClick={() => setTab('songs')}
-          className={`rounded-md px-3 py-1.5 text-sm ${tab === 'songs' ? 'bg-[var(--accent)] font-semibold text-black' : 'border border-[var(--border)]'}`}
+          className={`rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition ${tab === 'songs' ? 'bg-[var(--accent-color)] text-black' : 'border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
         >
           Songs
         </button>
-        <Link to="/playlists" className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm">
+        <Link
+          to="/playlists"
+          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+        >
           Playlists →
         </Link>
       </div>
 
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
       {!available && (
-        <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-6 text-sm text-[var(--muted)]">
-          {message || 'Music module unavailable.'}
+        <div className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center">
+          <Music2 className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
+          <p className="max-w-sm text-sm text-[var(--text-secondary)]">{message || 'Music isn\u2019t available yet.'}</p>
         </div>
       )}
 
       {available && tab === 'artists' && (
-        <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-          {items.length === 0 && (
-            <li className="px-4 py-6 text-sm text-[var(--muted)]">No artists yet.</li>
-          )}
+        <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+          {items.length === 0 && <li className="px-4 py-6 text-sm text-[var(--text-secondary)]">No artists yet.</li>}
           {items.map((a) => (
-            <li key={a.id} className="flex items-center justify-between px-4 py-3">
+            <li key={a.id} className="flex items-center justify-between px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
               <div>
-                <Link to={`/music/${a.id}`} className="font-medium text-[var(--accent)]">
+                <Link to={`/music/${a.id}`} className="font-medium text-[var(--accent-color)] hover:underline">
                   {a.name || a.title || a.id}
                 </Link>
-                {a.path && <p className="text-xs text-[var(--muted)]">{a.path}</p>}
+                {a.monitored === false ? (
+                  <p className="text-xs text-[var(--text-tertiary)]">Unavailable</p>
+                ) : null}
               </div>
             </li>
           ))}
@@ -143,34 +141,32 @@ export default function Music() {
 
       {available && tab === 'songs' && (
         <div className="space-y-3">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter songs…"
-            className="w-full max-w-md rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
-          />
-          <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+          <p className="text-sm text-[var(--text-secondary)]">
+            Use the header search to find songs across your library.
+          </p>
+          <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             {filteredTracks.length === 0 && (
-              <li className="px-4 py-6 text-sm text-[var(--muted)]">No songs scanned yet.</li>
+              <li className="px-4 py-6 text-sm text-[var(--text-secondary)]">No songs yet.</li>
             )}
             {filteredTracks.slice(0, 200).map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+              <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm transition hover:bg-[var(--bg-elevated-2)]">
                 <div className="min-w-0">
-                  <p className="truncate font-medium">{t.title}</p>
-                  <p className="truncate text-xs text-[var(--muted)]">
+                  <p className="truncate font-medium text-[var(--text-primary)]">{t.title}</p>
+                  <p className="truncate text-xs text-[var(--text-tertiary)]">
                     {t.artistName} · {t.albumTitle}
                   </p>
                 </div>
                 {t.stream_url ? (
                   <button
                     type="button"
-                    className="rounded-md border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                    aria-label={playing === t.id ? `Hide ${t.title}` : `Play ${t.title}`}
                     onClick={() => setPlaying(playing === t.id ? null : t.id)}
                   >
-                    {playing === t.id ? 'Hide' : 'Play'}
+                    {playing === t.id ? <Pause className="h-4 w-4 fill-current" aria-hidden="true" /> : <Play className="h-4 w-4 fill-current" aria-hidden="true" />}
                   </button>
                 ) : (
-                  <span className="text-xs text-[var(--muted)]">No file</span>
+                  <span className="text-xs text-[var(--text-tertiary)]">No file</span>
                 )}
               </li>
             ))}

@@ -115,4 +115,21 @@ describe('api smoke (library + request + auth errors)', () => {
     expect(req.requestId).toBe('r1')
     expect(String(fetchMock.mock.calls[1][0])).toContain('/api/request')
   })
+
+  it('merges capabilities from BFF with safe defaults', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        libraries: { movies: true, tv: true, music: false },
+        features: { search: true, livetv: false },
+      }),
+    })
+    const caps = await api.getCapabilities()
+    expect(caps.libraries.movies).toBe(true)
+    expect(caps.libraries.music).toBe(false)
+    expect(caps.libraries.books).toBe(false)
+    expect(caps.features.search).toBe(true)
+    expect(caps.features.livetv).toBe(false)
+    expect(caps.features.queue).toBe(true)
+  })
 })

@@ -1,5 +1,7 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ListMusic, Plus } from 'lucide-react'
+import { Badge } from '../components/ui/Badge'
 import { listFavorites, listPlaylists, savePlaylists, type FavoriteEntry, type Playlist } from '../lib/userdata'
 
 export default function Playlists() {
@@ -38,9 +40,9 @@ export default function Playlists() {
   return (
     <div className="space-y-6" data-testid="playlists-page">
       <div>
-        <h1 className="text-2xl font-bold">Playlists</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Playlists sync with BFF userdata (local + durable). Seed items from favorites.
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Playlists</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Create playlists from your favorites and keep them synced across your devices.
         </p>
       </div>
 
@@ -48,37 +50,50 @@ export default function Playlists() {
         <input
           name="name"
           placeholder="New playlist name"
-          className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm"
+          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm outline-none focus:border-[var(--accent-color)]"
         />
-        <button type="submit" className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-black">
+        <button
+          type="submit"
+          className="flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
           Create
         </button>
       </form>
 
       {playlists.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">No playlists yet.</p>
+        <div className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] py-14 text-center">
+          <ListMusic className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
+          <p className="text-sm text-[var(--text-secondary)]">No playlists yet.</p>
+        </div>
       ) : (
         <div className="space-y-4">
           {playlists.map((p) => (
-            <section key={p.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 space-y-3">
-              <h2 className="font-semibold">{p.name}</h2>
+            <section
+              key={p.id}
+              className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-[var(--text-primary)]">{p.name}</h2>
+                <Badge tone="neutral">{p.itemIds.length} items</Badge>
+              </div>
               <ul className="space-y-1 text-sm">
                 {p.itemIds.map((id) => {
                   const f = favById.get(id)
                   return (
                     <li key={id}>
                       {f ? (
-                        <Link to={f.href} className="text-[var(--accent)]">
+                        <Link to={f.href} className="text-[var(--accent-color)] hover:underline">
                           {f.title}
                         </Link>
                       ) : (
-                        id
+                        <span className="text-[var(--text-tertiary)]">{id}</span>
                       )}
                     </li>
                   )
                 })}
                 {p.itemIds.length === 0 && (
-                  <li className="text-[var(--muted)]">Empty — add from favorites below.</li>
+                  <li className="text-[var(--text-tertiary)]">Empty — add from favorites below.</li>
                 )}
               </ul>
               {favorites.length > 0 && (
@@ -88,7 +103,7 @@ export default function Playlists() {
                       key={f.id}
                       type="button"
                       onClick={() => addFavorite(p.id, f.id)}
-                      className="rounded-md border border-[var(--border)] px-2 py-1 text-xs"
+                      className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:border-[var(--accent-color)] hover:text-[var(--text-primary)]"
                     >
                       + {f.title}
                     </button>

@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { ArrowLeft, Pause, Play } from 'lucide-react'
 import { api } from '../api/client'
 import Spinner from '../components/Spinner'
 import type { MusicAlbum, MusicArtistDetail } from '../types'
@@ -59,8 +60,8 @@ export default function MusicArtist() {
   if (!detail) {
     return (
       <div className="space-y-3">
-        <p className="text-[var(--muted)]">{error || 'Artist not found'}</p>
-        <Link to="/music" className="text-[var(--accent)]">
+        <p className="text-[var(--text-secondary)]">{error || 'Artist not found'}</p>
+        <Link to="/music" className="text-[var(--accent-color)]">
           Back to music
         </Link>
       </div>
@@ -73,48 +74,52 @@ export default function MusicArtist() {
   return (
     <div className="space-y-8" data-testid="music-artist-page">
       <div>
-        <Link to="/music" className="text-sm text-[var(--accent)]">
-          ← Music
+        <Link to="/music" className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Music
         </Link>
-        <h1 className="mt-2 text-3xl font-bold">{artist.name}</h1>
-        <p className="text-sm text-[var(--muted)]">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--text-primary)]">{artist.name}</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
           {albums.length} album{albums.length === 1 ? '' : 's'}
-          {artist.path ? ` · ${artist.path}` : ''}
         </p>
       </div>
 
       {albums.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">No albums for this artist yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No albums for this artist yet.</p>
       ) : (
         albums.map((al) => (
           <section key={al.id} className="space-y-3">
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               {al.title}
-              {al.year ? <span className="text-sm font-normal text-[var(--muted)]"> · {al.year}</span> : null}
+              {al.year ? <span className="text-sm font-normal text-[var(--text-tertiary)]"> · {al.year}</span> : null}
             </h2>
-            <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
               {(al.tracks || []).map((t, i) => (
-                <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
+                <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm transition hover:bg-[var(--bg-elevated-2)]">
                   <div className="min-w-0">
-                    <span className="mr-2 text-[var(--muted)]">{i + 1}.</span>
-                    <span className="font-medium">{t.title}</span>
-                    {t.path ? <p className="truncate text-xs text-[var(--muted)]">{t.path}</p> : null}
+                    <span className="mr-2 text-[var(--text-tertiary)]">{i + 1}.</span>
+                    <span className="font-medium text-[var(--text-primary)]">{t.title}</span>
                   </div>
                   {t.stream_url || t.path ? (
                     <button
                       type="button"
-                      className="rounded-md border border-[var(--border)] px-3 py-1 text-xs font-semibold"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                      aria-label={playing === t.id ? `Hide ${t.title}` : `Play ${t.title}`}
                       onClick={() => setPlaying(playing === t.id ? null : t.id)}
                     >
-                      {playing === t.id ? 'Hide' : 'Play'}
+                      {playing === t.id ? (
+                        <Pause className="h-4 w-4 fill-current" aria-hidden="true" />
+                      ) : (
+                        <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+                      )}
                     </button>
                   ) : (
-                    <span className="text-xs text-[var(--muted)]">No file</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">Unavailable</span>
                   )}
                 </li>
               ))}
               {(al.tracks || []).length === 0 && (
-                <li className="px-4 py-3 text-sm text-[var(--muted)]">No tracks scanned for this album.</li>
+                <li className="px-4 py-3 text-sm text-[var(--text-secondary)]">No tracks in this album yet.</li>
               )}
             </ul>
             {playing &&
@@ -127,20 +132,20 @@ export default function MusicArtist() {
                     {src ? (
                       <audio className="w-full" controls autoPlay src={src} />
                     ) : (
-                      <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--muted)]">
-                        Track “{track.title}” is on disk at <code className="text-[var(--text)]">{track.path}</code>.
+                      <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+                        This track isn&apos;t available to play yet.
                       </div>
                     )}
-                    <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
                         Lyrics
                       </div>
                       {lyrics?.found && lyrics.text ? (
-                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-sans text-[var(--text)]">
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-sans text-[var(--text-primary)]">
                           {lyrics.text}
                         </pre>
                       ) : (
-                        <p className="text-[var(--muted)]">No .lrc/.txt beside the track file yet.</p>
+                        <p className="text-[var(--text-secondary)]">Lyrics aren&apos;t available for this track yet.</p>
                       )}
                     </div>
                   </div>

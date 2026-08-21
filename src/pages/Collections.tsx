@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight, Layers, X } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
-import Spinner from '../components/Spinner'
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
+import { Badge } from '../components/ui/Badge'
 import type { Movie } from '../types'
 
 type Collection = { id: string; name: string; items: Movie[]; source: 'tmdb' | 'genre' }
@@ -71,47 +73,54 @@ export default function Collections() {
   return (
     <div className="space-y-8" data-testid="collections-page">
       <div>
-        <h1 className="text-2xl font-bold">Collections</h1>
-        <p className="text-sm text-[var(--muted)]">
-          TMDB box sets from media-movies, plus genre groups as a browse aid.
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Collections</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Explore movie franchises, box sets, and genres.
         </p>
       </div>
-      {loading && (
-        <div className="flex justify-center py-10">
-          <Spinner />
-        </div>
-      )}
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {loading && <PosterGridSkeleton count={6} />}
+      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
 
       {detail && (
-        <section className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+        <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">{detail.name}</h2>
-            <button type="button" className="text-sm text-[var(--accent)]" onClick={() => setDetail(null)}>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{detail.name}</h2>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              onClick={() => setDetail(null)}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
               Close
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <PosterGrid>
             {detail.movies.map((item) => (
               <MediaCard key={item.id} item={item} type="movie" />
             ))}
-          </div>
+          </PosterGrid>
         </section>
       )}
 
       {!loading && serverCols.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Box sets</h2>
-          <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Box sets</h2>
+          <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             {serverCols.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
                   onClick={() => openServerCollection(c.id)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-[var(--bg)]"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition hover:bg-[var(--bg-elevated-2)]"
                 >
-                  <span className="font-medium">{c.name}</span>
-                  <span className="text-[var(--muted)]">{c.movie_count} titles</span>
+                  <span className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
+                    <Layers className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+                    {c.name}
+                  </span>
+                  <span className="flex items-center gap-1 text-[var(--text-tertiary)]">
+                    <Badge tone="neutral">{c.movie_count} titles</Badge>
+                    <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                  </span>
                 </button>
               </li>
             ))}
@@ -120,9 +129,9 @@ export default function Collections() {
       )}
 
       {!loading && genreCollections.length === 0 && serverCols.length === 0 && (
-        <p className="text-sm text-[var(--muted)]">
-          No collections yet. Refresh metadata so TMDB collection fields populate, or browse{' '}
-          <Link to="/movies" className="text-[var(--accent)]">
+        <p className="text-sm text-[var(--text-secondary)]">
+          No collections yet. Browse{' '}
+          <Link to="/movies" className="text-[var(--accent-color)]">
             Movies
           </Link>
           .
@@ -131,15 +140,15 @@ export default function Collections() {
 
       {genreCollections.map((c) => (
         <section key={c.id} className="space-y-3">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             {c.name}{' '}
-            <span className="text-sm font-normal text-[var(--muted)]">(genre · {c.items.length})</span>
+            <span className="text-sm font-normal text-[var(--text-tertiary)]">(genre · {c.items.length})</span>
           </h2>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <PosterGrid>
             {c.items.map((item) => (
               <MediaCard key={item.id} item={item} type="movie" />
             ))}
-          </div>
+          </PosterGrid>
         </section>
       ))}
     </div>

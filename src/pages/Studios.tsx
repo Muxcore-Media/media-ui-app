@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Building2, ChevronRight } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
-import Spinner from '../components/Spinner'
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
+import { Badge } from '../components/ui/Badge'
 import type { Movie } from '../types'
 
 /** Studio browse from collection_name / genre buckets (Jellyfin studios parity). */
@@ -57,19 +59,15 @@ export default function Studios() {
   return (
     <div className="space-y-6" data-testid="studios-page">
       <div>
-        <h1 className="text-2xl font-bold">Studios & collections</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Browse by collection or genre studio bucket (Jellyfin studios surface).
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Studios &amp; collections</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Browse by studio, franchise, or genre.
         </p>
       </div>
 
-      {loading && (
-        <div className="flex justify-center py-12">
-          <Spinner />
-        </div>
-      )}
+      {loading && (selected ? <PosterGridSkeleton count={6} /> : <PosterGridSkeleton count={9} />)}
       {error && (
-        <p className="rounded-md border border-red-500/40 bg-[var(--surface)] px-3 py-2 text-sm text-red-300">
+        <p className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--danger-color)]">
           {error}
         </p>
       )}
@@ -81,10 +79,16 @@ export default function Studios() {
               <button
                 type="button"
                 onClick={() => setParams({ studio: name })}
-                className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-left hover:border-[var(--accent)]"
+                className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-left transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
               >
-                <span className="font-medium">{name}</span>
-                <span className="text-xs text-[var(--muted)]">{count}</span>
+                <span className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
+                  <Building2 className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+                  {name}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Badge tone="neutral">{count}</Badge>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+                </span>
               </button>
             </li>
           ))}
@@ -97,23 +101,28 @@ export default function Studios() {
             <button
               type="button"
               onClick={() => setParams({})}
-              className="text-sm text-[var(--accent)] hover:underline"
+              className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
             >
-              ← All studios
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              All studios
             </button>
-            <h2 className="text-lg font-semibold">{selected}</h2>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{selected}</h2>
           </div>
           {filtered.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">No titles in this studio.</p>
+            <p className="text-sm text-[var(--text-secondary)]">No titles in this studio.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            <PosterGrid>
               {filtered.map((m) => (
                 <MediaCard key={m.id} item={m} type="movie" />
               ))}
-            </div>
+            </PosterGrid>
           )}
-          <p className="text-xs text-[var(--muted)]">
-            Also see <Link className="text-[var(--accent)]" to="/collections">Collections</Link>.
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Also see{' '}
+            <Link className="text-[var(--accent-color)]" to="/collections">
+              Collections
+            </Link>
+            .
           </p>
         </section>
       )}

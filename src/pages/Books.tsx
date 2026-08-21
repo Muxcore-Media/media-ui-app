@@ -7,11 +7,10 @@ export default function Books() {
   return (
     <LibrarySection
       title="Books"
-      description="Author library from media-books. Open an author for titles and ebook files."
+      description="Browse authors and their books."
       load={load}
       primaryLabel={(row) => row.name || row.title || row.id}
-      secondaryLabel={(row) => row.path || ''}
-      emptyReadyMessage="No authors in the books library yet. Scan a library root in media-books."
+      emptyReadyMessage="No books in your library yet."
       rowHref={(row) => `/books/${encodeURIComponent(row.id)}`}
     />
   )

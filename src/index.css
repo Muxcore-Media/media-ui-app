@@ -2,16 +2,56 @@
 
 :root {
   color-scheme: dark;
-  --bg: #0b0f14;
-  --surface: #121821;
-  --surface-2: #1a2230;
-  --border: #2a3545;
-  --text: #e8eef7;
-  --muted: #93a0b4;
+  /* Legacy tokens (kept for existing components) */
+  --bg: #0b0c0f;
+  --surface: #15161b;
+  --surface-2: #1c1e26;
+  --border: #23252b;
+  --text: #f5f5f7;
+  --muted: #a1a1aa;
   --accent: #3db8a8;
   --accent-2: #e6a23c;
-  --danger: #e35d6a;
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --danger: #ef4444;
+
+  /* Design-system tokens (AGENTS.md §3) */
+  --bg-base: #0b0c0f;
+  --bg-elevated: #15161b;
+  --bg-elevated-2: #1c1e26;
+  --bg-overlay: rgba(11, 12, 15, 0.85);
+  --border-subtle: #23252b;
+  --text-primary: #f5f5f7;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #6b6b73;
+  --accent-color: #3db8a8;
+  --accent-hover: #56d0c0;
+  --success: #3ddc84;
+  --warning: #f5a623;
+  --danger-color: #ef4444;
+  --focus-ring: color-mix(in srgb, var(--accent-color) 60%, transparent);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  font-family: "Inter", "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f4f6;
+  --surface: #ffffff;
+  --surface-2: #eceef2;
+  --border: #dcdfe6;
+  --text: #14151a;
+  --muted: #5c5f6a;
+  --bg-base: #f4f4f6;
+  --bg-elevated: #ffffff;
+  --bg-elevated-2: #eceef2;
+  --bg-overlay: rgba(244, 244, 246, 0.85);
+  --border-subtle: #dcdfe6;
+  --text-primary: #14151a;
+  --text-secondary: #5c5f6a;
+  --text-tertiary: #8a8d99;
 }
 
 * {
@@ -27,8 +67,8 @@ body,
 body {
   margin: 0;
   background:
-    radial-gradient(1200px 600px at 10% -10%, #16303a 0%, transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, #2a2418 0%, transparent 50%),
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--accent-color) 14%, transparent) 0%, transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, color-mix(in srgb, var(--warning) 10%, transparent) 0%, transparent 50%),
     var(--bg);
   color: var(--text);
 }
@@ -39,6 +79,80 @@ a {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hide scrollbar for horizontally scrollable shelves while keeping them scrollable */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface-2);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--text) 8%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+video[data-subtitle-size="sm"]::cue {
+  font-size: 0.85rem;
+}
+
+video[data-subtitle-size="md"]::cue {
+  font-size: 1rem;
+}
+
+video[data-subtitle-size="lg"]::cue {
+  font-size: 1.25rem;
+}
+
+video[data-subtitle-size="xl"]::cue {
+  font-size: 1.5rem;
+}
+
+video::cue {
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  line-height: 1.35;
 }

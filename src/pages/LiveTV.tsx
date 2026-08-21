@@ -1,5 +1,7 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
+import { CalendarClock, Clapperboard, Radio } from 'lucide-react'
 import { api } from '../api/client'
+import { Badge } from '../components/ui/Badge'
 
 type Channel = {
   id: string
@@ -30,6 +32,12 @@ type Timer = {
 }
 
 type Tab = 'guide' | 'recordings' | 'timers'
+
+const TAB_ICON: Record<Tab, typeof Radio> = {
+  guide: Radio,
+  recordings: Clapperboard,
+  timers: CalendarClock,
+}
 
 export default function LiveTV() {
   const [tab, setTab] = useState<Tab>('guide')
@@ -85,82 +93,87 @@ export default function LiveTV() {
   return (
     <div className="space-y-4" data-testid="livetv-page">
       <div>
-        <h1 className="text-2xl font-bold">Live TV</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Guide, recordings, and timers from durable Live TV JSON (admin + BFF share the same file). Physical tuners /
-          EPG grabbers waived under playback decision B.
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Live TV</h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Watch live channels, browse your recordings, and schedule timers.
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {(['guide', 'recordings', 'timers'] as Tab[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTab(t)}
-            className={`rounded-md px-3 py-1.5 text-sm capitalize ${
-              tab === t ? 'bg-[var(--accent)] font-semibold text-black' : 'border border-[var(--border)]'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
+        {(['guide', 'recordings', 'timers'] as Tab[]).map((t) => {
+          const Icon = TAB_ICON[t]
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`flex items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium capitalize transition ${
+                tab === t
+                  ? 'bg-[var(--accent-color)] text-black'
+                  : 'border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              {t}
+            </button>
+          )
+        })}
       </div>
 
-      {loading && <p className="text-sm text-[var(--muted)]">Loading…</p>}
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {loading && <p className="text-sm text-[var(--text-secondary)]">Loading…</p>}
+      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
 
       {tab === 'guide' && (
         <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-          <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)] max-h-[70vh] overflow-auto">
+          <ul className="max-h-[70vh] divide-y divide-[var(--border-subtle)] overflow-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             {channels.map((ch) => (
               <li key={ch.id}>
                 <button
                   type="button"
                   onClick={() => setActive(ch)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--bg)] ${
-                    active?.id === ch.id ? 'bg-[var(--bg)]' : ''
+                  className={`w-full px-3 py-2 text-left text-sm transition hover:bg-[var(--bg-elevated-2)] ${
+                    active?.id === ch.id ? 'bg-[var(--bg-elevated-2)]' : ''
                   }`}
                 >
-                  <div className="font-medium">
-                    <span className="text-[var(--muted)] mr-2">{ch.number}</span>
+                  <div className="font-medium text-[var(--text-primary)]">
+                    <span className="mr-2 text-[var(--text-tertiary)]">{ch.number}</span>
                     {ch.name}
                   </div>
                   {ch.now_playing && (
-                    <div className="truncate text-xs text-[var(--muted)]">{ch.now_playing.title}</div>
+                    <div className="truncate text-xs text-[var(--text-tertiary)]">{ch.now_playing.title}</div>
                   )}
                 </button>
               </li>
             ))}
             {!loading && channels.length === 0 && (
-              <li className="px-3 py-6 text-sm text-[var(--muted)]">No channels configured.</li>
+              <li className="px-3 py-6 text-sm text-[var(--text-secondary)]">No channels available.</li>
             )}
           </ul>
 
           <div className="space-y-3">
             {active ? (
               <>
-                <div className="rounded-lg border border-[var(--border)] bg-black aspect-video flex items-center justify-center overflow-hidden">
+                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-black">
                   {active.url ? (
                     <video className="h-full w-full" controls autoPlay src={active.url} />
                   ) : (
-                    <div className="px-6 text-center text-sm text-[var(--muted)]">
-                      <p className="text-lg font-semibold text-[var(--text)] mb-2">{active.name}</p>
-                      <p>No stream URL set for this channel. Add one in admin Live TV JSON.</p>
+                    <div className="px-6 text-center text-sm text-[var(--text-secondary)]">
+                      <p className="mb-2 text-lg font-semibold text-[var(--text-primary)]">{active.name}</p>
+                      <p>This channel isn&apos;t available right now. Try another channel.</p>
                     </div>
                   )}
                 </div>
                 {active.now_playing && (
-                  <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
-                    <div className="font-medium">{active.now_playing.title}</div>
-                    <div className="text-xs text-[var(--muted)] mt-1">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm">
+                    <div className="font-medium text-[var(--text-primary)]">{active.now_playing.title}</div>
+                    <div className="mt-1 text-xs text-[var(--text-tertiary)]">
                       {active.now_playing.start} → {active.now_playing.end}
                     </div>
                   </div>
                 )}
               </>
             ) : (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-10 text-sm text-[var(--muted)]">
+              <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-10 text-sm text-[var(--text-secondary)]">
                 Select a channel.
               </div>
             )}
@@ -169,18 +182,20 @@ export default function LiveTV() {
       )}
 
       {tab === 'recordings' && (
-        <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+        <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
           {recordings.length === 0 && (
-            <li className="px-4 py-6 text-sm text-[var(--muted)]">
-              No recordings yet. Add completed entries in admin Live TV JSON (or a recorder module writing the same file).
+            <li className="px-4 py-6 text-sm text-[var(--text-secondary)]">
+              No recordings yet. Scheduled recordings will show up here.
             </li>
           )}
           {recordings.map((r) => (
             <li key={r.id} className="px-4 py-3 text-sm">
-              <div className="font-medium">{r.title}</div>
-              <div className="text-xs text-[var(--muted)]">
-                {r.status} · {r.start} → {r.end}
-                {r.path ? ` · ${r.path}` : ''}
+              <div className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
+                {r.title}
+                <Badge tone={r.status === 'completed' ? 'success' : 'neutral'}>{r.status}</Badge>
+              </div>
+              <div className="text-xs text-[var(--text-tertiary)]">
+                {r.start} → {r.end}
               </div>
             </li>
           ))}
@@ -191,11 +206,15 @@ export default function LiveTV() {
         <div className="space-y-4">
           <form
             onSubmit={onSchedule}
-            className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+            className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
           >
             <label className="space-y-1 text-sm">
-              <span className="text-[var(--muted)]">Channel</span>
-              <select name="channel_id" required className="block rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5">
+              <span className="text-[var(--text-secondary)]">Channel</span>
+              <select
+                name="channel_id"
+                required
+                className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5 text-sm"
+              >
                 {channels.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.number} · {c.name}
@@ -204,29 +223,34 @@ export default function LiveTV() {
               </select>
             </label>
             <label className="space-y-1 text-sm">
-              <span className="text-[var(--muted)]">Title</span>
-              <input name="title" required className="block rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 py-1.5" />
+              <span className="text-[var(--text-secondary)]">Title</span>
+              <input
+                name="title"
+                required
+                className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5 text-sm"
+              />
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
               <input type="checkbox" name="series" value="1" />
               Series timer
             </label>
-            <button type="submit" className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-black">
+            <button
+              type="submit"
+              className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+            >
               Schedule
             </button>
           </form>
-          {timerMsg && <p className="text-sm text-[var(--muted)]">{timerMsg}</p>}
-          <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-            {timers.length === 0 && (
-              <li className="px-4 py-6 text-sm text-[var(--muted)]">No timers scheduled.</li>
-            )}
+          {timerMsg && <p className="text-sm text-[var(--text-secondary)]">{timerMsg}</p>}
+          <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+            {timers.length === 0 && <li className="px-4 py-6 text-sm text-[var(--text-secondary)]">No timers scheduled.</li>}
             {timers.map((t) => (
               <li key={t.id} className="px-4 py-3 text-sm">
-                <div className="font-medium">
-                  {t.title} {t.series ? <span className="text-xs text-[var(--muted)]">(series)</span> : null}
+                <div className="font-medium text-[var(--text-primary)]">
+                  {t.title} {t.series ? <span className="text-xs text-[var(--text-tertiary)]">(series)</span> : null}
                 </div>
-                <div className="text-xs text-[var(--muted)]">
-                  {t.channel_id} · {t.start} → {t.end}
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  {channels.find((c) => c.id === t.channel_id)?.name || 'Scheduled recording'} · {t.start} → {t.end}
                 </div>
               </li>
             ))}

@@ -18,6 +18,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api/search': { target: requestMedia, changeOrigin: true },
+      '/api/discover': { target: requestMedia, changeOrigin: true },
       '/api/request': { target: requestMedia, changeOrigin: true },
       '/api/requests': { target: requestMedia, changeOrigin: true },
       '/api/movies': { target: moviesHttp, changeOrigin: true, rewrite: (p) => p.replace(/^\/api\/movies/, '/api/movies') },

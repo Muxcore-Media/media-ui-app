@@ -7,13 +7,11 @@ export default function Audiobooks() {
   return (
     <LibrarySection
       title="Audiobooks"
-      description="Titles from media-audiobooks via mediauiprox GET /api/audiobooks."
+      description="Listen to audiobooks from your library."
       load={load}
       primaryLabel={(row) => row.title || row.name || row.id}
-      secondaryLabel={(row) =>
-        [row.narrator, row.asin].filter(Boolean).join(' · ') || row.path || ''
-      }
-      emptyReadyMessage="No audiobooks in the library yet. Scan a library root in media-audiobooks."
+      secondaryLabel={(row) => [row.narrator, row.asin].filter(Boolean).join(' · ')}
+      emptyReadyMessage="No audiobooks in your library yet."
     />
   )
 }

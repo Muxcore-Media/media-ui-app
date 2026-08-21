@@ -1,4 +1,5 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import VideoPlayer from '../components/VideoPlayer'
 import type { MediaKind } from '../lib/userdata'
 
@@ -9,24 +10,33 @@ export default function Player() {
   const id = params.get('id') || undefined
   const kind = (params.get('kind') as MediaKind) || 'movie'
   const poster = params.get('poster') || undefined
-  const back = params.get('back') || (kind === 'tv' ? '/tv' : '/movies')
+  const back = params.get('back') || (kind === 'episode' || kind === 'tv' ? '/tv' : '/movies')
+  const showId = params.get('showId') || undefined
+  const season = params.get('season')
+  const episode = params.get('episode')
+
+  useEffect(() => {
+    const prevHtml = document.documentElement.style.overflow
+    const prevBody = document.body.style.overflow
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.documentElement.style.overflow = prevHtml
+      document.body.style.overflow = prevBody
+    }
+  }, [])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="truncate text-xl font-semibold">{title}</h1>
-        <Link to={back} className="text-sm text-[var(--accent)]">
-          Back
-        </Link>
-      </div>
-      <VideoPlayer
-        src={src}
-        title={title}
-        mediaId={id}
-        mediaKind={kind}
-        posterUrl={poster}
-        href={back}
-      />
-    </div>
+    <VideoPlayer
+      src={src}
+      title={title}
+      mediaId={id}
+      mediaKind={kind}
+      posterUrl={poster}
+      href={back}
+      showId={showId}
+      seasonNumber={season ? Number(season) : undefined}
+      episodeNumber={episode ? Number(episode) : undefined}
+    />
   )
 }

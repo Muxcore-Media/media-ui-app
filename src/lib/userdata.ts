@@ -1,5 +1,7 @@
 /** Server-authoritative userdata: BFF/userdata-local is source of truth; localStorage is cache/offline. */
 
+import { buildEpisodePlayerHref } from './playHref'
+
 export type MediaKind = 'movie' | 'tv' | 'episode' | 'music' | 'book' | 'other'
 
 export type ProgressEntry = {
@@ -215,7 +217,7 @@ type ShowLike = {
   seasons?: Array<{ season_number: number; episodes?: EpisodeLike[] }>
 }
 
-function flattenEpisodes(show: ShowLike): EpisodeLike[] {
+export function flattenEpisodes(show: ShowLike): EpisodeLike[] {
   const out: EpisodeLike[] = []
   for (const season of show.seasons || []) {
     for (const ep of season.episodes || []) {
@@ -229,7 +231,7 @@ function flattenEpisodes(show: ShowLike): EpisodeLike[] {
   )
 }
 
-function nextEpisodeAfter(show: ShowLike, episodeId: string): EpisodeLike | null {
+export function nextEpisodeAfter(show: ShowLike, episodeId: string): EpisodeLike | null {
   const eps = flattenEpisodes(show)
   const idx = eps.findIndex((e) => e.id === episodeId)
   if (idx < 0) return null
@@ -240,11 +242,17 @@ function nextEpisodeAfter(show: ShowLike, episodeId: string): EpisodeLike | null
 }
 
 function episodePlayHref(show: ShowLike, ep: EpisodeLike): string {
-  const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
-  if (ep.has_file && ep.stream_url) {
-    return `/player?src=${encodeURIComponent(ep.stream_url)}&title=${encodeURIComponent(epTitle)}&id=${encodeURIComponent(ep.id)}&kind=episode&poster=${encodeURIComponent(show.poster_url || '')}&back=${encodeURIComponent(`/tv/${show.id}`)}`
-  }
-  return `/tv/${show.id}`
+  if (!ep.has_file || !ep.stream_url) return `/tv/${show.id}`
+  return (
+    buildEpisodePlayerHref(show, {
+      id: ep.id,
+      season_number: ep.season_number,
+      episode_number: ep.episode_number,
+      title: ep.title,
+      has_file: ep.has_file,
+      stream_url: ep.stream_url,
+    }) || `/tv/${show.id}`
+  )
 }
 
 /**

@@ -79,6 +79,28 @@ export interface SearchResult {
   mediaType: 'movie' | 'tv'
 }
 
+export interface DiscoverTrailer {
+  name: string
+  youtubeKey: string
+  url: string
+}
+
+export interface DiscoverDetail {
+  id: number
+  title: string
+  year: number
+  overview: string
+  tagline?: string
+  genres: string[]
+  poster: string
+  backdrop: string
+  voteAvg: number
+  runtime?: number
+  status?: string
+  mediaType: 'movie' | 'tv'
+  trailer?: DiscoverTrailer
+}
+
 export interface MediaRequest {
   id: string
   itemType: string

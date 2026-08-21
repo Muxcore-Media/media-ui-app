@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import CapabilitiesProvider from './components/CapabilitiesProvider'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import Movies from './pages/Movies'
@@ -13,9 +14,11 @@ import Comics from './pages/Comics'
 import Audiobooks from './pages/Audiobooks'
 import Player from './pages/Player'
 import Search from './pages/Search'
+import DiscoverDetail from './pages/DiscoverDetail'
 import Favorites from './pages/Favorites'
 import Settings from './pages/Settings'
 import Queue from './pages/Queue'
+import InProgress from './pages/InProgress'
 import Collections from './pages/Collections'
 import Upcoming from './pages/Upcoming'
 import Playlists from './pages/Playlists'
@@ -28,6 +31,77 @@ import MusicVideos from './pages/MusicVideos'
 import ForgotPassword from './pages/ForgotPassword'
 import Studios from './pages/Studios'
 import { applyTheme, getPreferences, pullUserdataFromServer } from './lib/userdata'
+import { featureEnabled, libraryEnabled, useCapabilities } from './lib/capabilities'
+
+function AppRoutes() {
+  const { caps, loading } = useCapabilities()
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-secondary)]">
+        Loading your library…
+      </div>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route path="player" element={<Player />} />
+      <Route element={<Layout />}>
+        <Route index element={<Home />} />
+        <Route path="search" element={<Search />} />
+        <Route path="discover/:type/:id" element={<DiscoverDetail />} />
+        <Route path="favorites" element={<Favorites />} />
+        {featureEnabled(caps, 'queue') && <Route path="queue" element={<Queue />} />}
+        {featureEnabled(caps, 'request') && <Route path="requests" element={<InProgress />} />}
+        {featureEnabled(caps, 'collections') && <Route path="collections" element={<Collections />} />}
+        {featureEnabled(caps, 'upcoming') && <Route path="upcoming" element={<Upcoming />} />}
+        {featureEnabled(caps, 'playlists') && <Route path="playlists" element={<Playlists />} />}
+        {featureEnabled(caps, 'livetv') && <Route path="livetv" element={<LiveTV />} />}
+        {featureEnabled(caps, 'quickconnect') && <Route path="quickconnect" element={<QuickConnect />} />}
+        <Route path="settings" element={<Settings />} />
+        <Route path="settings/profile" element={<Settings />} />
+        <Route path="settings/display" element={<Settings />} />
+        <Route path="settings/home" element={<Settings />} />
+        <Route path="settings/playback" element={<Settings />} />
+        <Route path="settings/subtitles" element={<Settings />} />
+        <Route path="settings/controls" element={<Settings />} />
+        {featureEnabled(caps, 'studios') && <Route path="studios" element={<Studios />} />}
+        {libraryEnabled(caps, 'movies') && (
+          <>
+            <Route path="movies" element={<Movies />} />
+            <Route path="movies/:id" element={<MovieDetail />} />
+          </>
+        )}
+        {libraryEnabled(caps, 'tv') && (
+          <>
+            <Route path="tv" element={<TVShows />} />
+            <Route path="tv/:id" element={<TVShowDetail />} />
+          </>
+        )}
+        {libraryEnabled(caps, 'music') && (
+          <>
+            <Route path="music" element={<Music />} />
+            <Route path="music/:id" element={<MusicArtist />} />
+          </>
+        )}
+        {libraryEnabled(caps, 'homevideos') && <Route path="homevideos" element={<HomeVideos />} />}
+        {featureEnabled(caps, 'mixed') && <Route path="mixed" element={<Mixed />} />}
+        {libraryEnabled(caps, 'musicvideos') && <Route path="musicvideos" element={<MusicVideos />} />}
+        {libraryEnabled(caps, 'books') && (
+          <>
+            <Route path="books" element={<Books />} />
+            <Route path="books/:id" element={<BookAuthor />} />
+          </>
+        )}
+        {libraryEnabled(caps, 'comics') && <Route path="comics" element={<Comics />} />}
+        {libraryEnabled(caps, 'audiobooks') && <Route path="audiobooks" element={<Audiobooks />} />}
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  )
+}
 
 export default function App() {
   useEffect(() => {
@@ -38,44 +112,10 @@ export default function App() {
   }, [])
 
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="search" element={<Search />} />
-          <Route path="favorites" element={<Favorites />} />
-          <Route path="queue" element={<Queue />} />
-          <Route path="collections" element={<Collections />} />
-          <Route path="upcoming" element={<Upcoming />} />
-          <Route path="playlists" element={<Playlists />} />
-          <Route path="livetv" element={<LiveTV />} />
-          <Route path="quickconnect" element={<QuickConnect />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="settings/profile" element={<Settings />} />
-          <Route path="settings/display" element={<Settings />} />
-          <Route path="settings/home" element={<Settings />} />
-          <Route path="settings/playback" element={<Settings />} />
-          <Route path="settings/subtitles" element={<Settings />} />
-          <Route path="settings/controls" element={<Settings />} />
-          <Route path="studios" element={<Studios />} />
-          <Route path="movies" element={<Movies />} />
-          <Route path="movies/:id" element={<MovieDetail />} />
-          <Route path="tv" element={<TVShows />} />
-          <Route path="tv/:id" element={<TVShowDetail />} />
-          <Route path="music" element={<Music />} />
-          <Route path="music/:id" element={<MusicArtist />} />
-          <Route path="homevideos" element={<HomeVideos />} />
-          <Route path="mixed" element={<Mixed />} />
-          <Route path="musicvideos" element={<MusicVideos />} />
-          <Route path="books" element={<Books />} />
-          <Route path="books/:id" element={<BookAuthor />} />
-          <Route path="comics" element={<Comics />} />
-          <Route path="audiobooks" element={<Audiobooks />} />
-          <Route path="player" element={<Player />} />
-          <Route path="forgot-password" element={<ForgotPassword />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <CapabilitiesProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppRoutes />
+      </BrowserRouter>
+    </CapabilitiesProvider>
   )
 }

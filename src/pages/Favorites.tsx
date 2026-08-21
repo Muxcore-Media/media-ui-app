@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
+import { Heart } from 'lucide-react'
 import MediaCard from '../components/MediaCard'
+import { PosterGrid } from '../components/media/PosterGrid'
 import { listFavorites, type FavoriteEntry } from '../lib/userdata'
 import { useMemo, useState } from 'react'
 import type { Movie, TVShow } from '../types'
@@ -31,14 +33,14 @@ export default function Favorites() {
     <div className="space-y-6" data-testid="favorites-page">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Favorites</h1>
-          <p className="text-sm text-[var(--muted)]">
-            Titles you marked as favorites. Synced via server userdata when the BFF is online.
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Favorites</h1>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Movies and shows you&apos;ve saved to watch later.
           </p>
         </div>
         <button
           type="button"
-          className="text-xs text-[var(--muted)] hover:text-[var(--text)]"
+          className="text-xs font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           onClick={() => setTick((n) => n + 1)}
         >
           Refresh
@@ -46,22 +48,21 @@ export default function Favorites() {
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          No favorites yet. Use the heart on a movie or TV detail page.{' '}
-          <Link to="/movies" className="text-[var(--accent)]">
+        <div className="flex flex-col items-center gap-3 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] py-16 text-center">
+          <Heart className="h-8 w-8 text-[var(--text-tertiary)]" aria-hidden="true" />
+          <p className="text-sm text-[var(--text-secondary)]">
+            No favorites yet. Use the star on a movie or TV detail page.
+          </p>
+          <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
             Browse movies
           </Link>
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {items.map((f) => (
-            <MediaCard
-              key={f.id}
-              item={asCardItem(f)}
-              type={f.kind === 'tv' ? 'tv' : 'movie'}
-            />
-          ))}
         </div>
+      ) : (
+        <PosterGrid>
+          {items.map((f) => (
+            <MediaCard key={f.id} item={asCardItem(f)} type={f.kind === 'tv' ? 'tv' : 'movie'} />
+          ))}
+        </PosterGrid>
       )}
     </div>
   )

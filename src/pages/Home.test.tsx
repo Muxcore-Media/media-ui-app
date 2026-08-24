@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Home from './Home'
+import * as userdata from '../lib/userdata'
 
 const listMovies = vi.fn()
 const listTVShows = vi.fn()
@@ -128,5 +129,69 @@ describe('Home page', () => {
 
     await screen.findByTestId('home-page')
     expect(screen.queryByTestId('home-recently-added')).not.toBeInTheDocument()
+  })
+})
+
+describe('Home accessibility', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    listMovies.mockReset()
+    listTVShows.mockReset()
+    listRequests.mockReset()
+    listRequests.mockResolvedValue([])
+    listMovies.mockResolvedValue({ items: [], total: 0 })
+    listTVShows.mockResolvedValue({ items: [], total: 0 })
+  })
+
+  it('uses the featured title as the page h1 when a hero is shown', async () => {
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'movie-hero',
+          title: 'Hero Feature',
+          year: 2024,
+          overview: 'A featured film',
+          runtime: 120,
+          vote_average: 9,
+          genres: ['Drama'],
+          poster_url: '/poster.jpg',
+          backdrop_url: '/backdrop.jpg',
+          has_file: true,
+          stream_url: '/stream/movies/movie-hero',
+          created_at: '2026-08-21T00:00:00.000Z',
+        },
+      ],
+      total: 1,
+    })
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hero Feature' })).toBeInTheDocument()
+  })
+
+  it('exposes a page h1 when the feed is empty', async () => {
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
+  })
+
+  it('announces loading on initial render', () => {
+    vi.mocked(userdata.pullUserdataFromServer).mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status', { name: 'Loading home' })).toBeInTheDocument()
   })
 })

@@ -17,7 +17,7 @@ export function EmptyState({ icon: Icon, title, message, action, testId = 'page-
       className="flex flex-col items-center gap-3 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center"
     >
       <Icon className="h-8 w-8 text-[var(--text-tertiary)]" aria-hidden="true" />
-      {title ? <p className="font-semibold text-[var(--text-primary)]">{title}</p> : null}
+      {title ? <h2 className="font-semibold text-[var(--text-primary)]">{title}</h2> : null}
       <p className="max-w-sm text-sm text-[var(--text-secondary)]">{message}</p>
       {action}
     </div>

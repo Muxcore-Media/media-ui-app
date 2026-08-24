@@ -41,4 +41,14 @@ describe('Settings page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(getPreferences().home.showRecentlyAdded).toBe(false)
   })
+
+  it('marks the active settings section with aria-current', () => {
+    renderSettings('/settings/display')
+    expect(screen.getByRole('link', { name: 'Display' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('labels each settings pane with a section heading', () => {
+    renderSettings('/settings/playback')
+    expect(screen.getByRole('heading', { level: 2, name: 'Playback' })).toBeInTheDocument()
+  })
 })

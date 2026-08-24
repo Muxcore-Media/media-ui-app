@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -19,6 +19,7 @@ export function Shelf({
   children: ReactNode
   testId?: string
 }) {
+  const headingId = useId()
   const trackRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
@@ -37,11 +38,17 @@ export function Shelf({
   }
 
   return (
-    <section className="group/shelf space-y-3" data-testid={testId}>
+    <section className="group/shelf space-y-3" data-testid={testId} aria-labelledby={headingId}>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h2>
+        <h2 id={headingId} className="text-xl font-semibold text-[var(--text-primary)]">
+          {title}
+        </h2>
         {seeAllHref && (
-          <Link to={seeAllHref} className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+          <Link
+            to={seeAllHref}
+            className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            aria-label={`See all ${title}`}
+          >
             See all
           </Link>
         )}

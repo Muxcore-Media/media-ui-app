@@ -81,3 +81,26 @@ describe('TVShows library list', () => {
     expect(screen.queryByRole('link', { name: /Fixture Series/i })).not.toBeInTheDocument()
   })
 })
+
+describe('TVShows accessibility', () => {
+  beforeEach(() => {
+    listTVShows.mockReset()
+  })
+
+  it('has a page h1 and labeled filter controls', async () => {
+    listTVShows.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+    } satisfies ListResponse<TVShow>)
+
+    renderTV()
+
+    expect(screen.getByRole('heading', { level: 1, name: 'TV Shows' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Filter and sort TV shows' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Genre')).toBeInTheDocument()
+    expect(screen.getByLabelText('Sort')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading TV shows' })).toBeInTheDocument()
+  })
+})

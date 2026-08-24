@@ -9,6 +9,7 @@ import { ProgressCard } from '../components/media/ProgressCard'
 import { ShelfSkeleton, HeroBannerSkeleton } from '../components/ui/Skeleton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import {
   continueWatching,
   getPreferences,
@@ -150,6 +151,7 @@ export default function Home() {
 
   return (
     <div className="-mt-6 space-y-10 sm:-mt-0" data-testid="home-page">
+      {loading && <LoadingStatus label="Loading home" />}
       {loading && <HeroBannerSkeleton />}
       {!loading && hero && <HeroBanner item={hero} />}
 
@@ -188,11 +190,15 @@ export default function Home() {
       {error ? <ErrorBanner message={error} /> : null}
 
       {isFullyEmpty && (
-        <EmptyState
-          icon={HomeIcon}
-          title="Your home feed is empty"
-          message="Search for titles, browse movies and TV, or add favorites to populate this page."
-          action={
+        <section className="space-y-6" aria-labelledby="home-empty-heading">
+          <h1 id="home-empty-heading" className="text-3xl font-bold tracking-tight">
+            Home
+          </h1>
+          <EmptyState
+            icon={HomeIcon}
+            title="Your home feed is empty"
+            message="Search for titles, browse movies and TV, or add favorites to populate this page."
+            action={
             <div className="flex flex-wrap justify-center gap-3">
               <Link
                 to="/search"
@@ -214,7 +220,8 @@ export default function Home() {
               </Link>
             </div>
           }
-        />
+          />
+        </section>
       )}
 
       {prefs.home.showContinueWatching && progress.length > 0 && (

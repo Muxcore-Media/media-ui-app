@@ -67,3 +67,37 @@ describe('Upcoming page', () => {
     expect(screen.getByText(/Pilot/)).toBeInTheDocument()
   })
 })
+
+describe('Upcoming accessibility', () => {
+  beforeEach(() => {
+    listTVShows.mockReset()
+    getTVShow.mockReset()
+    listTVShows.mockResolvedValue({ items: [], total: 0 })
+    getTVShow.mockResolvedValue({ id: 's1', title: 'Orbital', seasons: [] })
+  })
+
+  it('has a page h1 and announces loading on initial render', () => {
+    listTVShows.mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter>
+        <Upcoming />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Upcoming' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading upcoming episodes' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Month navigation' })).toBeInTheDocument()
+  })
+
+  it('shows empty state with title when no episodes air in the month', async () => {
+    render(
+      <MemoryRouter>
+        <Upcoming />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('No upcoming episodes')).toBeInTheDocument()
+    expect(screen.getByTestId('upcoming-empty')).toBeInTheDocument()
+  })
+})

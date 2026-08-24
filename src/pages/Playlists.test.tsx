@@ -38,3 +38,23 @@ describe('Playlists page', () => {
     expect(screen.getByRole('button', { name: /Playlist Pick/i })).toBeInTheDocument()
   })
 })
+
+describe('Playlists accessibility', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('has a page h1, labeled sections, and empty state', () => {
+    render(
+      <MemoryRouter>
+        <Playlists />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Playlists' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Create playlist' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Your playlists (0)' })).toBeInTheDocument()
+    expect(screen.getByTestId('playlists-empty')).toBeInTheDocument()
+    expect(screen.getByLabelText('New playlist name')).toBeInTheDocument()
+  })
+})

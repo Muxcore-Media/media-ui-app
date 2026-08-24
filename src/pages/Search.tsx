@@ -8,6 +8,7 @@ import { PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Badge } from '../components/ui/Badge'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import { useCapabilities } from '../lib/capabilities'
 import {
   groupLibraryHits,
@@ -111,13 +112,13 @@ export default function Search() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Search filters">
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Search filters">
         {scopeOptions.map((opt) => (
           <button
             key={opt.id}
             type="button"
-            role="tab"
-            aria-selected={scope === opt.id}
+            role="radio"
+            aria-checked={scope === opt.id}
             onClick={() => setScope(opt.id)}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
               scope === opt.id
@@ -137,6 +138,7 @@ export default function Search() {
       )}
 
       {error ? <ErrorBanner message={error} /> : null}
+      {loading && <LoadingStatus label="Searching" />}
       {loading && <PosterGridSkeleton count={6} />}
 
       {!loading && grouped.movies.length > 0 && (

@@ -146,3 +146,33 @@ describe('Search page', () => {
     })
   })
 })
+
+describe('Search accessibility', () => {
+  beforeEach(() => {
+    listMovies.mockReset()
+    listTVShows.mockReset()
+    search.mockReset()
+    listMovies.mockResolvedValue({ items: [] })
+    listTVShows.mockResolvedValue({ items: [] })
+  })
+
+  it('has a page h1 and filter radiogroup', () => {
+    renderSearch('/search')
+    expect(screen.getByRole('heading', { level: 1, name: 'Search' })).toBeInTheDocument()
+    expect(screen.getByRole('radiogroup', { name: 'Search filters' })).toBeInTheDocument()
+  })
+
+  it('marks the active search scope with aria-checked', async () => {
+    search.mockResolvedValueOnce([])
+    renderSearch('/search?q=Fight&scope=movies')
+    const movies = await screen.findByRole('radio', { name: 'Movies' })
+    expect(movies).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('announces loading while search is in flight', () => {
+    search.mockImplementation(() => new Promise(() => {}))
+    renderSearch('/search?q=Fight')
+    expect(screen.getByRole('status', { name: 'Searching' })).toBeInTheDocument()
+  })
+})

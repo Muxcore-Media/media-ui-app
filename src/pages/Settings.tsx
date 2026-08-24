@@ -90,7 +90,10 @@ function DisplayPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className={paneClass}>
+    <form onSubmit={onSubmit} className={paneClass} aria-labelledby="settings-display-heading">
+      <h2 id="settings-display-heading" className="font-semibold text-[var(--text-primary)]">
+        Display
+      </h2>
       <label htmlFor="settings-theme" className="block space-y-1 text-sm">
         <span className="text-[var(--text-secondary)]">Theme</span>
         <select id="settings-theme" name="theme" defaultValue={prefs.display.theme} className={inputClass}>
@@ -138,7 +141,10 @@ function HomePane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className={paneClass}>
+    <form onSubmit={onSubmit} className={paneClass} aria-labelledby="settings-home-heading">
+      <h2 id="settings-home-heading" className="font-semibold text-[var(--text-primary)]">
+        Home feed
+      </h2>
       {(
         [
           ['showContinueWatching', 'Continue watching', prefs.home.showContinueWatching],
@@ -174,7 +180,10 @@ function PlaybackPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className={paneClass}>
+    <form onSubmit={onSubmit} className={paneClass} aria-labelledby="settings-playback-heading">
+      <h2 id="settings-playback-heading" className="font-semibold text-[var(--text-primary)]">
+        Playback
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="autoplayNext" type="checkbox" defaultChecked={prefs.playback.autoplayNext} />
         Autoplay next episode
@@ -209,7 +218,10 @@ function SubtitlesPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className={paneClass}>
+    <form onSubmit={onSubmit} className={paneClass} aria-labelledby="settings-subtitles-heading">
+      <h2 id="settings-subtitles-heading" className="font-semibold text-[var(--text-primary)]">
+        Subtitles
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="enabled" type="checkbox" defaultChecked={prefs.subtitles.enabled} />
         Prefer subtitles when available
@@ -245,7 +257,10 @@ function ControlsPane() {
     })
   }
   return (
-    <form onSubmit={onSubmit} className={paneClass}>
+    <form onSubmit={onSubmit} className={paneClass} aria-labelledby="settings-controls-heading">
+      <h2 id="settings-controls-heading" className="font-semibold text-[var(--text-primary)]">
+        Controls
+      </h2>
       <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <input name="enableKeyboardShortcuts" type="checkbox" defaultChecked={prefs.controls.enableKeyboardShortcuts} />
         Keyboard shortcuts in the player (Space, ←/→, F)
@@ -314,12 +329,18 @@ function DebridPane() {
         Paste a magnet link or hoster URL to queue on your configured debrid provider.
       </p>
       {message && (
-        <p className="rounded-[var(--radius-sm)] border border-[var(--success)]/40 px-3 py-2 text-sm text-[var(--success)]">
+        <p
+          role="status"
+          className="rounded-[var(--radius-sm)] border border-[var(--success)]/40 px-3 py-2 text-sm text-[var(--success)]"
+        >
           {message}
         </p>
       )}
       {error && (
-        <p className="rounded-[var(--radius-sm)] border border-[var(--danger-color)]/40 px-3 py-2 text-sm text-[var(--danger-color)]">
+        <p
+          role="alert"
+          className="rounded-[var(--radius-sm)] border border-[var(--danger-color)]/40 px-3 py-2 text-sm text-[var(--danger-color)]"
+        >
           {error}
         </p>
       )}

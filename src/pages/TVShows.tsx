@@ -7,6 +7,7 @@ import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Shelf, ShelfItem } from '../components/media/Shelf'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import { isWatchable } from '../lib/acquisition'
 import { getPreferences } from '../lib/userdata'
 import type { TVShow } from '../types'
@@ -76,7 +77,7 @@ export default function TVShows() {
   )
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="tv-page">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">TV Shows</h1>
         <p className="text-sm text-[var(--text-secondary)]">Browse series you can watch now.</p>
@@ -103,11 +104,16 @@ export default function TVShows() {
         </Shelf>
       )}
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
-          <label className="space-y-1 text-sm">
+      <section className="space-y-4" aria-labelledby="tv-library-heading">
+        <div
+          className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3"
+          role="group"
+          aria-label="Filter and sort TV shows"
+        >
+          <label htmlFor="tv-genre" className="space-y-1 text-sm">
             <span className="text-[var(--text-tertiary)]">Genre</span>
             <select
+              id="tv-genre"
               value={genre}
               onChange={(e) => setGenre(e.target.value)}
               className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm"
@@ -120,9 +126,10 @@ export default function TVShows() {
               ))}
             </select>
           </label>
-          <label className="space-y-1 text-sm">
+          <label htmlFor="tv-sort" className="space-y-1 text-sm">
             <span className="text-[var(--text-tertiary)]">Sort</span>
             <select
+              id="tv-sort"
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm"
@@ -134,9 +141,14 @@ export default function TVShows() {
           </label>
         </div>
 
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Library ({filtered.length})</h2>
+        <h2 id="tv-library-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+          Library ({filtered.length})
+        </h2>
         {loading ? (
-          <PosterGridSkeleton />
+          <>
+            <LoadingStatus label="Loading TV shows" />
+            <PosterGridSkeleton />
+          </>
         ) : error ? null : filtered.length === 0 ? (
           <EmptyState
             icon={Tv}

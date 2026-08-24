@@ -94,3 +94,26 @@ describe('Movies library list', () => {
     })
   })
 })
+
+describe('Movies accessibility', () => {
+  beforeEach(() => {
+    listMovies.mockReset()
+  })
+
+  it('has a page h1 and labeled filter controls', async () => {
+    listMovies.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+    } satisfies ListResponse<Movie>)
+
+    renderMovies()
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Movies' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Filter and sort movies' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Genre')).toBeInTheDocument()
+    expect(screen.getByLabelText('Sort')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading movies' })).toBeInTheDocument()
+  })
+})

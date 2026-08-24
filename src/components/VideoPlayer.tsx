@@ -32,6 +32,7 @@ import StatsOverlay from './player/StatsOverlay'
 import ShortcutsHelp from './player/ShortcutsHelp'
 import ErrorScreen from './player/ErrorScreen'
 import PlayerEpisodeDrawer from './player/PlayerEpisodeDrawer'
+import { LoadingStatus } from './ui/LoadingStatus'
 import {
   audioTracksFromAnalysis,
   mergeAudioTracks,
@@ -386,6 +387,8 @@ export default function VideoPlayer({
   return (
     <div
       ref={containerRef}
+      role="main"
+      aria-label={`${title || 'Video'} player`}
       className={`fixed inset-0 z-50 flex flex-col bg-[var(--player-bg)] ${chrome.theaterMode ? 'theater-mode' : ''}`}
       data-testid="video-player"
       onMouseMove={chrome.bumpControls}
@@ -396,6 +399,7 @@ export default function VideoPlayer({
       onTouchMove={gestures.onTouchMove}
       onTouchEnd={gestures.onTouchEnd}
     >
+      {source.loading ? <LoadingStatus label="Loading playback" /> : null}
       <div className="relative min-h-0 flex-1">
         {!source.loading && (
           <video

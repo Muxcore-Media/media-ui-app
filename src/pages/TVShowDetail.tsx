@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button'
 import { IconButton } from '../components/ui/IconButton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata'
 import { buildEpisodePlayerHref } from '../lib/playHref'
 import { FixedWindowList } from '../components/ui/FixedWindowList'
@@ -65,14 +66,20 @@ export default function TVShowDetail() {
   }, [id])
 
   if (loading) {
-    return <DetailHeroSkeleton />
+    return (
+      <>
+        <LoadingStatus label="Loading TV show" />
+        <DetailHeroSkeleton />
+      </>
+    )
   }
 
   if (!show) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" data-testid="tv-detail-page">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">TV show not found</h1>
         <ErrorBanner message={error || 'TV show not found.'} />
-        <Link to="/tv" className="text-[var(--accent-color)]">
+        <Link to="/tv" className="text-[var(--accent-color)] hover:underline">
           Back to TV
         </Link>
       </div>
@@ -136,12 +143,17 @@ export default function TVShowDetail() {
       />
 
       {show.seasons && show.seasons.length > 0 ? (
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">Episodes</h2>
-          {show.seasons.map((season) => (
-            <div key={season.id} className="space-y-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
-                {season.name || `Season ${season.season_number}`}
+        <section className="space-y-6" aria-labelledby="tv-episodes-heading">
+          <h2 id="tv-episodes-heading" className="text-xl font-semibold text-[var(--text-primary)]">
+            Episodes
+          </h2>
+          {show.seasons.map((season) => {
+            const seasonLabel = season.name || `Season ${season.season_number}`
+            const seasonHeadingId = `tv-season-${season.id}`
+            return (
+            <div key={season.id} className="space-y-2" aria-labelledby={seasonHeadingId}>
+              <h3 id={seasonHeadingId} className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                {seasonLabel}
               </h3>
               <FixedWindowList
                 items={season.episodes}
@@ -151,8 +163,9 @@ export default function TVShowDetail() {
                 renderRow={(ep) => <EpisodeRow show={show} ep={ep} />}
               />
             </div>
-          ))}
-        </div>
+            )
+          })}
+        </section>
       ) : (
         <EmptyState
           icon={Tv}
@@ -183,6 +196,7 @@ function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
         <div className="flex items-center gap-2">
           <Link
             to={playTo}
+            aria-label={`Play ${ep.title ? `${ep.title}, ` : ''}${epTitle}`}
             className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-hover)]"
           >
             <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />

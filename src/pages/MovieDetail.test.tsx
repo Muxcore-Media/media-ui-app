@@ -61,3 +61,73 @@ describe('MovieDetail page', () => {
     })
   })
 })
+
+describe('MovieDetail accessibility', () => {
+  beforeEach(() => {
+    getMovie.mockReset()
+    jellyfinPlayURL.mockReset()
+    fetchPlaybackAnalysis.mockReset()
+    jellyfinPlayURL.mockResolvedValue(null)
+    fetchPlaybackAnalysis.mockResolvedValue({
+      src: '/stream/movies/m-550',
+      enabled: true,
+      info_line: '1080p Remux',
+    })
+  })
+
+  it('uses the movie title as the page h1', async () => {
+    getMovie.mockResolvedValue({
+      id: 'm-550',
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'An insomniac office worker...',
+      runtime: 139,
+      vote_average: 8.4,
+      genres: ['Drama'],
+      poster_url: '',
+      has_file: true,
+      stream_url: '/stream/movies/m-550',
+      created_at: '',
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Fight Club' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Play Fight Club' })).toBeInTheDocument()
+  })
+
+  it('announces loading on initial render', () => {
+    getMovie.mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status', { name: 'Loading movie' })).toBeInTheDocument()
+  })
+
+  it('exposes an error heading and alert when the movie is missing', async () => {
+    getMovie.mockRejectedValueOnce(new Error('Not found'))
+
+    render(
+      <MemoryRouter initialEntries={['/movies/missing']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Movie not found' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Not found')
+  })
+})

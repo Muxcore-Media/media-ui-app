@@ -103,3 +103,61 @@ describe('TVShowDetail page', () => {
     expect(screen.getByText('No episodes yet')).toBeInTheDocument()
   })
 })
+
+describe('TVShowDetail accessibility', () => {
+  beforeEach(() => {
+    getTVShow.mockReset()
+    jellyfinPlayURL.mockReset()
+    fetchPlaybackAnalysis.mockReset()
+    jellyfinPlayURL.mockResolvedValue(null)
+    fetchPlaybackAnalysis.mockResolvedValue({
+      src: '/stream/tv/bb/1/1',
+      enabled: true,
+      info_line: '1080p · H264',
+    })
+    getTVShow.mockResolvedValue(showWithEpisodes)
+  })
+
+  it('uses the show title as the page h1 and labels episode sections', async () => {
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Breaking Bad' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Episodes' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Play Pilot/i })).toBeInTheDocument()
+  })
+
+  it('announces loading on initial render', () => {
+    getTVShow.mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status', { name: 'Loading TV show' })).toBeInTheDocument()
+  })
+
+  it('exposes an error heading when the show is missing', async () => {
+    getTVShow.mockRejectedValueOnce(new Error('Not found'))
+
+    render(
+      <MemoryRouter initialEntries={['/tv/missing']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'TV show not found' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Not found')
+  })
+})

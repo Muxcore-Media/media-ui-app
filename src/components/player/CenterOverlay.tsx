@@ -14,15 +14,25 @@ export default function CenterOverlay({ loading, buffering, playing, showControl
   return (
     <>
       {loading ? (
-        <div className="flex h-full items-center justify-center gap-2 text-sm text-[var(--player-fg-muted)]">
-          <Spinner className="h-8 w-8 text-[var(--accent-color)]" />
-          Loading…
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Loading playback"
+          className="flex h-full items-center justify-center gap-2 text-sm text-[var(--player-fg-muted)]"
+        >
+          <Spinner className="h-8 w-8 text-[var(--accent-color)]" aria-hidden="true" />
+          <span aria-hidden="true">Loading…</span>
         </div>
       ) : null}
 
       {!loading && buffering ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--player-scrim-light)]">
-          <Spinner className="h-12 w-12 text-[var(--player-fg)]" />
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Buffering"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--player-scrim-light)]"
+        >
+          <Spinner className="h-12 w-12 text-[var(--player-fg)]" aria-hidden="true" />
         </div>
       ) : null}
 

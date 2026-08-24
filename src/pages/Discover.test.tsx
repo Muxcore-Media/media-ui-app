@@ -57,3 +57,40 @@ describe('Discover', () => {
     expect(await screen.findByText('Breaking Bad')).toBeInTheDocument()
   })
 })
+
+describe('Discover accessibility', () => {
+  beforeEach(() => {
+    discoverBrowse.mockReset()
+    discoverBrowse.mockResolvedValue([])
+  })
+
+  it('has a page h1 and announces loading', () => {
+    discoverBrowse.mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter>
+        <Discover />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Discover' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading discover' })).toBeInTheDocument()
+  })
+
+  it('labels browse shelves with section headings', async () => {
+    discoverBrowse.mockImplementation(async (category: string, type: string) => {
+      if (category === 'trending' && type === 'movie') {
+        return [{ id: 550, title: 'Fight Club', year: 1999, overview: '', poster: '/p.jpg', voteAvg: 8.4, mediaType: 'movie' }]
+      }
+      return []
+    })
+
+    render(
+      <MemoryRouter>
+        <Discover />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Trending movies' })).toBeInTheDocument()
+  })
+})

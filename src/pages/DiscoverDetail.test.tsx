@@ -114,3 +114,70 @@ describe('DiscoverDetail', () => {
     })
   })
 })
+
+describe('DiscoverDetail accessibility', () => {
+  beforeEach(() => {
+    getDiscoverDetail.mockReset()
+    requestTitle.mockReset()
+  })
+
+  it('uses the title as the page h1 and labels content sections', async () => {
+    getDiscoverDetail.mockResolvedValueOnce({
+      id: 550,
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'An insomniac office worker...',
+      tagline: 'Mischief. Mayhem. Soap.',
+      genres: ['Drama', 'Thriller'],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 8.4,
+      runtime: 139,
+      status: 'Released',
+      mediaType: 'movie',
+      trailer: { name: 'Trailer', youtubeKey: 'abc123', url: 'https://www.youtube.com/watch?v=abc123' },
+      cast: [{ id: 1, name: 'Brad Pitt', character: 'Tyler Durden', profilePath: '/brad.jpg' }],
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/discover/movie/550']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Fight Club' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Genres' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Trailer' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Cast' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Brad Pitt' })).toBeInTheDocument()
+  })
+
+  it('announces loading on initial render', () => {
+    getDiscoverDetail.mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter initialEntries={['/discover/movie/550']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status', { name: 'Loading title details' })).toBeInTheDocument()
+  })
+
+  it('exposes an error heading when the title is invalid', async () => {
+    render(
+      <MemoryRouter initialEntries={['/discover/movie/not-a-number']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Title not found' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Invalid title')
+  })
+})

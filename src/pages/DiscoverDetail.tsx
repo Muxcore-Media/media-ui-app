@@ -5,6 +5,7 @@ import { DetailHero } from '../components/media/DetailHero'
 import { DetailHeroSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import { tmdbImageUrl, youtubeEmbedUrl } from '../lib/tmdbImages'
 import type { DiscoverDetail } from '../types'
 
@@ -73,12 +74,18 @@ export default function DiscoverDetail() {
   }
 
   if (loading) {
-    return <DetailHeroSkeleton />
+    return (
+      <>
+        <LoadingStatus label="Loading title details" />
+        <DetailHeroSkeleton />
+      </>
+    )
   }
 
   if (error || !detail) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" data-testid="discover-detail-page">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Title not found</h1>
         <ErrorBanner message={error || 'Title not found'} />
         <Link to={backHref} className="text-sm text-[var(--accent-color)] hover:underline">
           Back to search
@@ -92,9 +99,11 @@ export default function DiscoverDetail() {
 
   return (
     <div className="space-y-8" data-testid="discover-detail-page">
-      <Link to={backHref} className="inline-flex text-sm text-[var(--text-secondary)] hover:text-[var(--accent-color)]">
-        ← Back to search
-      </Link>
+      <nav aria-label="Breadcrumb">
+        <Link to={backHref} className="inline-flex text-sm text-[var(--text-secondary)] hover:text-[var(--accent-color)]">
+          ← Back to search
+        </Link>
+      </nav>
 
       <DetailHero
         backdropUrl={backdropUrl}
@@ -110,7 +119,9 @@ export default function DiscoverDetail() {
         overview={detail.overview}
         actions={
           requested ? (
-            <Badge tone="success">{requested}</Badge>
+            <span role="status">
+              <Badge tone="success">{requested}</Badge>
+            </span>
           ) : (
             <button
               type="button"
@@ -124,8 +135,10 @@ export default function DiscoverDetail() {
       />
 
       {detail.genres.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Genres</h2>
+        <section className="space-y-3" aria-labelledby="discover-genres-heading">
+          <h2 id="discover-genres-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+            Genres
+          </h2>
           <div className="flex flex-wrap gap-2">
             {detail.genres.map((genre) => (
               <Badge key={genre} tone="neutral">
@@ -137,8 +150,10 @@ export default function DiscoverDetail() {
       )}
 
       {detail.trailer?.youtubeKey && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Trailer</h2>
+        <section className="space-y-3" aria-labelledby="discover-trailer-heading">
+          <h2 id="discover-trailer-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+            Trailer
+          </h2>
           <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--player-bg)] shadow-xl">
             <div className="relative aspect-video w-full">
               <iframe
@@ -157,8 +172,10 @@ export default function DiscoverDetail() {
       )}
 
       {detail.cast && detail.cast.length > 0 && (
-        <section className="space-y-3" data-testid="discover-cast">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Cast</h2>
+        <section className="space-y-3" data-testid="discover-cast" aria-labelledby="discover-cast-heading">
+          <h2 id="discover-cast-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+            Cast
+          </h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {detail.cast.map((member) => (
               <li
@@ -169,7 +186,7 @@ export default function DiscoverDetail() {
                   {member.profilePath ? (
                     <img
                       src={tmdbImageUrl(member.profilePath, 'w185')}
-                      alt=""
+                      alt={member.name}
                       className="h-full w-full object-cover"
                       loading="lazy"
                     />

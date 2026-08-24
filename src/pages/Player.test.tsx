@@ -54,3 +54,18 @@ describe('Player shell empty states', () => {
     expect(screen.getByTestId('video-player')).toHaveClass('fixed')
   })
 })
+
+describe('Player accessibility', () => {
+  it('exposes a main landmark and page h1 when playback is available', async () => {
+    renderPlayer('?src=%2Fstream%2Fmovies%2Fm1&title=Fight%20Club&back=%2Fmovies%2Fm1')
+    expect(await screen.findByRole('main', { name: 'Fight Club player' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Fight Club' })).toBeInTheDocument()
+  })
+
+  it('exposes an error heading and alert when src is missing', () => {
+    renderPlayer('')
+    expect(screen.getByRole('heading', { level: 1, name: 'Playback unavailable' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(/isn't available to play/i)
+    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies')
+  })
+})

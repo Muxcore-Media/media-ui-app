@@ -8,6 +8,7 @@ import { DetailHeroSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata'
 import { buildMoviePlayerHref } from '../lib/playHref'
 import type { Movie } from '../types'
@@ -54,14 +55,20 @@ export default function MovieDetail() {
   }, [id])
 
   if (loading) {
-    return <DetailHeroSkeleton />
+    return (
+      <>
+        <LoadingStatus label="Loading movie" />
+        <DetailHeroSkeleton />
+      </>
+    )
   }
 
   if (!movie) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" data-testid="movie-detail-page">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Movie not found</h1>
         <ErrorBanner message={error || 'Movie not found.'} />
-        <Link to="/movies" className="text-[var(--accent-color)]">
+        <Link to="/movies" className="text-[var(--accent-color)] hover:underline">
           Back to movies
         </Link>
       </div>
@@ -99,6 +106,7 @@ export default function MovieDetail() {
             {playTo ? (
               <Link
                 to={playTo}
+                aria-label={`Play ${movie.title}`}
                 className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-hover)]"
               >
                 <Play className="h-4 w-4 fill-current" aria-hidden="true" />
@@ -178,12 +186,17 @@ export default function MovieDetail() {
       />
 
       {movie.collection_name && movie.collection_id ? (
-        <p className="px-4 text-sm text-[var(--text-secondary)] sm:px-0">
-          Part of{' '}
-          <Link to="/collections" className="font-medium text-[var(--accent-color)]">
-            {movie.collection_name}
-          </Link>
-        </p>
+        <section className="px-4 sm:px-0" aria-labelledby="movie-collection-heading">
+          <h2 id="movie-collection-heading" className="sr-only">
+            Collection
+          </h2>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Part of{' '}
+            <Link to="/collections" className="font-medium text-[var(--accent-color)] hover:underline">
+              {movie.collection_name}
+            </Link>
+          </p>
+        </section>
       ) : null}
     </div>
   )

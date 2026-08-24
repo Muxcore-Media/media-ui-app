@@ -6,6 +6,7 @@ import { Shelf, ShelfItem } from '../components/media/Shelf'
 import { PosterGridSkeleton } from '../components/media/PosterGrid'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import type { SearchResult } from '../types'
 
 type BrowseShelf = {
@@ -96,7 +97,9 @@ export default function Discover() {
   return (
     <div className="space-y-8" data-testid="discover-page">
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Discover</h1>
+        <h1 id="discover-page-heading" className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Discover
+        </h1>
         <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
           Browse trending and popular titles from TMDB, then open a detail page to request something new.
         </p>
@@ -105,7 +108,10 @@ export default function Discover() {
       {error ? <ErrorBanner message={error} /> : null}
 
       {loading ? (
-        <PosterGridSkeleton count={12} />
+        <>
+          <LoadingStatus label="Loading discover" />
+          <PosterGridSkeleton count={12} />
+        </>
       ) : hasItems ? (
         shelves.map((shelf) => (
           <BrowseShelfRow

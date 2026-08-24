@@ -9,9 +9,16 @@ type Props = {
 
 export default function ErrorScreen({ message, href, onRetry }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--player-bg)] text-[var(--text-secondary)]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--player-bg)] text-[var(--text-secondary)]"
+      role="main"
+      aria-labelledby="player-error-heading"
+    >
       <div className="space-y-4 text-center">
-        <p>{message}</p>
+        <h1 id="player-error-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+          Playback unavailable
+        </h1>
+        <p role="alert">{message}</p>
         <div className="flex items-center justify-center gap-4">
           <Link to={href} className="text-[var(--accent-color)] hover:underline">
             Go back

@@ -28,6 +28,14 @@
   --warning: #f5a623;
   --danger-color: #ef4444;
   --focus-ring: color-mix(in srgb, var(--accent-color) 60%, transparent);
+  --text-on-accent: #0b0c0f;
+  --surface-contrast: #ffffff;
+  --scrim-strong: color-mix(in srgb, var(--bg-base) 85%, transparent);
+  --scrim-overlay: color-mix(in srgb, var(--bg-base) 40%, transparent);
+  --border-on-media: color-mix(in srgb, var(--text-primary) 15%, transparent);
+  --surface-glass: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  --surface-glass-hover: color-mix(in srgb, var(--text-primary) 20%, transparent);
+  --player-bg: var(--bg-base);
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -52,6 +60,7 @@
   --text-primary: #14151a;
   --text-secondary: #5c5f6a;
   --text-tertiary: #8a8d99;
+  --text-on-accent: #0b0c0f;
 }
 
 * {
@@ -99,6 +108,75 @@ select {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  .animate-spin {
+    animation: none !important;
+  }
+}
+
+.motion-safe-reveal {
+  opacity: 0;
+}
+
+.group:hover .motion-safe-reveal,
+.group:focus-within .motion-safe-reveal {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-safe-hover-lift {
+    transition:
+      transform 300ms ease-out,
+      box-shadow 300ms ease-out;
+  }
+
+  .motion-safe-hover-lift:hover,
+  .motion-safe-hover-lift:focus-within {
+    transform: translateY(-0.25rem);
+  }
+
+  .motion-safe-scale {
+    transition: transform 300ms ease-out;
+  }
+
+  .group:hover .motion-safe-scale,
+  .group:focus-within .motion-safe-scale {
+    transform: scale(1.06);
+  }
+
+  .motion-safe-reveal {
+    transform: translateY(0.5rem);
+    opacity: 0;
+    transition:
+      transform 200ms ease-out,
+      opacity 200ms ease-out;
+  }
+
+  .group:hover .motion-safe-reveal,
+  .group:focus-within .motion-safe-reveal {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--text) 8%, transparent),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
 }
 
 /* Hide scrollbar for horizontally scrollable shelves while keeping them scrollable */
@@ -110,29 +188,22 @@ select {
   display: none;
 }
 
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .skeleton {
   position: relative;
   overflow: hidden;
   background-color: var(--surface-2);
-}
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--text) 8%, transparent),
-    transparent
-  );
-  animation: shimmer 1.6s infinite;
 }
 
 video[data-subtitle-size="sm"]::cue {
@@ -152,7 +223,31 @@ video[data-subtitle-size="xl"]::cue {
 }
 
 video::cue {
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
+  background: color-mix(in srgb, var(--bg-base) 65%, transparent);
+  color: var(--text-primary);
   line-height: 1.35;
+}
+
+/* Video player OSD — tokenized overlay on black scrim (AGENTS.md §3) */
+[data-testid="video-player"] {
+  --player-fg: var(--surface-contrast);
+  --player-fg-muted: color-mix(in srgb, var(--surface-contrast) 68%, transparent);
+  --player-fg-subtle: color-mix(in srgb, var(--surface-contrast) 52%, transparent);
+  --player-chip-bg: color-mix(in srgb, var(--bg-base) 55%, transparent);
+  --player-chip-hover: color-mix(in srgb, var(--surface-contrast) 12%, transparent);
+  --player-chip-border: var(--border-on-media);
+  --player-play-bg: color-mix(in srgb, var(--surface-contrast) 92%, transparent);
+  --player-panel-bg: color-mix(in srgb, var(--bg-base) 82%, transparent);
+  --player-scrim: color-mix(in srgb, var(--bg-base) 60%, transparent);
+  --player-scrim-light: color-mix(in srgb, var(--bg-base) 30%, transparent);
+  --player-scrim-faint: color-mix(in srgb, var(--bg-base) 20%, transparent);
+  --player-bar-top-from: color-mix(in srgb, var(--bg-base) 85%, transparent);
+  --player-bar-top-via: color-mix(in srgb, var(--bg-base) 35%, transparent);
+  --player-bar-bottom-from: color-mix(in srgb, var(--bg-base) 95%, transparent);
+  --player-bar-bottom-via: color-mix(in srgb, var(--bg-base) 50%, transparent);
+}
+
+/* Theater mode: pure-black immersive backdrop instead of the theme's base color. */
+[data-testid="video-player"].theater-mode {
+  --player-bg: #000;
 }

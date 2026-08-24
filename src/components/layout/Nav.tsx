@@ -43,7 +43,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap transition',
     isActive
-      ? 'bg-[var(--accent-color)] text-black'
+      ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]'
       : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
   )
 
@@ -81,8 +81,15 @@ export default function Nav() {
     const onClick = (e: MouseEvent) => {
       if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false)
     }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMoreOpen(false)
+    }
     document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [moreOpen])
 
   return (
@@ -92,16 +99,16 @@ export default function Nav() {
           'sticky top-0 z-30 transition-colors duration-300',
           scrolled
             ? 'border-b border-[var(--border-subtle)] bg-[var(--bg-overlay)] backdrop-blur-md'
-            : 'border-b border-transparent bg-gradient-to-b from-black/70 to-transparent',
+            : 'border-b border-transparent bg-gradient-to-b from-[var(--scrim-strong)] to-transparent',
         )}
       >
-        <div className="mx-auto flex max-w-[1920px] items-center gap-3 px-4 py-3 sm:px-6 lg:px-10">
-          <NavLink to="/" className="shrink-0 text-lg font-bold tracking-tight">
+        <div className="mx-auto flex w-full min-w-0 max-w-[1920px] items-center gap-3 px-4 py-3 sm:px-6 lg:px-10">
+          <NavLink to="/" className="shrink-0 text-lg font-bold tracking-tight" aria-label="MuxCore Media home">
             MuxCore <span className="text-[var(--accent-color)]">Media</span>
           </NavLink>
 
-          <nav className="hidden min-w-0 flex-1 items-center gap-1 lg:flex" aria-label="Primary">
-            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          <nav className="hidden min-w-0 flex-1 items-center gap-1 lg:flex" aria-label="Primary navigation">
+            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
               {primary.map((item) => (
                 <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
                   {item.icon}
@@ -117,6 +124,7 @@ export default function Nav() {
                   onClick={() => setMoreOpen((v) => !v)}
                   aria-expanded={moreOpen}
                   aria-haspopup="menu"
+                  aria-controls="desktop-more-menu"
                   className={cn(
                     'flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition',
                     moreOpen
@@ -129,6 +137,7 @@ export default function Nav() {
                 </button>
                 {moreOpen && (
                   <div
+                    id="desktop-more-menu"
                     role="menu"
                     className="absolute left-0 top-full z-50 mt-2 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 shadow-xl"
                   >
@@ -142,7 +151,7 @@ export default function Nav() {
                           cn(
                             'block rounded-[var(--radius-sm)] px-3 py-2 text-sm transition',
                             isActive
-                              ? 'bg-[var(--accent-color)] text-black'
+                              ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]'
                               : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
                           )
                         }
@@ -161,11 +170,12 @@ export default function Nav() {
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <NavLink
               to="/favorites"
+              aria-label="Favorites"
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition',
                   isActive
-                    ? 'bg-[var(--accent-color)] text-black'
+                    ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
                 )
               }
@@ -175,11 +185,12 @@ export default function Nav() {
             </NavLink>
             <NavLink
               to="/settings"
+              aria-label="Settings"
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition',
                   isActive
-                    ? 'bg-[var(--accent-color)] text-black'
+                    ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
                 )
               }
@@ -189,6 +200,7 @@ export default function Nav() {
             </NavLink>
             <a
               href="/logout"
+              aria-label="Sign out"
               className={cn(
                 'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
                 showMobileMore ? 'hidden sm:flex' : 'flex',
@@ -203,7 +215,7 @@ export default function Nav() {
 
       {showMobileMore && mobileOpen && (
         <nav
-          aria-label="More"
+          aria-label="More navigation"
           className="fixed inset-x-0 bottom-16 z-40 max-h-[60vh] overflow-y-auto border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-2xl lg:hidden"
         >
           <div className="grid grid-cols-2 gap-1">
@@ -215,14 +227,14 @@ export default function Nav() {
                 className={({ isActive }) =>
                   cn(
                     'rounded-[var(--radius-sm)] px-3 py-2 text-sm',
-                    isActive ? 'bg-[var(--accent-color)] text-black' : 'text-[var(--text-secondary)]',
+                    isActive ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]' : 'text-[var(--text-secondary)]',
                   )
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-            <a href="/logout" className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+            <a href="/logout" aria-label="Sign out" className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--text-secondary)]">
               Logout
             </a>
           </div>
@@ -256,7 +268,7 @@ function MobileTabBar({
 }) {
   return (
     <nav
-      aria-label="Mobile primary"
+      aria-label="Mobile primary navigation"
       className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-[var(--border-subtle)] bg-[var(--bg-overlay)] pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       {MOBILE_TABS.map((item) => (

@@ -11,6 +11,21 @@ beforeAll(() => {
       /* no-op for unit tests */
     },
   })
+
+  if (typeof URL.createObjectURL !== 'function') {
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => 'blob:test',
+    })
+  }
+  if (typeof URL.revokeObjectURL !== 'function') {
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: () => {},
+    })
+  }
 })
 
 afterEach(() => {

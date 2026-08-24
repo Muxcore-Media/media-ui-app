@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Music2, Pause, Play } from 'lucide-react'
 import { api } from '../api/client'
 import { ShelfSkeleton } from '../components/ui/Skeleton'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import type { LibraryRow } from '../types'
 
 type FlatTrack = {
@@ -113,7 +114,7 @@ export default function Music() {
         </Link>
       </div>
 
-      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
+      {error && <ErrorBanner message={error} />}
       {!available && (
         <div className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center">
           <Music2 className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />

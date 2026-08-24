@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Video } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import type { Movie } from '../types'
 
 /** Home Videos library via BFF `?library=homevideos` (path prefixes / tags; heuristic when config empty). */
@@ -37,21 +40,25 @@ export default function HomeVideos() {
         <p className="text-sm text-[var(--text-secondary)]">Personal videos from your library.</p>
       </div>
       {loading && <PosterGridSkeleton />}
-      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
-      {!loading && movies.length === 0 && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No home videos yet. Browse{' '}
-          <Link to="/movies" className="text-[var(--accent-color)]">
-            Movies
-          </Link>{' '}
-          to find other titles.
-        </p>
+      {error && <ErrorBanner message={error} />}
+      {!loading && !error && movies.length === 0 && (
+        <EmptyState
+          icon={Video}
+          message="No home videos in your library yet."
+          action={
+            <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Browse movies
+            </Link>
+          }
+        />
       )}
-      <PosterGrid>
-        {movies.map((item) => (
-          <MediaCard key={item.id} item={item} type="movie" />
-        ))}
-      </PosterGrid>
+      {!error && movies.length > 0 && (
+        <PosterGrid>
+          {movies.map((item) => (
+            <MediaCard key={item.id} item={item} type="movie" />
+          ))}
+        </PosterGrid>
+      )}
     </div>
   )
 }

@@ -34,7 +34,7 @@ export function DetailHero({
       </div>
 
       <div className="relative -mt-24 flex flex-col gap-6 px-4 pb-6 sm:-mt-28 sm:flex-row sm:px-6 lg:px-10">
-        <div className="w-32 shrink-0 overflow-hidden rounded-[var(--radius-md)] border border-white/10 bg-[var(--bg-elevated-2)] shadow-2xl sm:w-44">
+        <div className="w-32 shrink-0 overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-on-media)] bg-[var(--bg-elevated-2)] shadow-2xl sm:w-44">
           {posterUrl ? (
             <img src={posterUrl} alt={title} className="aspect-[2/3] w-full object-cover" />
           ) : (
@@ -46,7 +46,7 @@ export function DetailHero({
         </div>
 
         <div className="min-w-0 flex-1 space-y-3 pt-2">
-          <h1 className="text-2xl font-extrabold tracking-tight text-[var(--text-primary)] drop-shadow sm:text-4xl">
+          <h1 className="line-clamp-2 text-2xl font-extrabold tracking-tight text-[var(--text-primary)] drop-shadow sm:text-4xl">
             {title}
           </h1>
           {meta && <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">{meta}</div>}

@@ -14,25 +14,25 @@ export default function PlayerEpisodeDrawer({ show, currentEpisodeId, onClose, o
     <div className="absolute inset-0 z-30 flex justify-end" data-testid="player-episode-drawer">
       <button
         type="button"
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0 bg-[var(--player-scrim)]"
         aria-label="Close episode list"
         onClick={onClose}
       />
-      <aside className="relative flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#0a0a0c]/95 shadow-2xl backdrop-blur-md">
-        <div className="flex items-start gap-3 border-b border-white/10 p-4">
+      <aside className="relative flex h-full w-full max-w-md flex-col border-l border-[var(--border-on-media)] bg-[var(--bg-overlay)] shadow-2xl backdrop-blur-md">
+        <div className="flex items-start gap-3 border-b border-[var(--border-on-media)] p-4">
           {show.poster_url ? (
             <img src={show.poster_url} alt="" className="h-16 w-11 rounded object-cover" loading="lazy" />
           ) : (
-            <div className="h-16 w-11 rounded bg-white/10" />
+            <div className="h-16 w-11 rounded bg-[var(--surface-glass)]" />
           )}
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold text-white">{show.title}</h2>
-            <p className="mt-1 line-clamp-2 text-xs text-white/60">{show.overview || 'Episodes'}</p>
+            <h2 className="truncate text-base font-semibold text-[var(--player-fg)]">{show.title}</h2>
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--player-fg-muted)]">{show.overview || 'Episodes'}</p>
           </div>
           <button
             type="button"
             aria-label="Close"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--player-fg-muted)] transition hover:bg-[var(--player-chip-hover)]"
             onClick={onClose}
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -41,7 +41,7 @@ export default function PlayerEpisodeDrawer({ show, currentEpisodeId, onClose, o
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
           {(show.seasons || []).map((season) => (
             <section key={season.id || season.season_number} className="mb-5">
-              <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-white/50">
+              <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-[var(--player-fg-subtle)]">
                 Season {season.season_number}
                 {season.name ? ` · ${season.name}` : ''}
               </h3>
@@ -86,13 +86,13 @@ function EpisodeRow({
         disabled={!playable}
         onClick={() => href && onPick(href)}
         className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition ${
-          active ? 'bg-[var(--accent-color)]/20 ring-1 ring-[var(--accent-color)]/50' : 'hover:bg-white/8'
+          active ? 'bg-[var(--accent-color)]/20 ring-1 ring-[var(--accent-color)]/50' : 'hover:bg-[var(--player-chip-hover)]'
         } ${!playable ? 'cursor-not-allowed opacity-45' : ''}`}
       >
-        <span className="w-12 shrink-0 text-xs font-medium tabular-nums text-white/70">{code}</span>
+        <span className="w-12 shrink-0 text-xs font-medium tabular-nums text-[var(--player-fg-muted)]">{code}</span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm text-white">{ep.title || `Episode ${ep.episode_number}`}</span>
-          {!playable ? <span className="text-[11px] text-white/45">Not available yet</span> : null}
+          <span className="block truncate text-sm text-[var(--player-fg)]">{ep.title || `Episode ${ep.episode_number}`}</span>
+          {!playable ? <span className="text-[11px] text-[var(--player-fg-subtle)]">Not available yet</span> : null}
         </span>
       </button>
     </li>

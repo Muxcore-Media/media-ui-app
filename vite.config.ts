@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
-const requestMedia = process.env.VITE_REQUEST_MEDIA_URL || 'http://localhost:9380'
-const moviesHttp = process.env.VITE_MOVIES_HTTP_URL || 'http://localhost:9430'
-const tvHttp = process.env.VITE_TV_HTTP_URL || 'http://localhost:9450'
+// Dev: proxy through mediauiprox (BFF) so auth, capabilities, userdata, and playback
+// match production. Run BFF on :5174 while Vite uses :5173, e.g.:
+//   mediauiprox -listen :5174 ...  (from _mvp after ./run-host.sh up)
+const bff = process.env.VITE_BFF_URL || 'http://127.0.0.1:5174'
 
 export default defineConfig({
   plugins: [tailwindcss(), react()],
@@ -17,16 +18,13 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api/search': { target: requestMedia, changeOrigin: true },
-      '/api/discover': { target: requestMedia, changeOrigin: true },
-      '/api/request': { target: requestMedia, changeOrigin: true },
-      '/api/requests': { target: requestMedia, changeOrigin: true },
-      '/api/movies': { target: moviesHttp, changeOrigin: true, rewrite: (p) => p.replace(/^\/api\/movies/, '/api/movies') },
-      '/api/tv': { target: tvHttp, changeOrigin: true, rewrite: (p) => p.replace(/^\/api\/tv/, '/api/tv') },
-      '/images/movies': { target: moviesHttp, changeOrigin: true, rewrite: (p) => p.replace(/^\/images\/movies/, '/images') },
-      '/images/tv': { target: tvHttp, changeOrigin: true, rewrite: (p) => p.replace(/^\/images\/tv/, '/images') },
-      '/stream/movies': { target: moviesHttp, changeOrigin: true },
-      '/stream/tv': { target: tvHttp, changeOrigin: true },
+      '/api': { target: bff, changeOrigin: true },
+      '/stream': { target: bff, changeOrigin: true },
+      '/images': { target: bff, changeOrigin: true },
+      '/login': { target: bff, changeOrigin: true },
+      '/logout': { target: bff, changeOrigin: true },
+      '/auth': { target: bff, changeOrigin: true },
+      '/invite': { target: bff, changeOrigin: true },
     },
   },
   build: {

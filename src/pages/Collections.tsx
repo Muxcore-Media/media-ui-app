@@ -5,6 +5,8 @@ import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Badge } from '../components/ui/Badge'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import type { Movie } from '../types'
 
 type Collection = { id: string; name: string; items: Movie[]; source: 'tmdb' | 'genre' }
@@ -79,7 +81,7 @@ export default function Collections() {
         </p>
       </div>
       {loading && <PosterGridSkeleton count={6} />}
-      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
+      {error && <ErrorBanner message={error} />}
 
       {detail && (
         <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
@@ -128,14 +130,18 @@ export default function Collections() {
         </section>
       )}
 
-      {!loading && genreCollections.length === 0 && serverCols.length === 0 && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No collections yet. Browse{' '}
-          <Link to="/movies" className="text-[var(--accent-color)]">
-            Movies
-          </Link>
-          .
-        </p>
+      {!loading && !error && genreCollections.length === 0 && serverCols.length === 0 && !detail && (
+        <EmptyState
+          icon={Layers}
+          title="No collections yet"
+          message="Box sets and genre groups will appear here as your movie library grows."
+          action={
+            <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Browse movies
+            </Link>
+          }
+          testId="collections-empty"
+        />
       )}
 
       {genreCollections.map((c) => (

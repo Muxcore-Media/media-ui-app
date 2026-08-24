@@ -16,14 +16,32 @@ import { DEFAULT_CAPABILITIES } from '../lib/capabilities'
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
+export const OFFLINE_FETCH_MESSAGE = "You're offline. Check your connection and try again."
+
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+/** User-facing copy for route-level fetch failures (ErrorBanner). */
+export function friendlyFetchError(err: unknown, fallback = 'Something went wrong'): string {
+  if (isOffline()) return OFFLINE_FETCH_MESSAGE
+  return err instanceof Error ? err.message : fallback
+}
+
 async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init?.headers || {}),
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        Accept: 'application/json',
+        ...(init?.headers || {}),
+      },
+    })
+  } catch (err) {
+    if (isOffline()) throw new Error(OFFLINE_FETCH_MESSAGE)
+    throw err
+  }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`
     try {
@@ -141,6 +159,29 @@ function normalizeTV(raw: Record<string, unknown>): TVShow {
   }
 }
 
+function normalizeRequest(raw: Record<string, unknown>): MediaRequest {
+  const statusDetail = raw.statusDetail ?? raw.status_detail
+  const statusLabel = raw.statusLabel ?? raw.status_label
+  return {
+    id: String(raw.id ?? ''),
+    itemType: String(raw.itemType ?? raw.item_type ?? ''),
+    itemId: String(raw.itemId ?? raw.item_id ?? ''),
+    tmdbId: Number(raw.tmdbId ?? raw.tmdb_id ?? 0),
+    musicbrainzId:
+      raw.musicbrainzId != null || raw.musicbrainz_id != null
+        ? String(raw.musicbrainzId ?? raw.musicbrainz_id)
+        : undefined,
+    title: String(raw.title ?? ''),
+    year: Number(raw.year ?? 0),
+    poster: String(raw.poster ?? ''),
+    status: String(raw.status ?? ''),
+    statusDetail: statusDetail != null && String(statusDetail) !== '' ? String(statusDetail) : undefined,
+    statusLabel: statusLabel != null && String(statusLabel) !== '' ? String(statusLabel) : undefined,
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
+  }
+}
+
 function asList<T>(data: unknown, map: (row: Record<string, unknown>) => T): ListResponse<T> {
   if (Array.isArray(data)) {
     const items = data.map((row) => map(row as Record<string, unknown>))
@@ -209,14 +250,11 @@ export const api = {
     return normalizeTV(row)
   },
 
-  async search(query: string): Promise<SearchResult[]> {
-    const data = await getJSON<{ results?: SearchResult[]; error?: string }>(
-      `/api/search?q=${encodeURIComponent(query)}`,
-    )
-    return (data.results || []).map((row) => ({
-      ...row,
-      mediaType: row.mediaType === 'tv' ? 'tv' : 'movie',
-    }))
+  async search(query: string, opts?: { type?: 'movie' | 'tv' | 'music' | 'music_album' | 'music_track' }): Promise<SearchResult[]> {
+    const params = new URLSearchParams({ q: query })
+    if (opts?.type) params.set('type', opts.type)
+    const data = await getJSON<{ results?: SearchResult[]; error?: string }>(`/api/search?${params}`)
+    return (data.results || []).map(normalizeSearchResult)
   },
 
   async getDiscoverDetail(type: 'movie' | 'tv', id: number): Promise<DiscoverDetail> {
@@ -228,18 +266,64 @@ export const api = {
     }
   },
 
+  async discoverBrowse(
+    category: 'trending' | 'popular',
+    type: 'movie' | 'tv',
+    opts?: { window?: 'day' | 'week' },
+  ): Promise<SearchResult[]> {
+    const params = new URLSearchParams()
+    if (opts?.window) params.set('window', opts.window)
+    const q = params.toString()
+    const data = await getJSON<{ results?: SearchResult[]; error?: string }>(
+      `/api/discover/${category}/${type}${q ? `?${q}` : ''}`,
+    )
+    return (data.results || []).map(normalizeSearchResult)
+  },
+
+  async watchlist(opts?: { type?: 'movie' | 'tv' }): Promise<SearchResult[]> {
+    const params = new URLSearchParams()
+    if (opts?.type) params.set('type', opts.type)
+    const q = params.toString()
+    const data = await getJSON<{ items?: SearchResult[]; error?: string }>(`/api/watchlist${q ? `?${q}` : ''}`)
+    return (data.items || []).map(normalizeSearchResult)
+  },
+
   async requestTitle(input: {
-    tmdbId: number
+    tmdbId?: number
+    musicbrainzId?: string
+    releaseGroupId?: string
+    recordingId?: string
+    artistName?: string
+    albumTitle?: string
     title: string
-    year: number
-    overview: string
-    poster: string
-    mediaType: 'movie' | 'tv'
-  }): Promise<{ requestId: string; movieId?: string; seriesId?: string; status: string }> {
+    year?: number
+    overview?: string
+    poster?: string
+    mediaType: 'movie' | 'tv' | 'music' | 'music_album' | 'music_track'
+  }): Promise<{ requestId: string; movieId?: string; seriesId?: string; artistId?: string; albumId?: string; status: string }> {
+    const body: Record<string, unknown> = {
+      title: input.title,
+      overview: input.overview ?? '',
+      poster: input.poster ?? '',
+      mediaType: input.mediaType,
+    }
+    if (input.mediaType === 'music' || input.mediaType === 'music_album' || input.mediaType === 'music_track') {
+      body.musicbrainzId = input.musicbrainzId ?? ''
+      body.releaseGroupId = input.releaseGroupId ?? ''
+      body.recordingId = input.recordingId ?? ''
+      body.artistName = input.artistName ?? ''
+      body.albumTitle = input.albumTitle ?? ''
+      if (input.mediaType === 'music_album' || input.mediaType === 'music_track') {
+        body.year = input.year ?? 0
+      }
+    } else {
+      body.tmdbId = input.tmdbId ?? 0
+      body.year = input.year ?? 0
+    }
     return getJSON('/api/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
+      body: JSON.stringify(body),
     })
   },
 
@@ -258,7 +342,9 @@ export const api = {
   },
 
   async listRequests(): Promise<MediaRequest[]> {
-    return getJSON<MediaRequest[]>('/api/requests')
+    const data = await getJSON<unknown>('/api/requests')
+    const rows = Array.isArray(data) ? data : []
+    return rows.map((row) => normalizeRequest(row as Record<string, unknown>))
   },
 
   /** Jellyfin web deep-link for a MuxCore library id (404 when unlinked). */
@@ -440,6 +526,25 @@ export async function resolvePlayback(src: string): Promise<PlaybackResolve> {
   return getJSON<PlaybackResolve>(`/api/playback/resolve?${q}`)
 }
 
+/** User-facing copy for mediauiprox playback resolve failures ({error, code}). */
+export function friendlyPlaybackError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? 'Playback failed')
+  const codeMatch = raw.match(/\(([^)]+)\)$/)
+  const code = codeMatch?.[1]
+  const message = code ? raw.replace(/\s*\([^)]+\)$/, '').trim() : raw
+
+  switch (code) {
+    case 'playback.src_required':
+      return "This title isn't available to play."
+    case 'playback.method_not_allowed':
+      return "Playback isn't available right now. Please try again."
+    case 'playback.internal_error':
+      return 'Something went wrong preparing playback. Please try again.'
+    default:
+      return message || 'Playback failed. Please try again.'
+  }
+}
+
 export type PlaybackSubtitleTrack = {
   id: string
   label: string
@@ -454,4 +559,194 @@ export async function fetchPlaybackSubtitles(src: string): Promise<{ tracks: Pla
   return getJSON<{ tracks: PlaybackSubtitleTrack[] }>(`/api/playback/subtitles?${q}`)
 }
 
-export { posterURL, normalizeMovie, normalizeTV }
+/** intro | outro | credits | recap skip segment, backed by media-intro-outro. */
+export type PlaybackSegment = {
+  kind: string
+  start_seconds: number
+  end_seconds: number
+  confidence: number
+  source: string
+}
+
+export async function fetchPlaybackSegments(
+  mediaId: string,
+  durationSeconds?: number,
+): Promise<{ media_id: string; segments: PlaybackSegment[]; enabled: boolean }> {
+  const q = new URLSearchParams({ media_id: mediaId })
+  if (durationSeconds && durationSeconds > 0) q.set('duration', String(Math.round(durationSeconds)))
+  return getJSON(`/api/playback/segments?${q}`)
+}
+
+/** Embedded container chapter marker from ffprobe (MKV/MP4 chapter tracks). */
+export type PlaybackChapter = {
+  index: number
+  title: string
+  start_seconds: number
+  end_seconds: number
+  source?: 'embedded' | 'scene' | 'interval' | string
+}
+
+export async function fetchPlaybackChapters(
+  src: string,
+  durationSeconds?: number,
+): Promise<{ src: string; chapters: PlaybackChapter[]; enabled: boolean; source?: string }> {
+  const q = new URLSearchParams({ src })
+  if (durationSeconds && durationSeconds > 0) {
+    q.set('duration', String(Math.round(durationSeconds)))
+  }
+  const raw = await getJSON<{
+    src: string
+    source?: string
+    chapters?: Array<{
+      index?: number
+      title?: string
+      start_seconds?: number
+      end_seconds?: number
+      startSeconds?: number
+      endSeconds?: number
+      source?: string
+    }>
+    enabled?: boolean
+  }>(`/api/playback/chapters?${q}`)
+  const chapters = (raw.chapters || []).map((ch, i) => ({
+    index: ch.index ?? i,
+    title: ch.title || `Chapter ${i + 1}`,
+    start_seconds: ch.start_seconds ?? ch.startSeconds ?? 0,
+    end_seconds: ch.end_seconds ?? ch.endSeconds ?? 0,
+    source: ch.source,
+  }))
+  return {
+    src: raw.src,
+    chapters,
+    enabled: raw.enabled ?? chapters.length > 0,
+    source: raw.source,
+  }
+}
+
+export type PlaybackAnalysisVideo = {
+  codec?: string
+  width?: number
+  height?: number
+  resolution_label?: string
+  hdr?: boolean
+  hdr_type?: string
+}
+
+export type PlaybackAnalysisAudio = {
+  index: number
+  codec?: string
+  language?: string
+  channels?: number
+  channel_layout?: string
+  label?: string
+}
+
+export type PlaybackAnalysisSubtitle = {
+  index: number
+  codec?: string
+  language?: string
+  forced?: boolean
+  hearing_impaired?: boolean
+  picture_based?: boolean
+  text_based?: boolean
+  label?: string
+}
+
+export type PlaybackAnalysisQuality = {
+  label?: string
+  resolution?: string
+  source?: string
+  codec_group?: string
+  hdr?: boolean
+}
+
+export type PlaybackAnalysis = {
+  src: string
+  enabled: boolean
+  info_line?: string
+  container?: string
+  duration_seconds?: number
+  video?: PlaybackAnalysisVideo
+  audio?: PlaybackAnalysisAudio[]
+  subtitles?: PlaybackAnalysisSubtitle[]
+  quality?: PlaybackAnalysisQuality
+}
+
+export async function fetchPlaybackAnalysis(src: string): Promise<PlaybackAnalysis> {
+  const q = new URLSearchParams({ src })
+  return getJSON(`/api/playback/analysis?${q}`)
+}
+
+export type TrickplayManifest = {
+  url: string
+  intervalSeconds: number
+  cols: number
+  rows: number
+  count: number
+}
+
+/** Fetches the trickplay sprite sheet (as a blob URL) plus its grid layout from response headers. */
+export async function fetchTrickplaySprite(
+  src: string,
+  durationSeconds: number,
+  intervalSeconds = 10,
+): Promise<TrickplayManifest | null> {
+  const q = new URLSearchParams({
+    src,
+    duration: String(Math.round(durationSeconds)),
+    interval: String(intervalSeconds),
+  })
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}/stream/trickplay?${q}`)
+  } catch {
+    return null
+  }
+  if (!res.ok) return null
+  const cols = Number(res.headers.get('X-Trickplay-Cols') || '0')
+  const rows = Number(res.headers.get('X-Trickplay-Rows') || '0')
+  const count = Number(res.headers.get('X-Trickplay-Count') || '0')
+  const intervalSecondsActual = Number(res.headers.get('X-Trickplay-Interval-Seconds') || String(intervalSeconds))
+  if (!cols || !rows) return null
+  const blob = await res.blob()
+  return {
+    url: URL.createObjectURL(blob),
+    intervalSeconds: intervalSecondsActual,
+    cols,
+    rows,
+    count: count || cols * rows,
+  }
+}
+
+export function normalizeSearchResult(row: SearchResult): SearchResult {
+  if (row.mediaType === 'music' || row.mediaType === 'music_album' || row.mediaType === 'music_track') {
+    return {
+      ...row,
+      id: row.id || 0,
+      musicbrainzId: row.musicbrainzId,
+      releaseGroupId: row.releaseGroupId,
+      recordingId: row.recordingId,
+      artistName: row.artistName,
+      albumTitle: row.albumTitle,
+    }
+  }
+  return {
+    ...row,
+    mediaType: row.mediaType === 'tv' ? 'tv' : 'movie',
+  }
+}
+
+export function searchResultKey(row: SearchResult): string {
+  if (row.mediaType === 'music_track') {
+    return `music_track:${row.recordingId || row.title.toLowerCase()}`
+  }
+  if (row.mediaType === 'music_album') {
+    return `music_album:${row.releaseGroupId || row.title.toLowerCase()}`
+  }
+  if (row.mediaType === 'music') {
+    return `music:${row.musicbrainzId || row.title.toLowerCase()}`
+  }
+  return `${row.mediaType}:${row.id}`
+}
+
+export { posterURL, normalizeMovie, normalizeTV, normalizeRequest }

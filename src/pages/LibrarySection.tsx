@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Clock, Library } from 'lucide-react'
 import { Badge } from '../components/ui/Badge'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { ShelfSkeleton } from '../components/ui/Skeleton'
 import type { LibraryListResponse, LibraryRow } from '../types'
 
@@ -65,16 +67,11 @@ export default function LibrarySection({
         <p className="text-sm text-[var(--text-secondary)]">{description}</p>
       </div>
 
+      {error ? <ErrorBanner message={error} testId="library-error" /> : null}
+
       {loading ? (
         <ShelfSkeleton count={4} />
-      ) : error ? (
-        <p
-          className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--danger-color)]"
-          data-testid="library-error"
-        >
-          {error}
-        </p>
-      ) : comingSoon || !available ? (
+      ) : error ? null : comingSoon || !available ? (
         <div
           className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center"
           data-testid="library-coming-soon"
@@ -87,10 +84,7 @@ export default function LibrarySection({
           </p>
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center" data-testid="library-empty">
-          <Library className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
-          <p className="max-w-sm text-sm text-[var(--text-secondary)]">{emptyReadyMessage}</p>
-        </div>
+        <EmptyState icon={Library} message={emptyReadyMessage} testId="library-empty" />
       ) : (
         <ul
           className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"

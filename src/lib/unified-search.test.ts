@@ -22,4 +22,15 @@ describe('unified-search', () => {
     const scopes = searchScopesForCaps(caps)
     expect(scopes.map((s) => s.id)).toEqual(['all', 'movies', 'tv', 'add'])
   })
+
+  it('shows add when music library is enabled', () => {
+    const caps = {
+      ...DEFAULT_CAPABILITIES,
+      features: { ...DEFAULT_CAPABILITIES.features, search: false, request: false },
+      libraries: { ...DEFAULT_CAPABILITIES.libraries, movies: false, tv: false, music: true },
+    }
+    const scopes = searchScopesForCaps(caps)
+    expect(scopes.map((s) => s.id)).toContain('add')
+    expect(scopes.map((s) => s.id)).toContain('music')
+  })
 })

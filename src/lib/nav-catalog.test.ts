@@ -9,8 +9,20 @@ describe('nav-catalog', () => {
     const overflow = visibleOverflowNav(DEFAULT_CAPABILITIES)
     expect(overflow.map((i) => i.label)).toContain('Collections')
     expect(overflow.map((i) => i.label)).toContain('In progress')
+    expect(overflow.map((i) => i.label)).not.toContain('Watchlist')
     expect(overflow.map((i) => i.label)).not.toContain('Music Videos')
     expect(overflow.map((i) => i.label)).not.toContain('Home Videos')
+  })
+
+  it('shows watchlist in overflow when feature is enabled', () => {
+    const caps = {
+      ...DEFAULT_CAPABILITIES,
+      features: { ...DEFAULT_CAPABILITIES.features, watchlist: true },
+    }
+    const overflow = visibleOverflowNav(caps)
+    expect(overflow.map((i) => i.label)).toContain('Watchlist')
+    expect(routeAllowed(caps, '/watchlist')).toBe(true)
+    expect(routeAllowed(DEFAULT_CAPABILITIES, '/watchlist')).toBe(false)
   })
 
   it('shows all library sections when capabilities enable them', () => {
@@ -27,6 +39,7 @@ describe('nav-catalog', () => {
     const overflow = visibleOverflowNav(ALL_CAPABILITIES)
     expect(overflow.map((i) => i.label)).toContain('Music Videos')
     expect(overflow.map((i) => i.label)).toContain('Home Videos')
+    expect(overflow.map((i) => i.label)).toContain('Watchlist')
   })
 
   it('blocks routes for disabled libraries', () => {
@@ -64,6 +77,8 @@ describe('nav-catalog', () => {
         playlists: false,
         queue: false,
         favorites: false,
+        debrid: false,
+        watchlist: false,
       },
     }
     expect(showDesktopMoreMenu(bare)).toBe(false)

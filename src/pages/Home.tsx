@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Home as HomeIcon } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner'
 import { Shelf, ShelfItem } from '../components/media/Shelf'
 import { ProgressCard } from '../components/media/ProgressCard'
-import { ShelfSkeleton } from '../components/ui/Skeleton'
+import { ShelfSkeleton, HeroBannerSkeleton } from '../components/ui/Skeleton'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import {
   continueWatching,
   getPreferences,
@@ -17,6 +20,8 @@ import {
   type ProgressEntry,
 } from '../lib/userdata'
 import { buildMoviePlayerHref, buildProgressPlayerHref } from '../lib/playHref'
+import { formatAddedRelative } from '../lib/relativeDate'
+import { prefetchPosterDetailRoute } from '../lib/routePreload'
 import { isWatchable, mergeInProgressEntries } from '../lib/acquisition'
 import type { Movie, TVShow } from '../types'
 
@@ -47,6 +52,7 @@ export default function Home() {
   const [nextUp, setNextUp] = useState<NextUpEntry[]>([])
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([])
   const [allMovies, setAllMovies] = useState<Movie[]>([])
+  const [allShows, setAllShows] = useState<TVShow[]>([])
   const recommended = useMemo(
     () =>
       [...allMovies]
@@ -55,6 +61,20 @@ export default function Home() {
         .slice(0, 16),
     [allMovies],
   )
+
+  const recentlyAdded = useMemo(() => {
+    type Row = { kind: 'movie' | 'tv'; item: Movie | TVShow; createdAt: string }
+    const rows: Row[] = []
+    for (const m of allMovies) {
+      if (!isWatchable(m) || !m.created_at) continue
+      rows.push({ kind: 'movie', item: m, createdAt: m.created_at })
+    }
+    for (const s of allShows) {
+      if (!isWatchable(s) || !s.created_at) continue
+      rows.push({ kind: 'tv', item: s, createdAt: s.created_at })
+    }
+    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 16)
+  }, [allMovies, allShows])
 
   const hero = useMemo<HeroItem | null>(() => {
     const candidate =
@@ -74,6 +94,11 @@ export default function Home() {
       detailHref: `/movies/${candidate.id}`,
     }
   }, [readyMovies, recommended])
+
+  useEffect(() => {
+    if (!hero) return
+    prefetchPosterDetailRoute(hero.detailHref.startsWith('/tv/') ? 'tv' : 'movie')
+  }, [hero])
 
   useEffect(() => {
     let cancelled = false
@@ -96,6 +121,7 @@ export default function Home() {
         setInProgressCount(mergeInProgressEntries(list, movies.items, shows.items).length)
         setReadyMovies(movies.items.filter((m) => m.has_file).slice(0, 16))
         setAllMovies(movies.items)
+        setAllShows(shows.items)
         setReadyShows(shows.items.filter((s) => s.has_file).slice(0, 16))
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load home')
@@ -111,11 +137,23 @@ export default function Home() {
   const showReadyFallback =
     prefs.home.showNextUp && nextUp.length === 0 && (readyMovies.length > 0 || readyShows.length > 0)
 
-  return (
-    <div className="-mt-6 space-y-10 sm:-mt-0">
-      {hero && <HeroBanner item={hero} />}
+  const hasContent =
+    (prefs.home.showContinueWatching && progress.length > 0) ||
+    (prefs.home.showNextUp && nextUp.length > 0) ||
+    (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
+    recommended.length > 0 ||
+    (prefs.home.showFavorites && favorites.length > 0) ||
+    showReadyFallback ||
+    (prefs.home.showRecentRequests && inProgressCount > 0)
 
-      {!hero && (
+  const isFullyEmpty = !loading && !error && !hero && !hasContent
+
+  return (
+    <div className="-mt-6 space-y-10 sm:-mt-0" data-testid="home-page">
+      {loading && <HeroBannerSkeleton />}
+      {!loading && hero && <HeroBanner item={hero} />}
+
+      {!loading && !hero && !isFullyEmpty && (
         <section className="space-y-3">
           <h1 className="text-3xl font-bold tracking-tight">Home</h1>
           <p className="max-w-2xl text-[var(--muted)]">
@@ -124,7 +162,7 @@ export default function Home() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/search"
-              className="rounded-md bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-black"
+              className="rounded-md bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-[var(--text-on-accent)]"
             >
               Search
             </Link>
@@ -147,10 +185,36 @@ export default function Home() {
           <ShelfSkeleton />
         </div>
       )}
-      {error && (
-        <p className="rounded-md border border-[var(--danger)]/40 bg-[var(--surface)] px-4 py-3 text-sm text-[var(--danger)]">
-          {error}
-        </p>
+      {error ? <ErrorBanner message={error} /> : null}
+
+      {isFullyEmpty && (
+        <EmptyState
+          icon={HomeIcon}
+          title="Your home feed is empty"
+          message="Search for titles, browse movies and TV, or add favorites to populate this page."
+          action={
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                to="/search"
+                className="rounded-md bg-[var(--accent-color)] px-4 py-2 text-sm font-semibold text-[var(--text-on-accent)]"
+              >
+                Search
+              </Link>
+              <Link
+                to="/movies"
+                className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                Movies
+              </Link>
+              <Link
+                to="/tv"
+                className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
+              >
+                TV
+              </Link>
+            </div>
+          }
+        />
       )}
 
       {prefs.home.showContinueWatching && progress.length > 0 && (
@@ -174,6 +238,16 @@ export default function Home() {
           {nextUp.map((n) => (
             <ShelfItem key={n.id}>
               <ProgressCard title={n.title} posterUrl={n.poster_url} href={n.href} subtitle={n.subtitle || 'Next up'} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showRecentlyAdded && recentlyAdded.length > 0 && (
+        <Shelf title="Recently added" testId="home-recently-added">
+          {recentlyAdded.map((row) => (
+            <ShelfItem key={`${row.kind}-${row.item.id}`}>
+              <MediaCard item={row.item} type={row.kind} subline={formatAddedRelative(row.createdAt)} />
             </ShelfItem>
           ))}
         </Shelf>

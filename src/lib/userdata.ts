@@ -37,6 +37,7 @@ export type UserPreferences = {
     showFavorites: boolean
     showRecentRequests: boolean
     showNextUp: boolean
+    showRecentlyAdded: boolean
   }
   playback: {
     autoplayNext: boolean
@@ -47,9 +48,20 @@ export type UserPreferences = {
     enabled: boolean
     language: string
     textSize: 'sm' | 'md' | 'lg'
+    /** 0-100 background opacity behind subtitle text (custom renderer). */
+    backgroundOpacity: number
+    edgeStyle: 'none' | 'drop-shadow' | 'outline'
+    verticalPosition: 'bottom' | 'top'
   }
   controls: {
     enableKeyboardShortcuts: boolean
+  }
+  player: {
+    /** Manual quality/version cap id from QUALITY_OPTIONS; 'auto' = original/source. */
+    preferredQuality: string
+    theaterMode: boolean
+    /** Aspect-ratio/zoom mode for the video element. */
+    aspectMode: 'contain' | 'cover' | 'fill'
   }
 }
 
@@ -86,6 +98,7 @@ const defaultPrefs = (): UserPreferences => ({
     showFavorites: true,
     showRecentRequests: true,
     showNextUp: true,
+    showRecentlyAdded: true,
   },
   playback: {
     autoplayNext: false,
@@ -96,9 +109,17 @@ const defaultPrefs = (): UserPreferences => ({
     enabled: true,
     language: 'eng',
     textSize: 'md',
+    backgroundOpacity: 60,
+    edgeStyle: 'drop-shadow',
+    verticalPosition: 'bottom',
   },
   controls: {
     enableKeyboardShortcuts: true,
+  },
+  player: {
+    preferredQuality: 'auto',
+    theaterMode: false,
+    aspectMode: 'contain',
   },
 })
 
@@ -127,6 +148,11 @@ function setMeta(patch: Partial<Meta>): void {
 /** True after a successful pull from BFF — home/next-up should prefer this cache. */
 export function isServerAuthoritative(): boolean {
   return getMeta().serverAuthoritative
+}
+
+export function getUserdataSyncStatus(): { authoritative: boolean; lastPullAt?: string } {
+  const meta = getMeta()
+  return { authoritative: meta.serverAuthoritative, lastPullAt: meta.lastPullAt }
 }
 
 export function listProgress(): ProgressEntry[] {
@@ -365,6 +391,7 @@ export function getPreferences(): UserPreferences {
     playback: { ...base.playback, ...stored.playback },
     subtitles: { ...base.subtitles, ...stored.subtitles },
     controls: { ...base.controls, ...stored.controls },
+    player: { ...base.player, ...stored.player },
   }
 }
 
@@ -376,6 +403,7 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
     playback: { ...cur.playback, ...patch.playback },
     subtitles: { ...cur.subtitles, ...patch.subtitles },
     controls: { ...cur.controls, ...patch.controls },
+    player: { ...cur.player, ...patch.player },
   }
   writeJSON(KEYS.prefs, next)
   void pushUserdataToServer()

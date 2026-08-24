@@ -71,18 +71,30 @@ export interface ListResponse<T> {
 
 export interface SearchResult {
   id: number
+  musicbrainzId?: string
+  releaseGroupId?: string
+  recordingId?: string
+  artistName?: string
+  albumTitle?: string
   title: string
   year: number
   overview: string
   poster: string
   voteAvg: number
-  mediaType: 'movie' | 'tv'
+  mediaType: 'movie' | 'tv' | 'music' | 'music_album' | 'music_track'
 }
 
 export interface DiscoverTrailer {
   name: string
   youtubeKey: string
   url: string
+}
+
+export interface DiscoverCastMember {
+  id: number
+  name: string
+  character?: string
+  profilePath?: string
 }
 
 export interface DiscoverDetail {
@@ -99,6 +111,7 @@ export interface DiscoverDetail {
   status?: string
   mediaType: 'movie' | 'tv'
   trailer?: DiscoverTrailer
+  cast?: DiscoverCastMember[]
 }
 
 export interface MediaRequest {
@@ -106,10 +119,13 @@ export interface MediaRequest {
   itemType: string
   itemId: string
   tmdbId: number
+  musicbrainzId?: string
   title: string
   year: number
   poster: string
   status: string
+  statusDetail?: string
+  statusLabel?: string
   createdAt: string
   updatedAt: string
 }

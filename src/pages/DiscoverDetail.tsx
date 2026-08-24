@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { DetailHero } from '../components/media/DetailHero'
+import { DetailHeroSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { tmdbImageUrl, youtubeEmbedUrl } from '../lib/tmdbImages'
 import type { DiscoverDetail } from '../types'
 
@@ -71,13 +73,13 @@ export default function DiscoverDetail() {
   }
 
   if (loading) {
-    return <p className="text-sm text-[var(--text-secondary)]">Loading details…</p>
+    return <DetailHeroSkeleton />
   }
 
   if (error || !detail) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-[var(--danger-color)]">{error || 'Title not found'}</p>
+        <ErrorBanner message={error || 'Title not found'} />
         <Link to={backHref} className="text-sm text-[var(--accent-color)] hover:underline">
           Back to search
         </Link>
@@ -137,7 +139,7 @@ export default function DiscoverDetail() {
       {detail.trailer?.youtubeKey && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-[var(--text-primary)]">Trailer</h2>
-          <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-black shadow-xl">
+          <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--player-bg)] shadow-xl">
             <div className="relative aspect-video w-full">
               <iframe
                 title={detail.trailer.name || `${detail.title} trailer`}
@@ -151,6 +153,41 @@ export default function DiscoverDetail() {
           {detail.trailer.name ? (
             <p className="text-sm text-[var(--text-secondary)]">{detail.trailer.name}</p>
           ) : null}
+        </section>
+      )}
+
+      {detail.cast && detail.cast.length > 0 && (
+        <section className="space-y-3" data-testid="discover-cast">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Cast</h2>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {detail.cast.map((member) => (
+              <li
+                key={`${member.id}-${member.name}`}
+                className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+              >
+                <div className="aspect-[2/3] bg-[var(--bg-elevated-2)]">
+                  {member.profilePath ? (
+                    <img
+                      src={tmdbImageUrl(member.profilePath, 'w185')}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center px-2 text-center text-xs text-[var(--text-tertiary)]">
+                      {member.name}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-0.5 p-2">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{member.name}</p>
+                  {member.character ? (
+                    <p className="truncate text-xs text-[var(--text-tertiary)]">{member.character}</p>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </div>

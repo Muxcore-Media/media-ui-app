@@ -16,22 +16,31 @@ export function ProgressCard({
   href: string
   progressPct?: number
 }) {
+  const label = subtitle ? `${title}, ${subtitle}` : title
+
   return (
-    <Link to={href} className="group block outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] rounded-[var(--radius-md)]">
-      <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-elevated-2)] shadow-md transition duration-300 ease-out group-hover:-translate-y-1 group-hover:shadow-2xl">
+    <Link
+      to={href}
+      aria-label={`Resume ${label}`}
+      className="group block rounded-[var(--radius-md)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+    >
+      <div className="motion-safe-hover-lift relative aspect-[2/3] overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-elevated-2)] shadow-md group-hover:shadow-2xl">
         {posterUrl ? (
           <img
             src={posterUrl}
             alt=""
-            className="h-full w-full object-cover transition duration-300 ease-out group-hover:scale-[1.06]"
+            className="motion-safe-scale h-full w-full object-cover"
             loading="lazy"
           />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-[var(--bg-elevated-2)] to-[var(--bg-elevated)]" />
         )}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black shadow-lg">
-            <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--scrim-overlay)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-contrast)] text-[var(--text-on-accent)] shadow-lg"
+            aria-hidden="true"
+          >
+            <Play className="h-4 w-4 fill-current" />
           </span>
         </div>
         {typeof progressPct === 'number' && (
@@ -41,7 +50,7 @@ export function ProgressCard({
         )}
       </div>
       <div className="space-y-0.5 pt-2">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-color)]">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-color)] group-focus-visible:text-[var(--accent-color)]">
           {title}
         </h3>
         {subtitle && <p className="text-xs text-[var(--text-tertiary)]">{subtitle}</p>}

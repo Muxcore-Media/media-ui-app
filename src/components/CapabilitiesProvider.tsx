@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { api } from '../api/client'
 import {
   CapabilitiesContext,
@@ -10,6 +10,13 @@ export default function CapabilitiesProvider({ children }: { children: ReactNode
   const [caps, setCaps] = useState<Capabilities>(DEFAULT_CAPABILITIES)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  const retry = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    setReloadKey((k) => k + 1)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -32,10 +39,10 @@ export default function CapabilitiesProvider({ children }: { children: ReactNode
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reloadKey])
 
   return (
-    <CapabilitiesContext.Provider value={{ caps, loading, error }}>
+    <CapabilitiesContext.Provider value={{ caps, loading, error, retry }}>
       {children}
     </CapabilitiesContext.Provider>
   )

@@ -5,6 +5,8 @@ import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Badge } from '../components/ui/Badge'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import type { Movie } from '../types'
 
 /** Studio browse from collection_name / genre buckets (Jellyfin studios parity). */
@@ -65,14 +67,23 @@ export default function Studios() {
         </p>
       </div>
 
+      {error ? <ErrorBanner message={error} /> : null}
       {loading && (selected ? <PosterGridSkeleton count={6} /> : <PosterGridSkeleton count={9} />)}
-      {error && (
-        <p className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--danger-color)]">
-          {error}
-        </p>
+
+      {!loading && !error && !selected && studios.length === 0 && (
+        <EmptyState
+          icon={Building2}
+          message="No studios or franchises found in your movie library yet."
+          action={
+            <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Browse movies
+            </Link>
+          }
+          testId="studios-empty"
+        />
       )}
 
-      {!loading && !selected && (
+      {!loading && !error && !selected && studios.length > 0 && (
         <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
           {studios.map(([name, count]) => (
             <li key={name}>
@@ -95,7 +106,7 @@ export default function Studios() {
         </ul>
       )}
 
-      {!loading && selected && (
+      {!loading && !error && selected && (
         <section className="space-y-4">
           <div className="flex items-center gap-3">
             <button
@@ -109,7 +120,12 @@ export default function Studios() {
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">{selected}</h2>
           </div>
           {filtered.length === 0 ? (
-            <p className="text-sm text-[var(--text-secondary)]">No titles in this studio.</p>
+            <EmptyState
+              icon={Building2}
+              title="No titles"
+              message={`No titles in ${selected} yet.`}
+              testId="studios-detail-empty"
+            />
           ) : (
             <PosterGrid>
               {filtered.map((m) => (

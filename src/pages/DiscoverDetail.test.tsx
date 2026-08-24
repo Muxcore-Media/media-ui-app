@@ -53,6 +53,37 @@ describe('DiscoverDetail', () => {
     expect(screen.getByTitle('Trailer')).toHaveAttribute('src', expect.stringContaining('abc123'))
   })
 
+  it('renders cast when present', async () => {
+    getDiscoverDetail.mockResolvedValueOnce({
+      id: 550,
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'soap',
+      genres: [],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 8.4,
+      mediaType: 'movie',
+      cast: [
+        { id: 1, name: 'Brad Pitt', character: 'Tyler Durden', profilePath: '/brad.jpg' },
+        { id: 2, name: 'Edward Norton', character: 'The Narrator' },
+      ],
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/discover/movie/550']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByTestId('discover-cast')).toBeInTheDocument()
+    expect(screen.getByText('Brad Pitt')).toBeInTheDocument()
+    expect(screen.getByText('Tyler Durden')).toBeInTheDocument()
+    expect(screen.getByText('The Narrator')).toBeInTheDocument()
+  })
+
   it('submits request from detail page', async () => {
     getDiscoverDetail.mockResolvedValueOnce({
       id: 550,

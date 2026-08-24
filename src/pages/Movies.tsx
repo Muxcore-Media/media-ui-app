@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Film } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Shelf, ShelfItem } from '../components/media/Shelf'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { isWatchable } from '../lib/acquisition'
 import { getPreferences } from '../lib/userdata'
 import type { Movie } from '../types'
@@ -73,11 +76,13 @@ export default function Movies() {
   )
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="movies-page">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Movies</h1>
         <p className="text-sm text-[var(--text-secondary)]">Browse movies you can watch now.</p>
       </div>
+
+      {error ? <ErrorBanner message={error} /> : null}
 
       {!loading && inProgressCount > 0 && (
         <p className="text-sm text-[var(--text-secondary)]">
@@ -88,7 +93,7 @@ export default function Movies() {
         </p>
       )}
 
-      {!loading && recommended.length > 0 && (
+      {!loading && !error && recommended.length > 0 && (
         <Shelf title="Recommended">
           {recommended.map((item) => (
             <ShelfItem key={`rec-${item.id}`}>
@@ -132,14 +137,24 @@ export default function Movies() {
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">Library ({filtered.length})</h2>
         {loading ? (
           <PosterGridSkeleton />
-        ) : error ? (
-          <p className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--danger-color)]">
-            {error}
-          </p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-[var(--text-secondary)]">
-            No movies ready to watch yet. Use search in the header to find and request titles.
-          </p>
+        ) : error ? null : filtered.length === 0 ? (
+          <EmptyState
+            icon={Film}
+            title={genre ? 'No matches' : undefined}
+            message={
+              genre
+                ? 'No movies match this genre. Try another filter or clear the genre selection.'
+                : 'No movies ready to watch yet. Use search in the header to find and request titles.'
+            }
+            action={
+              !genre ? (
+                <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+                  Search titles
+                </Link>
+              ) : undefined
+            }
+            testId="movies-empty"
+          />
         ) : (
           <PosterGrid>
             {filtered.map((item) => (

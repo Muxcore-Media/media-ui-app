@@ -2,6 +2,9 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { CalendarClock, Clapperboard, Radio } from 'lucide-react'
 import { api } from '../api/client'
 import { Badge } from '../components/ui/Badge'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ShelfSkeleton } from '../components/ui/Skeleton'
 
 type Channel = {
   id: string
@@ -120,10 +123,22 @@ export default function LiveTV() {
         })}
       </div>
 
-      {loading && <p className="text-sm text-[var(--text-secondary)]">Loading…</p>}
-      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
+      {loading && (
+        <div data-testid="livetv-loading" aria-busy="true" aria-label="Loading Live TV">
+          <ShelfSkeleton count={4} />
+        </div>
+      )}
+      {error ? <ErrorBanner message={error} /> : null}
 
-      {tab === 'guide' && (
+      {!loading && !error && tab === 'guide' && channels.length === 0 && (
+        <EmptyState
+          icon={Radio}
+          title="No channels"
+          message="Live TV channels will appear here once your provider or tuner is configured."
+        />
+      )}
+
+      {!loading && !error && tab === 'guide' && channels.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
           <ul className="max-h-[70vh] divide-y divide-[var(--border-subtle)] overflow-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             {channels.map((ch) => (
@@ -145,15 +160,12 @@ export default function LiveTV() {
                 </button>
               </li>
             ))}
-            {!loading && channels.length === 0 && (
-              <li className="px-3 py-6 text-sm text-[var(--text-secondary)]">No channels available.</li>
-            )}
           </ul>
 
           <div className="space-y-3">
             {active ? (
               <>
-                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-black">
+                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-[var(--player-bg)]">
                   {active.url ? (
                     <video className="h-full w-full" controls autoPlay src={active.url} />
                   ) : (
@@ -181,13 +193,16 @@ export default function LiveTV() {
         </div>
       )}
 
-      {tab === 'recordings' && (
+      {!loading && !error && tab === 'recordings' && recordings.length === 0 && (
+        <EmptyState
+          icon={Clapperboard}
+          title="No recordings yet"
+          message="Scheduled recordings will show up here once you start capturing live TV."
+        />
+      )}
+
+      {!loading && !error && tab === 'recordings' && recordings.length > 0 && (
         <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
-          {recordings.length === 0 && (
-            <li className="px-4 py-6 text-sm text-[var(--text-secondary)]">
-              No recordings yet. Scheduled recordings will show up here.
-            </li>
-          )}
           {recordings.map((r) => (
             <li key={r.id} className="px-4 py-3 text-sm">
               <div className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
@@ -202,7 +217,7 @@ export default function LiveTV() {
         </ul>
       )}
 
-      {tab === 'timers' && (
+      {!loading && !error && tab === 'timers' && (
         <div className="space-y-4">
           <form
             onSubmit={onSchedule}
@@ -242,19 +257,26 @@ export default function LiveTV() {
             </button>
           </form>
           {timerMsg && <p className="text-sm text-[var(--text-secondary)]">{timerMsg}</p>}
-          <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
-            {timers.length === 0 && <li className="px-4 py-6 text-sm text-[var(--text-secondary)]">No timers scheduled.</li>}
-            {timers.map((t) => (
-              <li key={t.id} className="px-4 py-3 text-sm">
-                <div className="font-medium text-[var(--text-primary)]">
-                  {t.title} {t.series ? <span className="text-xs text-[var(--text-tertiary)]">(series)</span> : null}
-                </div>
-                <div className="text-xs text-[var(--text-tertiary)]">
-                  {channels.find((c) => c.id === t.channel_id)?.name || 'Scheduled recording'} · {t.start} → {t.end}
-                </div>
-              </li>
-            ))}
-          </ul>
+          {timers.length === 0 ? (
+            <EmptyState
+              icon={CalendarClock}
+              title="No timers scheduled"
+              message="Use the form above to schedule a one-off or series recording."
+            />
+          ) : (
+            <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+              {timers.map((t) => (
+                <li key={t.id} className="px-4 py-3 text-sm">
+                  <div className="font-medium text-[var(--text-primary)]">
+                    {t.title} {t.series ? <span className="text-xs text-[var(--text-tertiary)]">(series)</span> : null}
+                  </div>
+                  <div className="text-xs text-[var(--text-tertiary)]">
+                    {channels.find((c) => c.id === t.channel_id)?.name || 'Scheduled recording'} · {t.start} → {t.end}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

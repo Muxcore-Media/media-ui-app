@@ -24,6 +24,8 @@ export type FeatureKey =
   | 'playlists'
   | 'queue'
   | 'favorites'
+  | 'debrid'
+  | 'watchlist'
 
 export type Capabilities = {
   libraries: Record<LibraryKey, boolean>
@@ -53,6 +55,8 @@ export const ALL_CAPABILITIES: Capabilities = {
     playlists: true,
     queue: true,
     favorites: true,
+    debrid: false,
+    watchlist: true,
   },
 }
 
@@ -80,6 +84,8 @@ export const DEFAULT_CAPABILITIES: Capabilities = {
     playlists: true,
     queue: true,
     favorites: true,
+    debrid: false,
+    watchlist: false,
   },
 }
 
@@ -87,12 +93,14 @@ export type CapabilitiesContextValue = {
   caps: Capabilities
   loading: boolean
   error: string | null
+  retry: () => void
 }
 
 export const CapabilitiesContext = createContext<CapabilitiesContextValue>({
   caps: DEFAULT_CAPABILITIES,
   loading: true,
   error: null,
+  retry: () => {},
 })
 
 export function useCapabilities() {

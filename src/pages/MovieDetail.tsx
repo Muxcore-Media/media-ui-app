@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react'
 import { api } from '../api/client'
-import Spinner from '../components/Spinner'
+import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis'
 import { DetailHero } from '../components/media/DetailHero'
+import { DetailHeroSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata'
 import { buildMoviePlayerHref } from '../lib/playHref'
 import type { Movie } from '../types'
@@ -19,6 +21,7 @@ export default function MovieDetail() {
   const [fav, setFav] = useState(false)
   const [watched, setWatched] = useState(false)
   const [queued, setQueued] = useState(false)
+  const probe = usePlaybackAnalysis(movie?.has_file ? movie.stream_url : undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -51,17 +54,13 @@ export default function MovieDetail() {
   }, [id])
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spinner />
-      </div>
-    )
+    return <DetailHeroSkeleton />
   }
 
   if (!movie) {
     return (
       <div className="space-y-3">
-        <p className="text-[var(--text-secondary)]">{error || 'We couldn\u2019t find this movie.'}</p>
+        <ErrorBanner message={error || 'Movie not found.'} />
         <Link to="/movies" className="text-[var(--accent-color)]">
           Back to movies
         </Link>
@@ -72,7 +71,7 @@ export default function MovieDetail() {
   const playTo = movie.has_file && movie.stream_url ? buildMoviePlayerHref(movie) : null
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="movie-detail-page">
       <DetailHero
         backdropUrl={movie.backdrop_url}
         posterUrl={movie.poster_url}
@@ -82,6 +81,7 @@ export default function MovieDetail() {
         meta={
           <>
             {movie.has_file && <Badge tone="accent">Available</Badge>}
+            {probe.analysis?.info_line ? <Badge tone="neutral">{probe.analysis.info_line}</Badge> : null}
             {watched && <Badge tone="neutral">Watched</Badge>}
             {movie.vote_average > 0 && (
               <Badge tone="neutral">
@@ -99,7 +99,7 @@ export default function MovieDetail() {
             {playTo ? (
               <Link
                 to={playTo}
-                className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+                className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-hover)]"
               >
                 <Play className="h-4 w-4 fill-current" aria-hidden="true" />
                 Play

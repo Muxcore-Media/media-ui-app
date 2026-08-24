@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Search from './Search'
-import { CapabilitiesContext, DEFAULT_CAPABILITIES } from '../lib/capabilities'
+import { CapabilitiesContext, DEFAULT_CAPABILITIES, type Capabilities } from '../lib/capabilities'
 
 const listMovies = vi.fn()
 const listTVShows = vi.fn()
@@ -26,9 +26,9 @@ vi.mock('../api/client', async () => {
   }
 })
 
-function renderSearch(initial = '/search?q=Fight') {
+function renderSearch(initial = '/search?q=Fight', caps: Capabilities = DEFAULT_CAPABILITIES) {
   return render(
-    <CapabilitiesContext.Provider value={{ caps: DEFAULT_CAPABILITIES, loading: false, error: null }}>
+    <CapabilitiesContext.Provider value={{ caps, loading: false, error: null, retry: () => {} }}>
       <MemoryRouter initialEntries={[initial]}>
         <Routes>
           <Route path="/search" element={<Search />} />
@@ -95,6 +95,53 @@ describe('Search page', () => {
     await waitFor(() => {
       expect(requestMovie).toHaveBeenCalledWith(
         expect.objectContaining({ tmdbId: 550, title: 'Fight Club', mediaType: 'movie' }),
+      )
+    })
+  })
+
+  it('shows empty state when search returns no matches', async () => {
+    search.mockResolvedValueOnce([])
+
+    renderSearch('/search?q=NoSuchTitle')
+
+    expect(await screen.findByTestId('search-empty')).toBeInTheDocument()
+    expect(screen.getByText(/No results for "NoSuchTitle"/i)).toBeInTheDocument()
+  })
+
+  it('requests remote music artist', async () => {
+    search.mockImplementation((_q, opts?: { type?: string }) => {
+      if (opts?.type === 'music') {
+        return Promise.resolve([
+          {
+            id: 0,
+            musicbrainzId: 'a74b1b7f-71a5-3961-8c07-9170df271ef9',
+            title: 'Radiohead',
+            year: 0,
+            overview: 'British rock band',
+            poster: '',
+            voteAvg: 0,
+            mediaType: 'music',
+          },
+        ])
+      }
+      return Promise.resolve([])
+    })
+    requestMovie.mockResolvedValueOnce({ status: 'requested' })
+
+    renderSearch('/search?q=Radiohead&scope=music', {
+      ...DEFAULT_CAPABILITIES,
+      libraries: { ...DEFAULT_CAPABILITIES.libraries, music: true },
+    })
+    const btn = await screen.findByRole('button', { name: 'Request' })
+    fireEvent.click(btn)
+
+    await waitFor(() => {
+      expect(requestMovie).toHaveBeenCalledWith(
+        expect.objectContaining({
+          musicbrainzId: 'a74b1b7f-71a5-3961-8c07-9170df271ef9',
+          title: 'Radiohead',
+          mediaType: 'music',
+        }),
       )
     })
   })

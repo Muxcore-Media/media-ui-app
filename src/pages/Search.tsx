@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { api } from '../api/client'
+import { Search as SearchIcon } from 'lucide-react'
+import { api, searchResultKey } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import RequestableCard from '../components/search/RequestableCard'
 import { PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Badge } from '../components/ui/Badge'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { useCapabilities } from '../lib/capabilities'
 import {
   groupLibraryHits,
@@ -27,7 +30,7 @@ export default function Search() {
   const [error, setError] = useState<string | null>(null)
   const [library, setLibrary] = useState<Awaited<ReturnType<typeof runUnifiedSearch>>['library']>([])
   const [remote, setRemote] = useState<SearchResult[]>([])
-  const [requested, setRequested] = useState<Record<number, string>>({})
+  const [requested, setRequested] = useState<Record<string, string>>({})
 
   const scopeOptions = useMemo(() => searchScopesForCaps(caps), [caps])
   const canSearch = q.length >= 2
@@ -84,14 +87,19 @@ export default function Search() {
 
   async function request(result: SearchResult) {
     const res = await api.requestTitle({
-      tmdbId: result.id,
+      tmdbId: result.mediaType === 'movie' || result.mediaType === 'tv' ? result.id : undefined,
+      musicbrainzId: result.musicbrainzId,
+      releaseGroupId: result.releaseGroupId,
+      recordingId: result.recordingId,
+      artistName: result.artistName,
+      albumTitle: result.albumTitle,
       title: result.title,
       year: result.year,
       overview: result.overview,
       poster: result.poster,
       mediaType: result.mediaType,
     })
-    setRequested((prev) => ({ ...prev, [result.id]: res.status || 'requested' }))
+    setRequested((prev) => ({ ...prev, [searchResultKey(result)]: res.status || 'requested' }))
   }
 
   return (
@@ -128,11 +136,7 @@ export default function Search() {
         </p>
       )}
 
-      {error && (
-        <p className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--danger-color)]">
-          {error}
-        </p>
-      )}
+      {error ? <ErrorBanner message={error} /> : null}
       {loading && <PosterGridSkeleton count={6} />}
 
       {!loading && grouped.movies.length > 0 && (
@@ -167,12 +171,12 @@ export default function Search() {
                 to={hit.href}
                 className="group block overflow-hidden rounded-[var(--radius-md)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
               >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-elevated-2)] shadow-md transition duration-300 group-hover:-translate-y-1 group-hover:shadow-2xl">
+                <div className="motion-safe-hover-lift relative aspect-[2/3] overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-elevated-2)] shadow-md group-hover:shadow-2xl">
                   {hit.poster ? (
                     <img
                       src={hit.poster}
                       alt=""
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.06]"
+                      className="motion-safe-scale h-full w-full object-cover"
                       loading="lazy"
                     />
                   ) : (
@@ -199,9 +203,9 @@ export default function Search() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             {remoteOnly.map((r) => (
               <RequestableCard
-                key={`${r.mediaType}-${r.id}`}
+                key={searchResultKey(r)}
                 item={r}
-                requested={requested[r.id]}
+                requested={requested[searchResultKey(r)]}
                 onRequest={(item) => void request(item)}
                 returnTo={returnTo}
               />
@@ -211,7 +215,12 @@ export default function Search() {
       )}
 
       {!loading && canSearch && library.length === 0 && remoteOnly.length === 0 && !error && (
-        <p className="text-sm text-[var(--text-secondary)]">No matches for &ldquo;{q}&rdquo;. Try another title or filter.</p>
+        <EmptyState
+          icon={SearchIcon}
+          title="No matches"
+          message={`No results for "${q}". Try another title or filter.`}
+          testId="search-empty"
+        />
       )}
 
       {canSearch && (

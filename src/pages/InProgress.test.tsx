@@ -83,4 +83,73 @@ describe('InProgress page', () => {
     expect(screen.getByText('Downloading Movie')).toBeInTheDocument()
     expect(screen.getByText('Searching Show')).toBeInTheDocument()
   })
+
+  it('surfaces import_failed requests in the attention section', async () => {
+    listRequests.mockResolvedValueOnce([
+      {
+        id: 'r-fail',
+        itemType: 'movie',
+        itemId: 'm9',
+        tmdbId: 9,
+        title: 'Broken Import',
+        year: 2020,
+        poster: '',
+        status: 'import_failed',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ])
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('in-progress-attention')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Broken Import')).toBeInTheDocument()
+    expect(screen.getByText('Import failed')).toBeInTheDocument()
+    expect(screen.getByText(/could not be added to your library/i)).toBeInTheDocument()
+  })
+
+  it('shows API statusLabel and statusDetail on cards when present', async () => {
+    listRequests.mockResolvedValueOnce([
+      {
+        id: 'r-stalled',
+        itemType: 'movie',
+        itemId: 'm1',
+        tmdbId: 1,
+        title: 'Stalled Movie',
+        year: 2020,
+        poster: '',
+        status: 'stalled',
+        statusLabel: 'Stalled — no peers',
+        statusDetail: 'no peers',
+        createdAt: '',
+        updatedAt: '',
+      },
+      {
+        id: 'r-detail',
+        itemType: 'tv',
+        itemId: 's1',
+        tmdbId: 2,
+        title: 'Detail Show',
+        year: 2021,
+        poster: '',
+        status: 'import_failed',
+        statusLabel: 'Import failed',
+        statusDetail: 'path not under a scanner watch directory',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ])
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('in-progress-attention')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Stalled — no peers')).toBeInTheDocument()
+    expect(screen.queryByText('no peers')).not.toBeInTheDocument()
+    expect(screen.getByText('Import failed')).toBeInTheDocument()
+    expect(screen.getByText('path not under a scanner watch directory')).toBeInTheDocument()
+  })
 })

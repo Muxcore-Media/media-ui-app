@@ -1,15 +1,31 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ExternalLink, ListPlus, Play, Star } from 'lucide-react'
+import { ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react'
 import { api } from '../api/client'
-import Spinner from '../components/Spinner'
+import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis'
 import { DetailHero } from '../components/media/DetailHero'
+import { DetailHeroSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { IconButton } from '../components/ui/IconButton'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata'
 import { buildEpisodePlayerHref } from '../lib/playHref'
-import type { TVShow } from '../types'
+import { FixedWindowList } from '../components/ui/FixedWindowList'
+import type { Episode, TVShow } from '../types'
+
+const EPISODE_ROW_HEIGHT = 72
+
+function firstPlayableStreamUrl(show: TVShow | null): string | undefined {
+  if (!show) return undefined
+  for (const season of show.seasons ?? []) {
+    for (const episode of season.episodes) {
+      if (episode.has_file && episode.stream_url) return episode.stream_url
+    }
+  }
+  return undefined
+}
 
 export default function TVShowDetail() {
   const { id = '' } = useParams()
@@ -18,6 +34,7 @@ export default function TVShowDetail() {
   const [error, setError] = useState<string | null>(null)
   const [jellyfinURL, setJellyfinURL] = useState<string | null>(null)
   const [fav, setFav] = useState(false)
+  const probe = usePlaybackAnalysis(firstPlayableStreamUrl(show))
 
   useEffect(() => {
     let cancelled = false
@@ -48,17 +65,13 @@ export default function TVShowDetail() {
   }, [id])
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Spinner />
-      </div>
-    )
+    return <DetailHeroSkeleton />
   }
 
   if (!show) {
     return (
       <div className="space-y-3">
-        <p className="text-[var(--text-secondary)]">{error || 'TV show not found.'}</p>
+        <ErrorBanner message={error || 'TV show not found.'} />
         <Link to="/tv" className="text-[var(--accent-color)]">
           Back to TV
         </Link>
@@ -67,7 +80,7 @@ export default function TVShowDetail() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-testid="tv-detail-page">
       <DetailHero
         backdropUrl={show.backdrop_url}
         posterUrl={show.poster_url}
@@ -76,6 +89,7 @@ export default function TVShowDetail() {
         meta={
           <>
             {show.has_file && <Badge tone="accent">Available</Badge>}
+            {probe.analysis?.info_line ? <Badge tone="neutral">{probe.analysis.info_line}</Badge> : null}
             {show.vote_average > 0 && (
               <Badge tone="neutral">
                 <Star className="h-3 w-3 fill-current" aria-hidden="true" />
@@ -129,58 +143,69 @@ export default function TVShowDetail() {
               <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
                 {season.name || `Season ${season.season_number}`}
               </h3>
-              <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
-                {season.episodes.map((ep) => {
-                  const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
-                  const playTo = buildEpisodePlayerHref(show, ep)
-                  return (
-                    <li key={ep.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
-                      <div className="min-w-0">
-                        <p className="text-sm">
-                          <span className="font-semibold text-[var(--text-primary)]">
-                            S{String(ep.season_number).padStart(2, '0')}E{String(ep.episode_number).padStart(2, '0')}
-                          </span>
-                          {ep.title ? <span className="text-[var(--text-secondary)]"> · {ep.title}</span> : null}
-                        </p>
-                        {ep.overview && <p className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{ep.overview}</p>}
-                      </div>
-                      {playTo ? (
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to={playTo}
-                            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-[var(--accent-hover)]"
-                          >
-                            <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
-                            Play
-                          </Link>
-                          <IconButton
-                            icon={<ListPlus className="h-4 w-4" aria-hidden="true" />}
-                            aria-label={`Add ${epTitle} to queue`}
-                            size="sm"
-                            onClick={() =>
-                              enqueue({
-                                id: ep.id,
-                                kind: 'episode',
-                                title: epTitle,
-                                href: playTo,
-                                stream_url: ep.stream_url,
-                                poster_url: show.poster_url,
-                              })
-                            }
-                          />
-                        </div>
-                      ) : (
-                        <Badge tone="neutral">No file</Badge>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
+              <FixedWindowList
+                items={season.episodes}
+                rowHeight={EPISODE_ROW_HEIGHT}
+                className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+                getKey={(ep) => ep.id}
+                renderRow={(ep) => <EpisodeRow show={show} ep={ep} />}
+              />
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-[var(--text-secondary)]">No episodes listed yet.</p>
+        <EmptyState
+          icon={Tv}
+          title="No episodes yet"
+          message="Episode listings will appear here once metadata is available for this series."
+        />
+      )}
+    </div>
+  )
+}
+
+function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
+  const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
+  const playTo = buildEpisodePlayerHref(show, ep)
+
+  return (
+    <div className="flex h-full flex-wrap items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
+      <div className="min-w-0">
+        <p className="text-sm">
+          <span className="font-semibold text-[var(--text-primary)]">
+            S{String(ep.season_number).padStart(2, '0')}E{String(ep.episode_number).padStart(2, '0')}
+          </span>
+          {ep.title ? <span className="text-[var(--text-secondary)]"> · {ep.title}</span> : null}
+        </p>
+        {ep.overview && <p className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{ep.overview}</p>}
+      </div>
+      {playTo ? (
+        <div className="flex items-center gap-2">
+          <Link
+            to={playTo}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-hover)]"
+          >
+            <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+            Play
+          </Link>
+          <IconButton
+            icon={<ListPlus className="h-4 w-4" aria-hidden="true" />}
+            aria-label={`Add ${epTitle} to queue`}
+            size="sm"
+            onClick={() =>
+              enqueue({
+                id: ep.id,
+                kind: 'episode',
+                title: epTitle,
+                href: playTo,
+                stream_url: ep.stream_url,
+                poster_url: show.poster_url,
+              })
+            }
+          />
+        </div>
+      ) : (
+        <Badge tone="neutral">No file</Badge>
       )}
     </div>
   )

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import { api } from '../api/client'
 import { ShelfSkeleton } from '../components/ui/Skeleton'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import type { Episode, TVShow } from '../types'
 
 type UpcomingRow = {
@@ -81,7 +83,7 @@ export default function Upcoming() {
   }, [rows, monthOffset])
 
   return (
-    <div className="space-y-6" data-testid="upcoming-page">
+    <div className="min-w-0 space-y-6 overflow-x-hidden" data-testid="upcoming-page">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Upcoming</h1>
@@ -108,14 +110,17 @@ export default function Upcoming() {
         </div>
       </div>
       {loading && <ShelfSkeleton count={4} />}
-      {error && <p className="text-sm text-[var(--danger-color)]">{error}</p>}
-      {!loading && view.byDay.length === 0 && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No air dates in {view.label}.{' '}
-          <Link to="/tv" className="text-[var(--accent-color)]">
-            Browse TV
-          </Link>
-        </p>
+      {error && <ErrorBanner message={error} />}
+      {!loading && !error && view.byDay.length === 0 && (
+        <EmptyState
+          icon={CalendarDays}
+          message={`No air dates in ${view.label}.`}
+          action={
+            <Link to="/tv" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Browse TV
+            </Link>
+          }
+        />
       )}
       <div className="space-y-4">
         {view.byDay.map(([day, dayRows]) => (
@@ -125,7 +130,7 @@ export default function Upcoming() {
               {dayRows.map((r) => (
                 <li
                   key={`${r.show.id}-${r.episode.id}`}
-                  className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]"
+                  className="flex min-w-0 items-center gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]"
                 >
                   <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-[var(--bg-elevated-2)]">
                     {r.show.poster_url ? (
@@ -134,13 +139,16 @@ export default function Upcoming() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-[var(--text-primary)]">{r.show.title}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">
+                    <p className="truncate text-xs text-[var(--text-tertiary)]">
                       S{String(r.episode.season_number).padStart(2, '0')}E
                       {String(r.episode.episode_number).padStart(2, '0')}
                       {r.episode.title ? ` · ${r.episode.title}` : ''}
                     </p>
                   </div>
-                  <Link to={`/tv/${r.show.id}`} className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+                  <Link
+                    to={`/tv/${r.show.id}`}
+                    className="shrink-0 text-sm font-medium text-[var(--accent-color)] hover:underline"
+                  >
                     Open
                   </Link>
                 </li>

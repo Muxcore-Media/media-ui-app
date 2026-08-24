@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search as SearchIcon } from 'lucide-react'
+import { Search as SearchIcon, Clapperboard } from 'lucide-react'
 import { api } from '../api/client'
 import MediaCard from '../components/MediaCard'
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
 import type { Movie, TVShow } from '../types'
 
 /** Jellyfin “mixed” library: movies + TV in one grid. */
@@ -64,7 +66,17 @@ export default function Mixed() {
       {loading ? (
         <PosterGridSkeleton />
       ) : error ? (
-        <p className="text-sm text-[var(--danger-color)]">{error}</p>
+        <ErrorBanner message={error} />
+      ) : movieRows.length === 0 && showRows.length === 0 ? (
+        <EmptyState
+          icon={Clapperboard}
+          message={needle ? 'No titles match your filter.' : 'No movies or TV shows in your library yet.'}
+          action={
+            <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Search
+            </Link>
+          }
+        />
       ) : (
         <PosterGrid>
           {movieRows.map((item) => (

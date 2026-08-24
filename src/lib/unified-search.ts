@@ -56,7 +56,8 @@ export function searchScopesForCaps(caps: Capabilities): { id: SearchScope; labe
     featureEnabled(caps, 'search') ||
     featureEnabled(caps, 'request') ||
     libraryEnabled(caps, 'movies') ||
-    libraryEnabled(caps, 'tv')
+    libraryEnabled(caps, 'tv') ||
+    libraryEnabled(caps, 'music')
   ) {
     scopes.push({ id: 'add', label: SCOPE_LABELS.add })
   }
@@ -71,8 +72,13 @@ function scopeIncludesLibrary(scope: SearchScope, lib: LibraryKey): boolean {
   return scope === 'all' || scope === lib
 }
 
-function scopeIncludesRemote(scope: SearchScope): boolean {
+function scopeIncludesMovieTVRemote(scope: SearchScope): boolean {
   return scope === 'all' || scope === 'add' || scope === 'movies' || scope === 'tv'
+}
+
+function scopeIncludesMusicRemote(scope: SearchScope, caps: Capabilities): boolean {
+  if (!libraryEnabled(caps, 'music')) return false
+  return scope === 'all' || scope === 'add' || scope === 'music'
 }
 
 export async function runUnifiedSearch(
@@ -112,11 +118,22 @@ export async function runUnifiedSearch(
     tasks.push(api.listAudiobooks().catch(() => emptyLib))
   } else tasks.push(Promise.resolve(emptyLib))
 
-  if (scopeIncludesRemote(scope)) {
-    tasks.push(api.search(query.trim()).catch(() => [] as SearchResult[]))
-  } else tasks.push(Promise.resolve([] as SearchResult[]))
+  const remoteTasks: Promise<SearchResult[]>[] = []
+  if (scopeIncludesMovieTVRemote(scope)) {
+    remoteTasks.push(api.search(query.trim()).catch(() => [] as SearchResult[]))
+  }
+  if (scopeIncludesMusicRemote(scope, caps)) {
+    remoteTasks.push(api.search(query.trim(), { type: 'music' }).catch(() => [] as SearchResult[]))
+    remoteTasks.push(api.search(query.trim(), { type: 'music_album' }).catch(() => [] as SearchResult[]))
+    remoteTasks.push(api.search(query.trim(), { type: 'music_track' }).catch(() => [] as SearchResult[]))
+  }
+  tasks.push(
+    remoteTasks.length > 0
+      ? Promise.all(remoteTasks).then((chunks) => chunks.flat())
+      : Promise.resolve([] as SearchResult[]),
+  )
 
-  const [movies, shows, music, books, comics, audiobooks, tmdb] = (await Promise.all(tasks)) as [
+  const [movies, shows, music, books, comics, audiobooks, remote] = (await Promise.all(tasks)) as [
     { items: Movie[] },
     { items: TVShow[] },
     typeof emptyLib,
@@ -195,14 +212,19 @@ export async function runUnifiedSearch(
     )
   }
 
-  let remote = tmdb
-  if (scope === 'movies') remote = remote.filter((r) => r.mediaType === 'movie')
-  if (scope === 'tv') remote = remote.filter((r) => r.mediaType === 'tv')
+  let filteredRemote = remote
+  if (scope === 'movies') filteredRemote = filteredRemote.filter((r) => r.mediaType === 'movie')
+  if (scope === 'tv') filteredRemote = filteredRemote.filter((r) => r.mediaType === 'tv')
+  if (scope === 'music') {
+    filteredRemote = filteredRemote.filter(
+      (r) => r.mediaType === 'music' || r.mediaType === 'music_album' || r.mediaType === 'music_track',
+    )
+  }
   if (scope === 'add') {
     /* keep remote only — library cleared below when scope is add-only display */
   }
 
-  return { library: scope === 'add' ? [] : lib, remote }
+  return { library: scope === 'add' ? [] : lib, remote: filteredRemote }
 }
 
 export function remoteNotInLibrary(library: LibraryHit[], remote: SearchResult[]): SearchResult[] {
@@ -211,10 +233,18 @@ export function remoteNotInLibrary(library: LibraryHit[], remote: SearchResult[]
       if (h.kind === 'movie' || h.kind === 'tv') {
         return [`${h.kind}:${h.item.title.toLowerCase()}`]
       }
+      if (h.kind === 'other' && h.subtitle === 'Music') {
+        return [`music:${h.title.toLowerCase()}`]
+      }
       return []
     }),
   )
-  return remote.filter((r) => !titles.has(`${r.mediaType}:${r.title.toLowerCase()}`))
+  return remote.filter((r) => {
+    if (r.mediaType === 'music' || r.mediaType === 'music_album' || r.mediaType === 'music_track') {
+      return !titles.has(`music:${(r.artistName || r.title).toLowerCase()}`)
+    }
+    return !titles.has(`${r.mediaType}:${r.title.toLowerCase()}`)
+  })
 }
 
 export function groupLibraryHits(library: LibraryHit[]) {

@@ -64,14 +64,14 @@ export function HeroBanner({ item }: { item: HeroItem }) {
         <div className="flex flex-wrap gap-3 pt-1">
           <Link
             to={item.playHref}
-            className="inline-flex h-12 items-center justify-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-6 text-base font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+            className="inline-flex h-12 items-center justify-center gap-2.5 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-6 text-base font-semibold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-hover)]"
           >
             <Play className="h-5 w-5 fill-current" aria-hidden="true" />
             Play
           </Link>
           <Link
             to={item.detailHref}
-            className="inline-flex h-12 items-center justify-center gap-2.5 rounded-[var(--radius-md)] border border-white/20 bg-white/10 px-6 text-base font-semibold text-[var(--text-primary)] backdrop-blur transition hover:bg-white/20"
+            className="inline-flex h-12 items-center justify-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--border-on-media)] bg-[var(--surface-glass)] px-6 text-base font-semibold text-[var(--text-primary)] backdrop-blur transition hover:bg-[var(--surface-glass-hover)]"
           >
             <Info className="h-5 w-5" aria-hidden="true" />
             More info

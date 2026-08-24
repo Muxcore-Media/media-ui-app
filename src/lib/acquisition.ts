@@ -11,6 +11,22 @@ export function isActiveRequestStatus(status: string | undefined): boolean {
   return s !== '' && s !== 'available'
 }
 
+/** Badge text for a request row — prefers API statusLabel when present. */
+export function requestDisplayLabel(req: Pick<MediaRequest, 'status' | 'statusLabel'>): string {
+  const label = (req.statusLabel || '').trim()
+  if (label) return label
+  return requestStatusLabel(req.status)
+}
+
+/** Subtitle detail when API provides statusDetail and it is not already in the label. */
+export function requestDisplayDetail(req: Pick<MediaRequest, 'statusLabel' | 'statusDetail'>): string | null {
+  const detail = (req.statusDetail || '').trim()
+  if (!detail) return null
+  const label = (req.statusLabel || '').trim()
+  if (label && label.includes(detail)) return null
+  return detail
+}
+
 export function requestStatusLabel(status: string): string {
   switch (status.trim().toLowerCase()) {
     case 'downloading':
@@ -24,7 +40,16 @@ export function requestStatusLabel(status: string): string {
     case 'requested':
       return 'Requested'
     case 'workflow':
+    case 'pending':
       return 'Pending approval'
+    case 'import_failed':
+      return 'Import failed'
+    case 'failed':
+      return 'Download failed'
+    case 'stalled':
+      return 'Stalled'
+    case 'denied':
+      return 'Denied'
     case 'available':
       return 'Available'
     default:
@@ -32,7 +57,7 @@ export function requestStatusLabel(status: string): string {
   }
 }
 
-export type RequestStatusTone = 'success' | 'accent' | 'neutral' | 'warning'
+export type RequestStatusTone = 'success' | 'accent' | 'neutral' | 'warning' | 'danger'
 
 export function requestStatusTone(status: string): RequestStatusTone {
   switch (status.trim().toLowerCase()) {
@@ -43,19 +68,36 @@ export function requestStatusTone(status: string): RequestStatusTone {
       return 'accent'
     case 'searching':
     case 'queued':
+    case 'pending':
+    case 'workflow':
+    case 'stalled':
       return 'warning'
+    case 'import_failed':
+    case 'failed':
+    case 'denied':
+      return 'danger'
     default:
       return 'neutral'
   }
 }
 
-export function requestPhase(status: string): 'downloading' | 'searching' | 'requested' {
+export function requestPhase(
+  status: string,
+): 'attention' | 'downloading' | 'searching' | 'pending' | 'requested' {
   switch (status.trim().toLowerCase()) {
+    case 'import_failed':
+    case 'failed':
+    case 'stalled':
+    case 'denied':
+      return 'attention'
     case 'downloading':
       return 'downloading'
     case 'searching':
     case 'queued':
       return 'searching'
+    case 'pending':
+    case 'workflow':
+      return 'pending'
     default:
       return 'requested'
   }
@@ -71,7 +113,9 @@ export function posterUrlForRequest(poster: string | undefined): string {
 
 export function detailHrefForRequest(req: MediaRequest): string | null {
   if (!req.itemId) return null
-  return req.itemType === 'tv' ? `/tv/${req.itemId}` : `/movies/${req.itemId}`
+  if (req.itemType === 'tv') return `/tv/${req.itemId}`
+  if (req.itemType === 'music' || req.itemType === 'music_album' || req.itemType === 'music_track') return `/music/${req.itemId}`
+  return `/movies/${req.itemId}`
 }
 
 export type InProgressEntry =
@@ -80,6 +124,8 @@ export type InProgressEntry =
 
 function requestKey(req: MediaRequest): string {
   if (req.itemId) return `${req.itemType}:${req.itemId}`
+  if (req.itemType === 'music' && req.musicbrainzId) return `${req.itemType}:mbid:${req.musicbrainzId}`
+  if (req.itemType === 'music_album' && req.musicbrainzId) return `${req.itemType}:rg:${req.musicbrainzId}`
   if (req.tmdbId) return `${req.itemType}:tmdb:${req.tmdbId}`
   return `${req.itemType}:${req.title.toLowerCase()}`
 }
@@ -114,11 +160,13 @@ export function mergeInProgressEntries(
     const rank = (entry: InProgressEntry) => {
       if (entry.source === 'request') {
         const phase = requestPhase(entry.request.status)
-        if (phase === 'downloading') return 0
-        if (phase === 'searching') return 1
-        return 2
+        if (phase === 'attention') return 0
+        if (phase === 'downloading') return 1
+        if (phase === 'searching') return 2
+        if (phase === 'pending') return 3
+        return 4
       }
-      return 3
+      return 5
     }
     const diff = rank(a) - rank(b)
     if (diff !== 0) return diff
@@ -129,17 +177,21 @@ export function mergeInProgressEntries(
 }
 
 export function groupInProgressByPhase(entries: InProgressEntry[]) {
+  const attention: InProgressEntry[] = []
   const downloading: InProgressEntry[] = []
   const searching: InProgressEntry[] = []
+  const pending: InProgressEntry[] = []
   const requested: InProgressEntry[] = []
 
   for (const entry of entries) {
     const status = entry.source === 'request' ? entry.request.status : 'added'
     const phase = requestPhase(status)
-    if (phase === 'downloading') downloading.push(entry)
+    if (phase === 'attention') attention.push(entry)
+    else if (phase === 'downloading') downloading.push(entry)
     else if (phase === 'searching') searching.push(entry)
+    else if (phase === 'pending') pending.push(entry)
     else requested.push(entry)
   }
 
-  return { downloading, searching, requested }
+  return { attention, downloading, searching, pending, requested }
 }

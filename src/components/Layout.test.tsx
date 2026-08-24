@@ -6,7 +6,7 @@ import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../
 
 function renderLayout(caps = DEFAULT_CAPABILITIES) {
   return render(
-    <CapabilitiesContext.Provider value={{ caps, loading: false, error: null }}>
+    <CapabilitiesContext.Provider value={{ caps, loading: false, error: null, retry: () => {} }}>
       <MemoryRouter initialEntries={['/']}>
         <Routes>
           <Route element={<Layout />}>
@@ -21,13 +21,13 @@ function renderLayout(caps = DEFAULT_CAPABILITIES) {
 describe('Layout (session / login shell)', () => {
   it('exposes BFF logout so auth-local session cookie can be cleared', () => {
     renderLayout()
-    const logout = screen.getByRole('link', { name: 'Logout' })
+    const logout = screen.getByRole('link', { name: 'Sign out' })
     expect(logout).toHaveAttribute('href', '/logout')
   })
 
   it('renders only enabled library sections in primary nav', () => {
     renderLayout()
-    const primaryNav = screen.getByRole('navigation', { name: 'Primary' })
+    const primaryNav = screen.getByRole('navigation', { name: 'Primary navigation' })
     expect(within(primaryNav).getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/')
     expect(within(primaryNav).getByRole('link', { name: 'Movies' })).toHaveAttribute('href', '/movies')
     expect(within(primaryNav).getByRole('link', { name: 'TV' })).toHaveAttribute('href', '/tv')
@@ -42,7 +42,7 @@ describe('Layout (session / login shell)', () => {
 
   it('shows optional libraries when capabilities report them enabled', () => {
     renderLayout(ALL_CAPABILITIES)
-    const primaryNav = screen.getByRole('navigation', { name: 'Primary' })
+    const primaryNav = screen.getByRole('navigation', { name: 'Primary navigation' })
     expect(within(primaryNav).getByRole('link', { name: 'Music' })).toHaveAttribute('href', '/music')
     expect(within(primaryNav).getByRole('link', { name: 'Books' })).toHaveAttribute('href', '/books')
   })

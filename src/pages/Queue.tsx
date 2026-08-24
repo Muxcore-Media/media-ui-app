@@ -1,12 +1,81 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ListMusic, Play, Trash2, X } from 'lucide-react'
+import { api, friendlyFetchError } from '../api/client'
+import { EmptyState } from '../components/ui/EmptyState'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { Badge } from '../components/ui/Badge'
+import {
+  isActiveRequestStatus,
+  requestDisplayDetail,
+  requestDisplayLabel,
+  requestStatusTone,
+} from '../lib/acquisition'
 import { clearQueue, continueWatching, dequeue, listFavorites, listQueue, type QueueItem } from '../lib/userdata'
 import { buildProgressPlayerHref } from '../lib/playHref'
+import type { MediaRequest } from '../types'
+
+function attentionHint(status: string): string | null {
+  switch (status.trim().toLowerCase()) {
+    case 'import_failed':
+      return 'Download finished but could not be added to your library yet.'
+    case 'failed':
+      return 'The grab did not complete successfully.'
+    case 'stalled':
+      return 'Download is stuck and may need attention.'
+    case 'denied':
+      return 'This request was not approved.'
+    default:
+      return null
+  }
+}
+
+function queueItemRequestKey(item: QueueItem): string | null {
+  if (item.kind === 'tv') return `tv:${item.id}`
+  if (item.kind === 'movie') return `movie:${item.id}`
+  return null
+}
+
+function buildActiveRequestMap(requests: MediaRequest[]): Map<string, MediaRequest> {
+  const map = new Map<string, MediaRequest>()
+  for (const req of requests) {
+    if (!isActiveRequestStatus(req.status) || !req.itemId) continue
+    const key = req.itemType === 'tv' ? `tv:${req.itemId}` : `movie:${req.itemId}`
+    const existing = map.get(key)
+    if (!existing || req.updatedAt > existing.updatedAt) map.set(key, req)
+  }
+  return map
+}
 
 /** Jellyfin-style play queue with durable userdata + resume/favorites seed. */
 export default function Queue() {
   const [queue, setQueue] = useState(() => listQueue())
+  const [requests, setRequests] = useState<MediaRequest[]>([])
+  const [requestError, setRequestError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await api.listRequests()
+        if (!cancelled) {
+          setRequests(list)
+          setRequestError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setRequests([])
+          setRequestError(friendlyFetchError(err, 'Failed to load request status'))
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const activeRequests = useMemo(() => buildActiveRequestMap(requests), [requests])
+
   const seeded = useMemo(() => {
     const fromProgress = continueWatching(20).map(
       (p): QueueItem => ({
@@ -31,6 +100,8 @@ export default function Queue() {
   }, [])
 
   const display = queue.length > 0 ? queue : [...seeded.fromProgress, ...seeded.fromFav]
+  const showingSuggestions = queue.length === 0 && display.length > 0
+  const listLabel = showingSuggestions ? 'Suggested picks from continue watching and favorites' : 'Playback queue'
 
   function remove(id: string) {
     dequeue(id)
@@ -62,19 +133,30 @@ export default function Queue() {
           </button>
         )}
       </div>
+      {requestError && <ErrorBanner message={requestError} testId="queue-request-error" />}
       {display.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] py-16 text-center">
-          <ListMusic className="h-8 w-8 text-[var(--text-tertiary)]" aria-hidden="true" />
-          <p className="text-sm text-[var(--text-secondary)]">
-            Queue empty. Play something, add to queue from a detail page, or add favorites.
-          </p>
-          <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
-            Search
-          </Link>
-        </div>
+        <EmptyState
+          icon={ListMusic}
+          title="Queue empty"
+          message="Play something, add to queue from a detail page, or add favorites."
+          testId="queue-empty"
+          action={
+            <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Search
+            </Link>
+          }
+        />
       ) : (
-        <ol className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
-          {display.map((item, i) => (
+        <ol
+          aria-label={listLabel}
+          className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+        >
+          {display.map((item, i) => {
+            const itemKey = queueItemRequestKey(item)
+            const request = itemKey ? activeRequests.get(itemKey) : undefined
+            const statusDetail = request ? requestDisplayDetail(request) ?? attentionHint(request.status) : null
+
+            return (
             <li key={`${item.id}-${i}`} className="flex items-center gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
               <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-[var(--bg-elevated-2)]">
                 {item.poster_url ? (
@@ -84,14 +166,25 @@ export default function Queue() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-[var(--text-primary)]">
                   <span className="mr-2 text-[var(--text-tertiary)]">{i + 1}.</span>
-                  {item.title}
+                  <Link to={item.href} className="rounded-sm hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-color)]">
+                    {item.title}
+                  </Link>
                 </p>
                 <p className="text-xs text-[var(--text-tertiary)]">{item.kind === 'tv' ? 'TV Show' : 'Movie'}</p>
+                {request ? (
+                  <div className="mt-1 space-y-1">
+                    <Badge tone={requestStatusTone(request.status)}>{requestDisplayLabel(request)}</Badge>
+                    {statusDetail ? (
+                      <p className="text-xs leading-snug text-[var(--text-secondary)]">{statusDetail}</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div className="flex items-center gap-2">
                 <Link
                   to={item.href}
-                  aria-label={`Open ${item.title}`}
+                  tabIndex={-1}
+                  aria-hidden="true"
                   className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
                 >
                   <Play className="h-4 w-4 fill-current" aria-hidden="true" />
@@ -108,7 +201,8 @@ export default function Queue() {
                 )}
               </div>
             </li>
-          ))}
+            )
+          })}
         </ol>
       )}
     </div>

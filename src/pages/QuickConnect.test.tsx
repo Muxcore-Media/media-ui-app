@@ -36,3 +36,32 @@ describe('QuickConnect page', () => {
     expect(approveQuickConnect).toHaveBeenCalledWith('654321')
   })
 })
+
+describe('QuickConnect accessibility', () => {
+  beforeEach(() => {
+    approveQuickConnect.mockReset()
+  })
+
+  it('has a page h1 and labeled code input', () => {
+    render(
+      <MemoryRouter>
+        <QuickConnect />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Quick Connect' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Code')).toBeRequired()
+    expect(screen.getByRole('button', { name: 'Authorize' })).toBeInTheDocument()
+  })
+
+  it('announces validation errors with role alert', async () => {
+    render(
+      <MemoryRouter>
+        <QuickConnect />
+      </MemoryRouter>,
+    )
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Authorize' }).closest('form')!)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Enter the code shown on your other device/i)
+  })
+})

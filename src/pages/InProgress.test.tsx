@@ -42,7 +42,7 @@ describe('InProgress page', () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText(/Nothing in progress right now/i)).toBeInTheDocument()
+      expect(screen.getByText(/Nothing in progress/i)).toBeInTheDocument()
     })
   })
 
@@ -151,5 +151,25 @@ describe('InProgress page', () => {
     expect(screen.queryByText('no peers')).not.toBeInTheDocument()
     expect(screen.getByText('Import failed')).toBeInTheDocument()
     expect(screen.getByText('path not under a scanner watch directory')).toBeInTheDocument()
+  })
+})
+
+describe('InProgress accessibility', () => {
+  beforeEach(() => {
+    listRequests.mockReset()
+    listMovies.mockReset()
+    listTVShows.mockReset()
+    listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 })
+    listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 })
+    listRequests.mockResolvedValue([])
+  })
+
+  it('has a page h1 and announces loading on initial render', () => {
+    listRequests.mockImplementation(() => new Promise(() => {}))
+
+    renderPage()
+
+    expect(screen.getByRole('heading', { level: 1, name: 'In progress' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading in-progress titles' })).toBeInTheDocument()
   })
 })

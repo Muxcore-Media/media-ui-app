@@ -147,10 +147,19 @@ export default function Queue() {
           }
         />
       ) : (
-        <ol
-          aria-label={listLabel}
-          className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
-        >
+        <section className="space-y-3" aria-labelledby="queue-list-heading">
+          <h2 id="queue-list-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+            {showingSuggestions ? 'Suggested picks' : 'Playback queue'}
+          </h2>
+          {showingSuggestions ? (
+            <p className="text-sm text-[var(--text-secondary)]">
+              Suggested from continue watching and favorites while your queue is empty.
+            </p>
+          ) : null}
+          <ol
+            aria-label={listLabel}
+            className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+          >
           {display.map((item, i) => {
             const itemKey = queueItemRequestKey(item)
             const request = itemKey ? activeRequests.get(itemKey) : undefined
@@ -183,9 +192,8 @@ export default function Queue() {
               <div className="flex items-center gap-2">
                 <Link
                   to={item.href}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                  aria-label={`Play ${item.title}`}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-color)]"
                 >
                   <Play className="h-4 w-4 fill-current" aria-hidden="true" />
                 </Link>
@@ -203,7 +211,8 @@ export default function Queue() {
             </li>
             )
           })}
-        </ol>
+          </ol>
+        </section>
       )}
     </div>
   )

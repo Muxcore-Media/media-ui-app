@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, useId, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Clock3, Download, Search, ShieldAlert, TriangleAlert } from 'lucide-react'
 import { api } from '../api/client'
@@ -17,6 +17,8 @@ import {
 import { ShelfSkeleton } from '../components/ui/Skeleton'
 import { Badge } from '../components/ui/Badge'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { EmptyState } from '../components/ui/EmptyState'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 
 function entryTitle(entry: InProgressEntry): string {
   return entry.source === 'request' ? entry.request.title : entry.item.title
@@ -142,12 +144,13 @@ function PhaseSection({
   entries: InProgressEntry[]
   testId: string
 }) {
+  const headingId = useId()
   if (entries.length === 0) return null
   return (
-    <section className="space-y-3" data-testid={testId}>
+    <section className="space-y-3" data-testid={testId} aria-labelledby={headingId}>
       <div className="flex items-center gap-2">
         {icon}
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2 id={headingId} className="text-lg font-semibold text-[var(--text-primary)]">
           {title} <span className="text-[var(--text-tertiary)]">({entries.length})</span>
         </h2>
       </div>
@@ -193,28 +196,33 @@ export default function InProgress() {
 
   return (
     <div className="min-w-0 space-y-8 overflow-x-hidden" data-testid="in-progress-page">
-      <div>
+      <header>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">In progress</h1>
         <p className="text-sm text-[var(--text-secondary)]">
           Titles you&apos;ve requested that aren&apos;t ready to watch yet. Your main library only shows what you can play now.
         </p>
-      </div>
+      </header>
 
       {loading && (
-        <div data-testid="in-progress-loading" aria-busy="true" aria-label="Loading in-progress titles">
+        <div data-testid="in-progress-loading" aria-busy="true">
+          <LoadingStatus label="Loading in-progress titles" />
           <ShelfSkeleton count={4} />
         </div>
       )}
       {error && <ErrorBanner message={error} testId="in-progress-error" />}
 
       {!loading && !error && entries.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] py-16 text-center">
-          <Clock3 className="h-8 w-8 text-[var(--text-tertiary)]" aria-hidden="true" />
-          <p className="text-sm text-[var(--text-secondary)]">Nothing in progress right now.</p>
-          <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
-            Search to add titles
-          </Link>
-        </div>
+        <EmptyState
+          icon={Clock3}
+          title="Nothing in progress"
+          message="Search to add titles that are still downloading or awaiting approval."
+          action={
+            <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              Search to add titles
+            </Link>
+          }
+          testId="in-progress-empty"
+        />
       )}
 
       {!loading && entries.length > 0 && (

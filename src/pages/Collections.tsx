@@ -7,6 +7,7 @@ import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import { Badge } from '../components/ui/Badge'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import type { Movie } from '../types'
 
 type Collection = { id: string; name: string; items: Movie[]; source: 'tmdb' | 'genre' }
@@ -74,21 +75,32 @@ export default function Collections() {
 
   return (
     <div className="space-y-8" data-testid="collections-page">
-      <div>
+      <header>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Collections</h1>
         <p className="text-sm text-[var(--text-secondary)]">
           Explore movie franchises, box sets, and genres.
         </p>
-      </div>
-      {loading && <PosterGridSkeleton count={6} />}
+      </header>
+      {loading ? (
+        <>
+          <LoadingStatus label="Loading collections" />
+          <PosterGridSkeleton count={6} />
+        </>
+      ) : null}
       {error && <ErrorBanner message={error} />}
 
       {detail && (
-        <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+        <section
+          className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
+          aria-labelledby="collection-detail-heading"
+        >
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">{detail.name}</h2>
+            <h2 id="collection-detail-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+              {detail.name}
+            </h2>
             <button
               type="button"
+              aria-label={`Close ${detail.name} collection`}
               className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               onClick={() => setDetail(null)}
             >
@@ -105,14 +117,17 @@ export default function Collections() {
       )}
 
       {!loading && serverCols.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Box sets</h2>
+        <section className="space-y-3" aria-labelledby="collections-boxsets-heading">
+          <h2 id="collections-boxsets-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+            Box sets
+          </h2>
           <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
             {serverCols.map((c) => (
               <li key={c.id}>
                 <button
                   type="button"
                   onClick={() => openServerCollection(c.id)}
+                  aria-label={`Open ${c.name} collection, ${c.movie_count} titles`}
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition hover:bg-[var(--bg-elevated-2)]"
                 >
                   <span className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
@@ -145,8 +160,8 @@ export default function Collections() {
       )}
 
       {genreCollections.map((c) => (
-        <section key={c.id} className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+        <section key={c.id} className="space-y-3" aria-labelledby={`collection-genre-${c.id}`}>
+          <h2 id={`collection-genre-${c.id}`} className="text-lg font-semibold text-[var(--text-primary)]">
             {c.name}{' '}
             <span className="text-sm font-normal text-[var(--text-tertiary)]">(genre · {c.items.length})</span>
           </h2>

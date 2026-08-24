@@ -5,6 +5,7 @@ import RequestableCard from '../components/search/RequestableCard'
 import { PosterGridSkeleton } from '../components/media/PosterGrid'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
 import { EmptyState } from '../components/ui/EmptyState'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import type { SearchResult } from '../types'
 
 export default function Watchlist() {
@@ -58,27 +59,36 @@ export default function Watchlist() {
 
       {error ? <ErrorBanner message={error} /> : null}
 
-      {loading ? (
-        <PosterGridSkeleton count={12} />
-      ) : items.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-          {items.map((item) => (
-            <RequestableCard
-              key={searchResultKey(item)}
-              item={item}
-              requested={requested[searchResultKey(item)]}
-              onRequest={(row) => void request(row)}
-              returnTo="/watchlist"
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={Bookmark}
-          title="No watchlist items"
-          message="Add import-list sources in admin and sync watchlist actions to see titles here."
-        />
-      )}
+      <section className="space-y-4" aria-labelledby="watchlist-items-heading">
+        <h2 id="watchlist-items-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+          Synced titles
+        </h2>
+        {loading ? (
+          <>
+            <LoadingStatus label="Loading watchlist" />
+            <PosterGridSkeleton count={12} />
+          </>
+        ) : items.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {items.map((item) => (
+              <RequestableCard
+                key={searchResultKey(item)}
+                item={item}
+                requested={requested[searchResultKey(item)]}
+                onRequest={(row) => void request(row)}
+                returnTo="/watchlist"
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Bookmark}
+            title="No watchlist items"
+            message="Add import-list sources in admin and sync watchlist actions to see titles here."
+            testId="watchlist-empty"
+          />
+        )}
+      </section>
     </div>
   )
 }

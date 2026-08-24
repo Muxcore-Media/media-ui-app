@@ -135,3 +135,34 @@ describe('Queue page', () => {
     expect(screen.getByText('path not under a scanner watch directory')).toBeInTheDocument()
   })
 })
+
+describe('Queue accessibility', () => {
+  beforeEach(() => {
+    listQueue.mockReset()
+    continueWatching.mockReset()
+    listFavorites.mockReset()
+    listRequests.mockReset()
+    listQueue.mockReturnValue([])
+    continueWatching.mockReturnValue([])
+    listFavorites.mockReturnValue([])
+    listRequests.mockResolvedValue([])
+  })
+
+  it('has a page h1 and labeled queue section when items are shown', () => {
+    listQueue.mockReturnValue([
+      {
+        id: 'm1',
+        kind: 'movie',
+        title: 'Queued Movie',
+        href: '/movies/m1',
+      },
+    ])
+
+    renderPage()
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Queue' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Playback queue' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Playback queue' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Play Queued Movie' })).toHaveAttribute('href', '/movies/m1')
+  })
+})

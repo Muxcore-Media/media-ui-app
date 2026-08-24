@@ -69,3 +69,26 @@ describe('Collections page', () => {
     expect(screen.getByText('Action')).toBeInTheDocument()
   })
 })
+
+describe('Collections accessibility', () => {
+  beforeEach(() => {
+    listMovies.mockReset()
+    listCollections.mockReset()
+    listMovies.mockResolvedValue({ items: [], total: 0 })
+    listCollections.mockResolvedValue({ items: [] })
+  })
+
+  it('has a page h1 and announces loading on initial render', () => {
+    listMovies.mockImplementation(() => new Promise(() => {}))
+    listCollections.mockImplementation(() => new Promise(() => {}))
+
+    render(
+      <MemoryRouter>
+        <Collections />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Collections' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading collections' })).toBeInTheDocument()
+  })
+})

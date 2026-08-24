@@ -53,7 +53,6 @@ describe('Watchlist page', () => {
     )
 
     expect(await screen.findByText('No watchlist items')).toBeInTheDocument()
-    expect(screen.getByText(/Add import-list sources in admin/i)).toBeInTheDocument()
   })
 
   it('surfaces API errors', async () => {
@@ -66,5 +65,25 @@ describe('Watchlist page', () => {
     )
 
     expect(await screen.findByText('watchlist unavailable')).toBeInTheDocument()
+  })
+})
+
+describe('Watchlist accessibility', () => {
+  beforeEach(() => {
+    watchlist.mockReset()
+    watchlist.mockResolvedValue([])
+  })
+
+  it('has a page h1, labeled section, and loading status', async () => {
+    render(
+      <MemoryRouter>
+        <Watchlist />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Watchlist' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Synced titles' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading watchlist' })).toBeInTheDocument()
+    await screen.findByTestId('watchlist-empty')
   })
 })

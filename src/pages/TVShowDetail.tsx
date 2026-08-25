@@ -1,69 +1,69 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react'
-import { api } from '../api/client'
-import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis'
-import { DetailHero } from '../components/media/DetailHero'
-import { DetailHeroSkeleton } from '../components/ui/Skeleton'
-import { Badge } from '../components/ui/Badge'
-import { Button } from '../components/ui/Button'
-import { IconButton } from '../components/ui/IconButton'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata'
-import { buildEpisodePlayerHref } from '../lib/playHref'
-import { FixedWindowList } from '../components/ui/FixedWindowList'
-import type { Episode, TVShow } from '../types'
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
+import { api } from '../api/client';
+import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
+import { DetailHero } from '../components/media/DetailHero';
+import { DetailHeroSkeleton } from '../components/ui/Skeleton';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { IconButton } from '../components/ui/IconButton';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata';
+import { buildEpisodePlayerHref } from '../lib/playHref';
+import { FixedWindowList } from '../components/ui/FixedWindowList';
+import type { Episode, TVShow } from '../types';
 
-const EPISODE_ROW_HEIGHT = 72
+const EPISODE_ROW_HEIGHT = 72;
 
 function firstPlayableStreamUrl(show: TVShow | null): string | undefined {
-  if (!show) return undefined
+  if (!show) return undefined;
   for (const season of show.seasons ?? []) {
     for (const episode of season.episodes) {
-      if (episode.has_file && episode.stream_url) return episode.stream_url
+      if (episode.has_file && episode.stream_url) return episode.stream_url;
     }
   }
-  return undefined
+  return undefined;
 }
 
 export default function TVShowDetail() {
-  const { id = '' } = useParams()
-  const [show, setShow] = useState<TVShow | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [jellyfinURL, setJellyfinURL] = useState<string | null>(null)
-  const [fav, setFav] = useState(false)
-  const probe = usePlaybackAnalysis(firstPlayableStreamUrl(show))
+  const { id = '' } = useParams();
+  const [show, setShow] = useState<TVShow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [jellyfinURL, setJellyfinURL] = useState<string | null>(null);
+  const [fav, setFav] = useState(false);
+  const probe = usePlaybackAnalysis(firstPlayableStreamUrl(show));
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
-      setJellyfinURL(null)
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      setJellyfinURL(null);
       try {
-        const item = await api.getTVShow(id)
+        const item = await api.getTVShow(id);
         if (!cancelled) {
-          setShow(item)
-          setFav(isFavorite(item.id))
+          setShow(item);
+          setFav(isFavorite(item.id));
         }
-        const jf = await api.jellyfinPlayURL(id)
-        if (!cancelled) setJellyfinURL(jf)
+        const jf = await api.jellyfinPlayURL(id);
+        if (!cancelled) setJellyfinURL(jf);
       } catch (err) {
         if (!cancelled) {
-          setShow(null)
-          setError(err instanceof Error ? err.message : 'Failed to load TV show')
+          setShow(null);
+          setError(err instanceof Error ? err.message : 'Failed to load TV show');
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [id])
+      cancelled = true;
+    };
+  }, [id]);
 
   if (loading) {
     return (
@@ -71,19 +71,21 @@ export default function TVShowDetail() {
         <LoadingStatus label="Loading TV show" />
         <DetailHeroSkeleton />
       </>
-    )
+    );
   }
 
   if (!show) {
     return (
       <div className="space-y-3" data-testid="tv-detail-page">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">TV show not found</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          TV show not found
+        </h1>
         <ErrorBanner message={error || 'TV show not found.'} />
         <Link to="/tv" className="text-[var(--accent-color)] hover:underline">
           Back to TV
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -96,7 +98,9 @@ export default function TVShowDetail() {
         meta={
           <>
             {show.has_file && <Badge tone="accent">Available</Badge>}
-            {probe.analysis?.info_line ? <Badge tone="neutral">{probe.analysis.info_line}</Badge> : null}
+            {probe.analysis?.info_line ? (
+              <Badge tone="neutral">{probe.analysis.info_line}</Badge>
+            ) : null}
             {show.vote_average > 0 && (
               <Badge tone="neutral">
                 <Star className="h-3 w-3 fill-current" aria-hidden="true" />
@@ -112,7 +116,9 @@ export default function TVShowDetail() {
           <>
             <Button
               variant={fav ? 'primary' : 'secondary'}
-              icon={<Star className={fav ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden="true" />}
+              icon={
+                <Star className={fav ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden="true" />
+              }
               onClick={() => {
                 const on = toggleFavorite({
                   id: show.id,
@@ -121,8 +127,8 @@ export default function TVShowDetail() {
                   poster_url: show.poster_url,
                   href: `/tv/${show.id}`,
                   year: show.year,
-                })
-                setFav(on)
+                });
+                setFav(on);
               }}
             >
               {fav ? 'Favorited' : 'Favorite'}
@@ -148,22 +154,25 @@ export default function TVShowDetail() {
             Episodes
           </h2>
           {show.seasons.map((season) => {
-            const seasonLabel = season.name || `Season ${season.season_number}`
-            const seasonHeadingId = `tv-season-${season.id}`
+            const seasonLabel = season.name || `Season ${season.season_number}`;
+            const seasonHeadingId = `tv-season-${season.id}`;
             return (
-            <div key={season.id} className="space-y-2" aria-labelledby={seasonHeadingId}>
-              <h3 id={seasonHeadingId} className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
-                {seasonLabel}
-              </h3>
-              <FixedWindowList
-                items={season.episodes}
-                rowHeight={EPISODE_ROW_HEIGHT}
-                className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
-                getKey={(ep) => ep.id}
-                renderRow={(ep) => <EpisodeRow show={show} ep={ep} />}
-              />
-            </div>
-            )
+              <div key={season.id} className="space-y-2" aria-labelledby={seasonHeadingId}>
+                <h3
+                  id={seasonHeadingId}
+                  className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]"
+                >
+                  {seasonLabel}
+                </h3>
+                <FixedWindowList
+                  items={season.episodes}
+                  rowHeight={EPISODE_ROW_HEIGHT}
+                  className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+                  getKey={(ep) => ep.id}
+                  renderRow={(ep) => <EpisodeRow show={show} ep={ep} />}
+                />
+              </div>
+            );
           })}
         </section>
       ) : (
@@ -174,23 +183,26 @@ export default function TVShowDetail() {
         />
       )}
     </div>
-  )
+  );
 }
 
 function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
-  const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`
-  const playTo = buildEpisodePlayerHref(show, ep)
+  const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`;
+  const playTo = buildEpisodePlayerHref(show, ep);
 
   return (
     <div className="flex h-full flex-wrap items-center justify-between gap-3 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
       <div className="min-w-0">
         <p className="text-sm">
           <span className="font-semibold text-[var(--text-primary)]">
-            S{String(ep.season_number).padStart(2, '0')}E{String(ep.episode_number).padStart(2, '0')}
+            S{String(ep.season_number).padStart(2, '0')}E
+            {String(ep.episode_number).padStart(2, '0')}
           </span>
           {ep.title ? <span className="text-[var(--text-secondary)]"> · {ep.title}</span> : null}
         </p>
-        {ep.overview && <p className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{ep.overview}</p>}
+        {ep.overview && (
+          <p className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{ep.overview}</p>
+        )}
       </div>
       {playTo ? (
         <div className="flex items-center gap-2">
@@ -222,5 +234,5 @@ function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
         <Badge tone="neutral">No file</Badge>
       )}
     </div>
-  )
+  );
 }

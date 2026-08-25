@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from 'react';
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -14,73 +14,74 @@ import {
   Volume1,
   Volume2,
   VolumeX,
-} from 'lucide-react'
-import { formatTime } from '../../lib/player/format'
-import SeekBar from './SeekBar'
-import SettingsMenu from './SettingsMenu'
-import type { PlaybackChapter, PlaybackSegment } from '../../api/client'
-import type { AspectMode, PlayerTrackInfo, QualityOption } from '../../lib/player/types'
-import type { UserPreferences } from '../../lib/userdata'
-import type { TrickplayFrame } from './hooks/useTrickplay'
+} from 'lucide-react';
+import { formatTime } from '../../lib/player/format';
+import SeekBar from './SeekBar';
+import SettingsMenu from './SettingsMenu';
+import type { PlaybackChapter, PlaybackSegment } from '../../api/client';
+import type { AspectMode, PlayerTrackInfo, QualityOption } from '../../lib/player/types';
+import type { UserPreferences } from '../../lib/userdata';
+import type { TrickplayFrame } from './hooks/useTrickplay';
 
 type Props = {
-  visible: boolean
-  playing: boolean
-  onTogglePlay: () => void
-  absoluteCurrent: number
-  durationSec: number
-  bufferedAheadSec: number
-  segments: PlaybackSegment[]
-  chapters?: PlaybackChapter[]
-  onSeekAbsolute: (sec: number) => void
-  onSeekRelative: (deltaSec: number) => void
-  trickplayFrameAt?: (seconds: number) => TrickplayFrame | null
-  trickplayEnabled: boolean
-  volume: number
-  muted: boolean
-  onVolume: (v: number) => void
-  onMuted: (m: boolean) => void
-  playMode: string
-  theaterMode: boolean
-  onToggleTheater: () => void
-  pipSupported: boolean
-  pipActive: boolean
-  onTogglePiP: () => void
-  fullscreen: boolean
-  onToggleFullscreen: () => void
+  visible: boolean;
+  playing: boolean;
+  onTogglePlay: () => void;
+  absoluteCurrent: number;
+  durationSec: number;
+  bufferedAheadSec: number;
+  segments: PlaybackSegment[];
+  chapters?: PlaybackChapter[];
+  onSeekAbsolute: (sec: number) => void;
+  onSeekRelative: (deltaSec: number) => void;
+  trickplayFrameAt?: (seconds: number) => TrickplayFrame | null;
+  trickplayEnabled: boolean;
+  volume: number;
+  muted: boolean;
+  onVolume: (v: number) => void;
+  onMuted: (m: boolean) => void;
+  playMode: string;
+  theaterMode: boolean;
+  onToggleTheater: () => void;
+  pipSupported: boolean;
+  pipActive: boolean;
+  onTogglePiP: () => void;
+  fullscreen: boolean;
+  onToggleFullscreen: () => void;
 
-  quality: string
-  qualityOptions: QualityOption[]
-  onQuality: (id: string) => void
-  transcoderAvailable: boolean
-  audioTracks: PlayerTrackInfo[]
-  audioIdx: number
-  onAudio: (idx: number) => void
-  textTracks: PlayerTrackInfo[]
-  pictureSubtitleTracks?: PlayerTrackInfo[]
-  textIdx: number
-  onText: (idx: number) => void
-  rate: number
-  onRate: (r: number) => void
-  subtitlePrefs: UserPreferences['subtitles']
-  onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void
-  onSettingsOpenChange?: (open: boolean) => void
-  aspectMode: AspectMode
-  onAspectMode: (mode: AspectMode) => void
+  quality: string;
+  qualityOptions: QualityOption[];
+  onQuality: (id: string) => void;
+  transcoderAvailable: boolean;
+  audioTracks: PlayerTrackInfo[];
+  audioIdx: number;
+  onAudio: (idx: number) => void;
+  textTracks: PlayerTrackInfo[];
+  pictureSubtitleTracks?: PlayerTrackInfo[];
+  textIdx: number;
+  onText: (idx: number) => void;
+  rate: number;
+  onRate: (r: number) => void;
+  subtitlePrefs: UserPreferences['subtitles'];
+  onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void;
+  onSettingsOpenChange?: (open: boolean) => void;
+  aspectMode: AspectMode;
+  onAspectMode: (mode: AspectMode) => void;
   /** Previous/next chapter navigation (container chapters, else intro/outro segment boundaries). */
-  onPrevMarker?: () => void
-  onNextMarker?: () => void
-}
+  onPrevMarker?: () => void;
+  onNextMarker?: () => void;
+};
 
 export default function ControlsBar(props: Props) {
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const VolumeIcon = props.muted || props.volume === 0 ? VolumeX : props.volume < 0.5 ? Volume1 : Volume2
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const VolumeIcon =
+    props.muted || props.volume === 0 ? VolumeX : props.volume < 0.5 ? Volume1 : Volume2;
 
   function toggleSettings() {
     setSettingsOpen((o) => {
-      props.onSettingsOpenChange?.(!o)
-      return !o
-    })
+      props.onSettingsOpenChange?.(!o);
+      return !o;
+    });
   }
 
   return (
@@ -153,7 +154,10 @@ export default function ControlsBar(props: Props) {
             </button>
           ) : null}
 
-          <span className="text-xs font-medium tabular-nums text-[var(--player-fg)]" data-testid="player-time">
+          <span
+            className="text-xs font-medium tabular-nums text-[var(--player-fg)]"
+            data-testid="player-time"
+          >
             {formatTime(props.absoluteCurrent)} / {formatTime(props.durationSec)}
           </span>
 
@@ -173,8 +177,8 @@ export default function ControlsBar(props: Props) {
               step={0.05}
               value={props.muted ? 0 : props.volume}
               onChange={(e) => {
-                props.onMuted(false)
-                props.onVolume(Number(e.target.value))
+                props.onMuted(false);
+                props.onVolume(Number(e.target.value));
               }}
               className="hidden w-20 accent-[var(--accent-color)] sm:block"
               aria-label="Volume"
@@ -183,7 +187,10 @@ export default function ControlsBar(props: Props) {
 
           <span className="ml-auto flex items-center gap-1">
             {props.playMode === 'transcode' ? (
-              <span className="hidden text-[11px] text-[var(--player-fg-subtle)] sm:inline" data-testid="player-mode">
+              <span
+                className="hidden text-[11px] text-[var(--player-fg-subtle)] sm:inline"
+                data-testid="player-mode"
+              >
                 Transcoding
               </span>
             ) : (
@@ -215,8 +222,8 @@ export default function ControlsBar(props: Props) {
               {settingsOpen ? (
                 <SettingsMenu
                   onClose={() => {
-                    setSettingsOpen(false)
-                    props.onSettingsOpenChange?.(false)
+                    setSettingsOpen(false);
+                    props.onSettingsOpenChange?.(false);
                   }}
                   playMode={props.playMode}
                   transcoderAvailable={props.transcoderAvailable}
@@ -267,5 +274,5 @@ export default function ControlsBar(props: Props) {
         </div>
       </div>
     </div>
-  )
+  );
 }

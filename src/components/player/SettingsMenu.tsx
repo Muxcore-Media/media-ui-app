@@ -1,43 +1,65 @@
-import { useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Gauge, Languages, Maximize2, Subtitles as SubtitlesIcon, Sparkles, X } from 'lucide-react'
-import { ASPECT_MODE_OPTIONS, type AspectMode, type PlayerTrackInfo, type QualityOption } from '../../lib/player/types'
-import { formatAudioTrackLabel, formatSubtitleTrackLabel } from '../../lib/player/tracks'
-import { languageDisplayName } from '../../lib/player/format'
-import type { UserPreferences } from '../../lib/userdata'
+import { useState } from 'react';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Gauge,
+  Languages,
+  Maximize2,
+  Subtitles as SubtitlesIcon,
+  Sparkles,
+  X,
+} from 'lucide-react';
+import {
+  ASPECT_MODE_OPTIONS,
+  type AspectMode,
+  type PlayerTrackInfo,
+  type QualityOption,
+} from '../../lib/player/types';
+import { formatAudioTrackLabel, formatSubtitleTrackLabel } from '../../lib/player/tracks';
+import { languageDisplayName } from '../../lib/player/format';
+import type { UserPreferences } from '../../lib/userdata';
 
-type Panel = 'root' | 'quality' | 'audio' | 'subtitles' | 'subtitle-appearance' | 'speed' | 'aspect'
+type Panel =
+  | 'root'
+  | 'quality'
+  | 'audio'
+  | 'subtitles'
+  | 'subtitle-appearance'
+  | 'speed'
+  | 'aspect';
 
 type Props = {
-  onClose: () => void
-  playMode: string
-  transcoderAvailable: boolean
-  quality: string
-  qualityOptions: QualityOption[]
-  onQuality: (id: string) => void
-  audioTracks: PlayerTrackInfo[]
-  audioIdx: number
-  onAudio: (idx: number) => void
-  textTracks: PlayerTrackInfo[]
-  pictureSubtitleTracks?: PlayerTrackInfo[]
-  textIdx: number
-  onText: (idx: number) => void
-  rate: number
-  onRate: (rate: number) => void
-  subtitlePrefs: UserPreferences['subtitles']
-  onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void
-  aspectMode: AspectMode
-  onAspectMode: (mode: AspectMode) => void
-}
+  onClose: () => void;
+  playMode: string;
+  transcoderAvailable: boolean;
+  quality: string;
+  qualityOptions: QualityOption[];
+  onQuality: (id: string) => void;
+  audioTracks: PlayerTrackInfo[];
+  audioIdx: number;
+  onAudio: (idx: number) => void;
+  textTracks: PlayerTrackInfo[];
+  pictureSubtitleTracks?: PlayerTrackInfo[];
+  textIdx: number;
+  onText: (idx: number) => void;
+  rate: number;
+  onRate: (rate: number) => void;
+  subtitlePrefs: UserPreferences['subtitles'];
+  onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void;
+  aspectMode: AspectMode;
+  onAspectMode: (mode: AspectMode) => void;
+};
 
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 function trackLabel(t: PlayerTrackInfo): string {
-  if (t.kind === 'audio') return formatAudioTrackLabel(t)
-  return formatSubtitleTrackLabel(t) || languageDisplayName(t.language) || t.label
+  if (t.kind === 'audio') return formatAudioTrackLabel(t);
+  return formatSubtitleTrackLabel(t) || languageDisplayName(t.language) || t.label;
 }
 
 export default function SettingsMenu(props: Props) {
-  const [panel, setPanel] = useState<Panel>('root')
+  const [panel, setPanel] = useState<Panel>('root');
   const {
     onClose,
     playMode,
@@ -58,10 +80,13 @@ export default function SettingsMenu(props: Props) {
     onSubtitlePrefs,
     aspectMode,
     onAspectMode,
-  } = props
+  } = props;
 
-  const activeQualityLabel = qualityOptions.find((q) => q.id === quality)?.label || 'Original'
-  const activeSubtitleLabel = textIdx === -1 ? 'Off' : trackLabel(textTracks[textIdx] ?? { label: 'On' } as PlayerTrackInfo)
+  const activeQualityLabel = qualityOptions.find((q) => q.id === quality)?.label || 'Original';
+  const activeSubtitleLabel =
+    textIdx === -1
+      ? 'Off'
+      : trackLabel(textTracks[textIdx] ?? ({ label: 'On' } as PlayerTrackInfo));
 
   return (
     <div
@@ -101,10 +126,32 @@ export default function SettingsMenu(props: Props) {
       <div className="max-h-[60vh] overflow-y-auto p-1.5">
         {panel === 'root' && (
           <ul className="space-y-0.5 text-sm">
-            <RootRow icon={<Sparkles className="h-4 w-4" aria-hidden="true" />} label="Quality" value={`${activeQualityLabel}${playMode === 'transcode' ? ' · Transcoding' : ' · Direct play'}`} onClick={() => setPanel('quality')} disabled={!transcoderAvailable && qualityOptions.length <= 1} />
-            <RootRow icon={<Languages className="h-4 w-4" aria-hidden="true" />} label="Audio" value={trackLabel(audioTracks[audioIdx] ?? { label: 'Default' } as PlayerTrackInfo)} onClick={() => setPanel('audio')} disabled={audioTracks.length <= 1} />
-            <RootRow icon={<SubtitlesIcon className="h-4 w-4" aria-hidden="true" />} label="Subtitles" value={activeSubtitleLabel} onClick={() => setPanel('subtitles')} />
-            <RootRow icon={<Gauge className="h-4 w-4" aria-hidden="true" />} label="Speed" value={`${rate}×`} onClick={() => setPanel('speed')} />
+            <RootRow
+              icon={<Sparkles className="h-4 w-4" aria-hidden="true" />}
+              label="Quality"
+              value={`${activeQualityLabel}${playMode === 'transcode' ? ' · Transcoding' : ' · Direct play'}`}
+              onClick={() => setPanel('quality')}
+              disabled={!transcoderAvailable && qualityOptions.length <= 1}
+            />
+            <RootRow
+              icon={<Languages className="h-4 w-4" aria-hidden="true" />}
+              label="Audio"
+              value={trackLabel(audioTracks[audioIdx] ?? ({ label: 'Default' } as PlayerTrackInfo))}
+              onClick={() => setPanel('audio')}
+              disabled={audioTracks.length <= 1}
+            />
+            <RootRow
+              icon={<SubtitlesIcon className="h-4 w-4" aria-hidden="true" />}
+              label="Subtitles"
+              value={activeSubtitleLabel}
+              onClick={() => setPanel('subtitles')}
+            />
+            <RootRow
+              icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+              label="Speed"
+              value={`${rate}×`}
+              onClick={() => setPanel('speed')}
+            />
             <RootRow
               icon={<Maximize2 className="h-4 w-4" aria-hidden="true" />}
               label="Aspect ratio"
@@ -117,7 +164,12 @@ export default function SettingsMenu(props: Props) {
         {panel === 'quality' && (
           <ul className="space-y-0.5 text-sm">
             {qualityOptions.map((q) => (
-              <OptionRow key={q.id} label={q.label} active={q.id === quality} onClick={() => onQuality(q.id)} />
+              <OptionRow
+                key={q.id}
+                label={q.label}
+                active={q.id === quality}
+                onClick={() => onQuality(q.id)}
+              />
             ))}
           </ul>
         )}
@@ -125,7 +177,12 @@ export default function SettingsMenu(props: Props) {
         {panel === 'audio' && (
           <ul className="space-y-0.5 text-sm">
             {audioTracks.map((t) => (
-              <OptionRow key={t.id} label={trackLabel(t)} active={t.index === audioIdx} onClick={() => onAudio(t.index)} />
+              <OptionRow
+                key={t.id}
+                label={trackLabel(t)}
+                active={t.index === audioIdx}
+                onClick={() => onAudio(t.index)}
+              />
             ))}
           </ul>
         )}
@@ -135,7 +192,12 @@ export default function SettingsMenu(props: Props) {
             <ul className="space-y-0.5 text-sm">
               <OptionRow label="Off" active={textIdx === -1} onClick={() => onText(-1)} />
               {textTracks.map((t) => (
-                <OptionRow key={t.id} label={trackLabel(t)} active={t.index === textIdx} onClick={() => onText(t.index)} />
+                <OptionRow
+                  key={t.id}
+                  label={trackLabel(t)}
+                  active={t.index === textIdx}
+                  onClick={() => onText(t.index)}
+                />
               ))}
             </ul>
             {pictureSubtitleTracks.length > 0 ? (
@@ -171,7 +233,9 @@ export default function SettingsMenu(props: Props) {
         {panel === 'subtitle-appearance' && (
           <div className="space-y-4 px-2 py-1 text-sm text-[var(--player-fg)]">
             <div>
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">Size</label>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
+                Size
+              </label>
               <div className="flex gap-1.5">
                 {(['sm', 'md', 'lg'] as const).map((sz) => (
                   <button
@@ -205,7 +269,9 @@ export default function SettingsMenu(props: Props) {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">Edge style</label>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
+                Edge style
+              </label>
               <div className="flex gap-1.5">
                 {(['none', 'drop-shadow', 'outline'] as const).map((edge) => (
                   <button
@@ -224,7 +290,9 @@ export default function SettingsMenu(props: Props) {
               </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">Position</label>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
+                Position
+              </label>
               <div className="flex gap-1.5">
                 {(['bottom', 'top'] as const).map((pos) => (
                   <button
@@ -248,7 +316,12 @@ export default function SettingsMenu(props: Props) {
         {panel === 'speed' && (
           <ul className="space-y-0.5 text-sm">
             {SPEEDS.map((s) => (
-              <OptionRow key={s} label={`${s}×${s === 1 ? ' (Normal)' : ''}`} active={s === rate} onClick={() => onRate(s)} />
+              <OptionRow
+                key={s}
+                label={`${s}×${s === 1 ? ' (Normal)' : ''}`}
+                active={s === rate}
+                onClick={() => onRate(s)}
+              />
             ))}
           </ul>
         )}
@@ -256,13 +329,18 @@ export default function SettingsMenu(props: Props) {
         {panel === 'aspect' && (
           <ul className="space-y-0.5 text-sm">
             {ASPECT_MODE_OPTIONS.map((a) => (
-              <OptionRow key={a.id} label={a.label} active={a.id === aspectMode} onClick={() => onAspectMode(a.id)} />
+              <OptionRow
+                key={a.id}
+                label={a.label}
+                active={a.id === aspectMode}
+                onClick={() => onAspectMode(a.id)}
+              />
             ))}
           </ul>
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function RootRow({
@@ -272,11 +350,11 @@ function RootRow({
   onClick,
   disabled,
 }: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  onClick: () => void
-  disabled?: boolean
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <li>
@@ -288,14 +366,27 @@ function RootRow({
       >
         <span className="text-[var(--player-fg-muted)]">{icon}</span>
         <span className="flex-1 text-[var(--player-fg)]">{label}</span>
-        <span className="max-w-[8.5rem] truncate text-xs text-[var(--player-fg-subtle)]">{value}</span>
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--player-fg-subtle)]" aria-hidden="true" />
+        <span className="max-w-[8.5rem] truncate text-xs text-[var(--player-fg-subtle)]">
+          {value}
+        </span>
+        <ChevronRight
+          className="h-3.5 w-3.5 shrink-0 text-[var(--player-fg-subtle)]"
+          aria-hidden="true"
+        />
       </button>
     </li>
-  )
+  );
 }
 
-function OptionRow({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function OptionRow({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <li>
       <button
@@ -304,10 +395,14 @@ function OptionRow({ label, active, onClick }: { label: string; active: boolean;
         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[var(--player-chip-hover)]"
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-          {active ? <Check className="h-4 w-4 text-[var(--accent-color)]" aria-hidden="true" /> : null}
+          {active ? (
+            <Check className="h-4 w-4 text-[var(--accent-color)]" aria-hidden="true" />
+          ) : null}
         </span>
-        <span className={active ? 'text-[var(--accent-color)]' : 'text-[var(--player-fg)]'}>{label}</span>
+        <span className={active ? 'text-[var(--accent-color)]' : 'text-[var(--player-fg)]'}>
+          {label}
+        </span>
       </button>
     </li>
-  )
+  );
 }

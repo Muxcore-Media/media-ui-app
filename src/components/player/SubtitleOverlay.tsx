@@ -1,18 +1,18 @@
-import type { SubtitleCue } from '../../lib/player/types'
-import type { UserPreferences } from '../../lib/userdata'
+import type { SubtitleCue } from '../../lib/player/types';
+import type { UserPreferences } from '../../lib/userdata';
 
 type Props = {
-  cues: SubtitleCue[]
-  prefs: UserPreferences['subtitles']
+  cues: SubtitleCue[];
+  prefs: UserPreferences['subtitles'];
   /** Shifts the overlay up so it doesn't collide with the visible control bar. */
-  controlsVisible: boolean
-}
+  controlsVisible: boolean;
+};
 
 const SIZE_CLASS: Record<UserPreferences['subtitles']['textSize'], string> = {
   sm: 'text-sm sm:text-base',
   md: 'text-base sm:text-xl',
   lg: 'text-lg sm:text-2xl',
-}
+};
 
 function edgeStyleCss(edge: UserPreferences['subtitles']['edgeStyle']): React.CSSProperties {
   switch (edge) {
@@ -20,11 +20,11 @@ function edgeStyleCss(edge: UserPreferences['subtitles']['edgeStyle']): React.CS
       return {
         textShadow:
           '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px rgba(0,0,0,0.6)',
-      }
+      };
     case 'drop-shadow':
-      return { textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)' }
+      return { textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8)' };
     default:
-      return {}
+      return {};
   }
 }
 
@@ -32,9 +32,12 @@ function edgeStyleCss(edge: UserPreferences['subtitles']['edgeStyle']): React.CS
  * appearance (size, background, edge style, position) is fully user-configurable
  * instead of depending on the browser's native cue box. */
 export default function SubtitleOverlay({ cues, prefs, controlsVisible }: Props) {
-  if (cues.length === 0) return null
+  if (cues.length === 0) return null;
 
-  const bg = prefs.backgroundOpacity > 0 ? `rgba(0,0,0,${Math.min(100, prefs.backgroundOpacity) / 100})` : 'transparent'
+  const bg =
+    prefs.backgroundOpacity > 0
+      ? `rgba(0,0,0,${Math.min(100, prefs.backgroundOpacity) / 100})`
+      : 'transparent';
 
   return (
     <div
@@ -52,5 +55,5 @@ export default function SubtitleOverlay({ cues, prefs, controlsVisible }: Props)
         />
       ))}
     </div>
-  )
+  );
 }

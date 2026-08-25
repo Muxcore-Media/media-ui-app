@@ -1,83 +1,85 @@
-import type { MediaRequest, Movie, TVShow } from '../types'
+import type { MediaRequest, Movie, TVShow } from '../types';
 
 /** True when the title can be played from the library right now. */
 export function isWatchable(item: { has_file: boolean }): boolean {
-  return item.has_file
+  return item.has_file;
 }
 
 /** Request-media statuses that mean acquisition is still underway. */
 export function isActiveRequestStatus(status: string | undefined): boolean {
-  const s = (status || '').trim().toLowerCase()
-  return s !== '' && s !== 'available'
+  const s = (status || '').trim().toLowerCase();
+  return s !== '' && s !== 'available';
 }
 
 /** Badge text for a request row — prefers API statusLabel when present. */
 export function requestDisplayLabel(req: Pick<MediaRequest, 'status' | 'statusLabel'>): string {
-  const label = (req.statusLabel || '').trim()
-  if (label) return label
-  return requestStatusLabel(req.status)
+  const label = (req.statusLabel || '').trim();
+  if (label) return label;
+  return requestStatusLabel(req.status);
 }
 
 /** Subtitle detail when API provides statusDetail and it is not already in the label. */
-export function requestDisplayDetail(req: Pick<MediaRequest, 'statusLabel' | 'statusDetail'>): string | null {
-  const detail = (req.statusDetail || '').trim()
-  if (!detail) return null
-  const label = (req.statusLabel || '').trim()
-  if (label && label.includes(detail)) return null
-  return detail
+export function requestDisplayDetail(
+  req: Pick<MediaRequest, 'statusLabel' | 'statusDetail'>,
+): string | null {
+  const detail = (req.statusDetail || '').trim();
+  if (!detail) return null;
+  const label = (req.statusLabel || '').trim();
+  if (label && label.includes(detail)) return null;
+  return detail;
 }
 
 export function requestStatusLabel(status: string): string {
   switch (status.trim().toLowerCase()) {
     case 'downloading':
-      return 'Downloading'
+      return 'Downloading';
     case 'searching':
-      return 'Searching'
+      return 'Searching';
     case 'queued':
-      return 'Queued'
+      return 'Queued';
     case 'added':
-      return 'In library'
+      return 'In library';
     case 'requested':
-      return 'Requested'
+      return 'Requested';
     case 'workflow':
     case 'pending':
-      return 'Pending approval'
+      return 'Pending approval';
     case 'import_failed':
-      return 'Import failed'
+      return 'Import failed';
     case 'failed':
-      return 'Download failed'
+      return 'Download failed';
     case 'stalled':
-      return 'Stalled'
+      return 'Stalled';
     case 'denied':
-      return 'Denied'
+      return 'Denied';
     case 'available':
-      return 'Available'
+      return 'Available';
     default:
-      return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+      return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 }
 
-export type RequestStatusTone = 'success' | 'accent' | 'neutral' | 'warning' | 'danger'
+export type RequestStatusTone = 'success' | 'accent' | 'neutral' | 'warning' | 'danger';
 
 export function requestStatusTone(status: string): RequestStatusTone {
   switch (status.trim().toLowerCase()) {
     case 'available':
     case 'added':
-      return 'success'
+      return 'success';
     case 'downloading':
-      return 'accent'
+      return 'accent';
     case 'searching':
     case 'queued':
     case 'pending':
     case 'workflow':
     case 'stalled':
-      return 'warning'
+      return 'warning';
     case 'import_failed':
     case 'failed':
     case 'denied':
-      return 'danger'
+      return 'danger';
     default:
-      return 'neutral'
+      return 'neutral';
   }
 }
 
@@ -89,45 +91,48 @@ export function requestPhase(
     case 'failed':
     case 'stalled':
     case 'denied':
-      return 'attention'
+      return 'attention';
     case 'downloading':
-      return 'downloading'
+      return 'downloading';
     case 'searching':
     case 'queued':
-      return 'searching'
+      return 'searching';
     case 'pending':
     case 'workflow':
-      return 'pending'
+      return 'pending';
     default:
-      return 'requested'
+      return 'requested';
   }
 }
 
 export function posterUrlForRequest(poster: string | undefined): string {
-  const p = (poster || '').trim()
-  if (!p) return ''
-  if (p.startsWith('http') || p.startsWith('/images')) return p
-  if (p.startsWith('/')) return `https://image.tmdb.org/t/p/w185${p}`
-  return p
+  const p = (poster || '').trim();
+  if (!p) return '';
+  if (p.startsWith('http') || p.startsWith('/images')) return p;
+  if (p.startsWith('/')) return `https://image.tmdb.org/t/p/w185${p}`;
+  return p;
 }
 
 export function detailHrefForRequest(req: MediaRequest): string | null {
-  if (!req.itemId) return null
-  if (req.itemType === 'tv') return `/tv/${req.itemId}`
-  if (req.itemType === 'music' || req.itemType === 'music_album' || req.itemType === 'music_track') return `/music/${req.itemId}`
-  return `/movies/${req.itemId}`
+  if (!req.itemId) return null;
+  if (req.itemType === 'tv') return `/tv/${req.itemId}`;
+  if (req.itemType === 'music' || req.itemType === 'music_album' || req.itemType === 'music_track')
+    return `/music/${req.itemId}`;
+  return `/movies/${req.itemId}`;
 }
 
 export type InProgressEntry =
   | { source: 'request'; request: MediaRequest }
-  | { source: 'library'; kind: 'movie' | 'tv'; item: Movie | TVShow }
+  | { source: 'library'; kind: 'movie' | 'tv'; item: Movie | TVShow };
 
 function requestKey(req: MediaRequest): string {
-  if (req.itemId) return `${req.itemType}:${req.itemId}`
-  if (req.itemType === 'music' && req.musicbrainzId) return `${req.itemType}:mbid:${req.musicbrainzId}`
-  if (req.itemType === 'music_album' && req.musicbrainzId) return `${req.itemType}:rg:${req.musicbrainzId}`
-  if (req.tmdbId) return `${req.itemType}:tmdb:${req.tmdbId}`
-  return `${req.itemType}:${req.title.toLowerCase()}`
+  if (req.itemId) return `${req.itemType}:${req.itemId}`;
+  if (req.itemType === 'music' && req.musicbrainzId)
+    return `${req.itemType}:mbid:${req.musicbrainzId}`;
+  if (req.itemType === 'music_album' && req.musicbrainzId)
+    return `${req.itemType}:rg:${req.musicbrainzId}`;
+  if (req.tmdbId) return `${req.itemType}:tmdb:${req.tmdbId}`;
+  return `${req.itemType}:${req.title.toLowerCase()}`;
 }
 
 /** Merge active request-media rows with library titles that are not watchable yet. */
@@ -136,62 +141,70 @@ export function mergeInProgressEntries(
   movies: Movie[],
   shows: TVShow[],
 ): InProgressEntry[] {
-  const active = requests.filter((r) => isActiveRequestStatus(r.status))
-  const keys = new Set(active.map(requestKey))
-  const out: InProgressEntry[] = active.map((request) => ({ source: 'request', request }))
+  const active = requests.filter((r) => isActiveRequestStatus(r.status));
+  const keys = new Set(active.map(requestKey));
+  const out: InProgressEntry[] = active.map((request) => ({ source: 'request', request }));
 
   for (const item of movies) {
-    if (isWatchable(item)) continue
-    const key = item.id ? `movie:${item.id}` : item.tmdb_id ? `movie:tmdb:${item.tmdb_id}` : `movie:${item.title.toLowerCase()}`
-    if (keys.has(key)) continue
-    keys.add(key)
-    out.push({ source: 'library', kind: 'movie', item })
+    if (isWatchable(item)) continue;
+    const key = item.id
+      ? `movie:${item.id}`
+      : item.tmdb_id
+        ? `movie:tmdb:${item.tmdb_id}`
+        : `movie:${item.title.toLowerCase()}`;
+    if (keys.has(key)) continue;
+    keys.add(key);
+    out.push({ source: 'library', kind: 'movie', item });
   }
 
   for (const item of shows) {
-    if (isWatchable(item)) continue
-    const key = item.id ? `tv:${item.id}` : item.tmdb_id ? `tv:tmdb:${item.tmdb_id}` : `tv:${item.title.toLowerCase()}`
-    if (keys.has(key)) continue
-    keys.add(key)
-    out.push({ source: 'library', kind: 'tv', item })
+    if (isWatchable(item)) continue;
+    const key = item.id
+      ? `tv:${item.id}`
+      : item.tmdb_id
+        ? `tv:tmdb:${item.tmdb_id}`
+        : `tv:${item.title.toLowerCase()}`;
+    if (keys.has(key)) continue;
+    keys.add(key);
+    out.push({ source: 'library', kind: 'tv', item });
   }
 
   return out.sort((a, b) => {
     const rank = (entry: InProgressEntry) => {
       if (entry.source === 'request') {
-        const phase = requestPhase(entry.request.status)
-        if (phase === 'attention') return 0
-        if (phase === 'downloading') return 1
-        if (phase === 'searching') return 2
-        if (phase === 'pending') return 3
-        return 4
+        const phase = requestPhase(entry.request.status);
+        if (phase === 'attention') return 0;
+        if (phase === 'downloading') return 1;
+        if (phase === 'searching') return 2;
+        if (phase === 'pending') return 3;
+        return 4;
       }
-      return 5
-    }
-    const diff = rank(a) - rank(b)
-    if (diff !== 0) return diff
-    const titleA = a.source === 'request' ? a.request.title : a.item.title
-    const titleB = b.source === 'request' ? b.request.title : b.item.title
-    return titleA.localeCompare(titleB)
-  })
+      return 5;
+    };
+    const diff = rank(a) - rank(b);
+    if (diff !== 0) return diff;
+    const titleA = a.source === 'request' ? a.request.title : a.item.title;
+    const titleB = b.source === 'request' ? b.request.title : b.item.title;
+    return titleA.localeCompare(titleB);
+  });
 }
 
 export function groupInProgressByPhase(entries: InProgressEntry[]) {
-  const attention: InProgressEntry[] = []
-  const downloading: InProgressEntry[] = []
-  const searching: InProgressEntry[] = []
-  const pending: InProgressEntry[] = []
-  const requested: InProgressEntry[] = []
+  const attention: InProgressEntry[] = [];
+  const downloading: InProgressEntry[] = [];
+  const searching: InProgressEntry[] = [];
+  const pending: InProgressEntry[] = [];
+  const requested: InProgressEntry[] = [];
 
   for (const entry of entries) {
-    const status = entry.source === 'request' ? entry.request.status : 'added'
-    const phase = requestPhase(status)
-    if (phase === 'attention') attention.push(entry)
-    else if (phase === 'downloading') downloading.push(entry)
-    else if (phase === 'searching') searching.push(entry)
-    else if (phase === 'pending') pending.push(entry)
-    else requested.push(entry)
+    const status = entry.source === 'request' ? entry.request.status : 'added';
+    const phase = requestPhase(status);
+    if (phase === 'attention') attention.push(entry);
+    else if (phase === 'downloading') downloading.push(entry);
+    else if (phase === 'searching') searching.push(entry);
+    else if (phase === 'pending') pending.push(entry);
+    else requested.push(entry);
   }
 
-  return { attention, downloading, searching, pending, requested }
+  return { attention, downloading, searching, pending, requested };
 }

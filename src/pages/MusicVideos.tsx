@@ -1,44 +1,46 @@
-import { useEffect, useId, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Music2 } from 'lucide-react'
-import { api } from '../api/client'
-import MediaCard from '../components/MediaCard'
-import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import type { Movie } from '../types'
+import { useEffect, useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Music2 } from 'lucide-react';
+import { api } from '../api/client';
+import MediaCard from '../components/MediaCard';
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import type { Movie } from '../types';
 
 /** Music videos library via BFF `?library=musicvideos` (path prefixes / tags; heuristic when config empty). */
 export default function MusicVideos() {
-  const libraryHeadingId = useId()
-  const [movies, setMovies] = useState<Movie[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const libraryHeadingId = useId();
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const list = await api.listMovies(1, 200, { library: 'musicvideos' })
+        const list = await api.listMovies(1, 200, { library: 'musicvideos' });
         if (!cancelled) {
-          setMovies(list.items)
+          setMovies(list.items);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="space-y-6" data-testid="musicvideos-page">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Music Videos</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Music Videos
+        </h1>
         <p className="text-sm text-[var(--text-secondary)]">Music videos from your library.</p>
       </div>
       {loading && (
@@ -53,7 +55,10 @@ export default function MusicVideos() {
           icon={Music2}
           message="No music videos in your library yet."
           action={
-            <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+            <Link
+              to="/movies"
+              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            >
               Browse movies
             </Link>
           }
@@ -72,5 +77,5 @@ export default function MusicVideos() {
         </section>
       )}
     </div>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import RequestableCard from './RequestableCard'
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import RequestableCard from './RequestableCard';
 
 describe('RequestableCard', () => {
   it('links to discover detail and keeps return path', () => {
@@ -21,12 +21,12 @@ describe('RequestableCard', () => {
           returnTo="/search?q=fight"
         />
       </MemoryRouter>,
-    )
+    );
 
-    const link = screen.getByRole('link', { name: /Fight Club/i })
-    expect(link).toHaveAttribute('href', '/discover/movie/550?return=%2Fsearch%3Fq%3Dfight')
-    expect(screen.getByRole('button', { name: 'Request' })).toBeInTheDocument()
-  })
+    const link = screen.getByRole('link', { name: /Fight Club/i });
+    expect(link).toHaveAttribute('href', '/discover/movie/550?return=%2Fsearch%3Fq%3Dfight');
+    expect(screen.getByRole('button', { name: 'Request' })).toBeInTheDocument();
+  });
 
   it('does not link music items to discover', () => {
     render(
@@ -45,10 +45,10 @@ describe('RequestableCard', () => {
           onRequest={() => {}}
         />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
-    expect(screen.getByText('Artist')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Request' })).toBeInTheDocument()
-  })
-})
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('Artist')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request' })).toBeInTheDocument();
+  });
+});

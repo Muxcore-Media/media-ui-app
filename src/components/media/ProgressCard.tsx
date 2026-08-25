@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
-import { Play } from 'lucide-react'
-import { ProgressBar } from '../ui/ProgressBar'
+import { Link } from 'react-router-dom';
+import { Play } from 'lucide-react';
+import { ProgressBar } from '../ui/ProgressBar';
 
 /** Compact card for Continue Watching / Next Up rows — poster + progress bar + subtitle. */
 export function ProgressCard({
@@ -10,13 +10,13 @@ export function ProgressCard({
   href,
   progressPct,
 }: {
-  title: string
-  subtitle?: string
-  posterUrl?: string
-  href: string
-  progressPct?: number
+  title: string;
+  subtitle?: string;
+  posterUrl?: string;
+  href: string;
+  progressPct?: number;
 }) {
-  const label = subtitle ? `${title}, ${subtitle}` : title
+  const label = subtitle ? `${title}, ${subtitle}` : title;
 
   return (
     <Link
@@ -56,5 +56,5 @@ export function ProgressCard({
         {subtitle && <p className="text-xs text-[var(--text-tertiary)]">{subtitle}</p>}
       </div>
     </Link>
-  )
+  );
 }

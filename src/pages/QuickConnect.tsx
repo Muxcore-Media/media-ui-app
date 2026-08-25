@@ -1,33 +1,33 @@
-import { type FormEvent, useId, useState } from 'react'
-import { KeyRound } from 'lucide-react'
-import { api } from '../api/client'
+import { type FormEvent, useId, useState } from 'react';
+import { KeyRound } from 'lucide-react';
+import { api } from '../api/client';
 
 /** Jellyfin Quick Connect: approve a code shown on another device. */
 export default function QuickConnect() {
-  const codeInputId = useId()
-  const [code, setCode] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
-  const [ok, setOk] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const codeInputId = useId();
+  const [code, setCode] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    const c = code.trim()
+    e.preventDefault();
+    const c = code.trim();
     if (c.length < 4) {
-      setMessage('Enter the code shown on your other device.')
-      setOk(false)
-      return
+      setMessage('Enter the code shown on your other device.');
+      setOk(false);
+      return;
     }
-    setBusy(true)
+    setBusy(true);
     try {
-      const res = await api.approveQuickConnect(c)
-      setOk(true)
-      setMessage(res.message || `Code "${c}" authorized.`)
+      const res = await api.approveQuickConnect(c);
+      setOk(true);
+      setMessage(res.message || `Code "${c}" authorized.`);
     } catch (err) {
-      setOk(false)
-      setMessage(err instanceof Error ? err.message : 'Authorization failed')
+      setOk(false);
+      setMessage(err instanceof Error ? err.message : 'Authorization failed');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
@@ -37,7 +37,9 @@ export default function QuickConnect() {
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-elevated-2)] text-[var(--accent-color)]">
           <KeyRound className="h-5 w-5" aria-hidden="true" />
         </span>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Quick Connect</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Quick Connect
+        </h1>
         <p className="text-sm text-[var(--text-secondary)]">
           Enter the code shown on your TV or other device to sign in.
         </p>
@@ -82,5 +84,5 @@ export default function QuickConnect() {
         )}
       </form>
     </div>
-  )
+  );
 }

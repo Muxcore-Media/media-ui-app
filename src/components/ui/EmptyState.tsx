@@ -1,13 +1,13 @@
-import type { LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 type Props = {
-  icon: LucideIcon
-  title?: string
-  message: string
-  action?: ReactNode
-  testId?: string
-}
+  icon: LucideIcon;
+  title?: string;
+  message: string;
+  action?: ReactNode;
+  testId?: string;
+};
 
 /** Standard empty library/list state (AGENTS.md §12). */
 export function EmptyState({ icon: Icon, title, message, action, testId = 'page-empty' }: Props) {
@@ -21,5 +21,5 @@ export function EmptyState({ icon: Icon, title, message, action, testId = 'page-
       <p className="max-w-sm text-sm text-[var(--text-secondary)]">{message}</p>
       {action}
     </div>
-  )
+  );
 }

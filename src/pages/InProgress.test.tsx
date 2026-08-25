@@ -1,14 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import InProgress from './InProgress'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import InProgress from './InProgress';
 
-const listRequests = vi.fn()
-const listMovies = vi.fn()
-const listTVShows = vi.fn()
+const listRequests = vi.fn();
+const listMovies = vi.fn();
+const listTVShows = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
@@ -16,35 +16,35 @@ vi.mock('../api/client', async () => {
       listMovies: (...args: unknown[]) => listMovies(...args),
       listTVShows: (...args: unknown[]) => listTVShows(...args),
     },
-  }
-})
+  };
+});
 
 function renderPage() {
   return render(
     <MemoryRouter>
       <InProgress />
     </MemoryRouter>,
-  )
+  );
 }
 
 describe('InProgress page', () => {
   beforeEach(() => {
-    listRequests.mockReset()
-    listMovies.mockReset()
-    listTVShows.mockReset()
-    listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 })
-    listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 })
-  })
+    listRequests.mockReset();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+  });
 
   it('shows empty state when nothing is in progress', async () => {
-    listRequests.mockResolvedValueOnce([])
+    listRequests.mockResolvedValueOnce([]);
 
-    renderPage()
+    renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/Nothing in progress/i)).toBeInTheDocument()
-    })
-  })
+      expect(screen.getByText(/Nothing in progress/i)).toBeInTheDocument();
+    });
+  });
 
   it('groups active requests by phase', async () => {
     listRequests.mockResolvedValueOnce([
@@ -72,17 +72,17 @@ describe('InProgress page', () => {
         createdAt: '',
         updatedAt: '',
       },
-    ])
+    ]);
 
-    renderPage()
+    renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId('in-progress-downloading')).toBeInTheDocument()
-      expect(screen.getByTestId('in-progress-searching')).toBeInTheDocument()
-    })
-    expect(screen.getByText('Downloading Movie')).toBeInTheDocument()
-    expect(screen.getByText('Searching Show')).toBeInTheDocument()
-  })
+      expect(screen.getByTestId('in-progress-downloading')).toBeInTheDocument();
+      expect(screen.getByTestId('in-progress-searching')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Downloading Movie')).toBeInTheDocument();
+    expect(screen.getByText('Searching Show')).toBeInTheDocument();
+  });
 
   it('surfaces import_failed requests in the attention section', async () => {
     listRequests.mockResolvedValueOnce([
@@ -98,17 +98,17 @@ describe('InProgress page', () => {
         createdAt: '',
         updatedAt: '',
       },
-    ])
+    ]);
 
-    renderPage()
+    renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId('in-progress-attention')).toBeInTheDocument()
-    })
-    expect(screen.getByText('Broken Import')).toBeInTheDocument()
-    expect(screen.getByText('Import failed')).toBeInTheDocument()
-    expect(screen.getByText(/could not be added to your library/i)).toBeInTheDocument()
-  })
+      expect(screen.getByTestId('in-progress-attention')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Broken Import')).toBeInTheDocument();
+    expect(screen.getByText('Import failed')).toBeInTheDocument();
+    expect(screen.getByText(/could not be added to your library/i)).toBeInTheDocument();
+  });
 
   it('shows API statusLabel and statusDetail on cards when present', async () => {
     listRequests.mockResolvedValueOnce([
@@ -140,36 +140,36 @@ describe('InProgress page', () => {
         createdAt: '',
         updatedAt: '',
       },
-    ])
+    ]);
 
-    renderPage()
+    renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId('in-progress-attention')).toBeInTheDocument()
-    })
-    expect(screen.getByText('Stalled — no peers')).toBeInTheDocument()
-    expect(screen.queryByText('no peers')).not.toBeInTheDocument()
-    expect(screen.getByText('Import failed')).toBeInTheDocument()
-    expect(screen.getByText('path not under a scanner watch directory')).toBeInTheDocument()
-  })
-})
+      expect(screen.getByTestId('in-progress-attention')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Stalled — no peers')).toBeInTheDocument();
+    expect(screen.queryByText('no peers')).not.toBeInTheDocument();
+    expect(screen.getByText('Import failed')).toBeInTheDocument();
+    expect(screen.getByText('path not under a scanner watch directory')).toBeInTheDocument();
+  });
+});
 
 describe('InProgress accessibility', () => {
   beforeEach(() => {
-    listRequests.mockReset()
-    listMovies.mockReset()
-    listTVShows.mockReset()
-    listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 })
-    listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 })
-    listRequests.mockResolvedValue([])
-  })
+    listRequests.mockReset();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listRequests.mockResolvedValue([]);
+  });
 
   it('has a page h1 and announces loading on initial render', () => {
-    listRequests.mockImplementation(() => new Promise(() => {}))
+    listRequests.mockImplementation(() => new Promise(() => {}));
 
-    renderPage()
+    renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'In progress' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading in-progress titles' })).toBeInTheDocument()
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'In progress' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading in-progress titles' })).toBeInTheDocument();
+  });
+});

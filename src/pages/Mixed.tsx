@@ -1,47 +1,47 @@
-import { useEffect, useId, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Search as SearchIcon, Clapperboard } from 'lucide-react'
-import { api } from '../api/client'
-import MediaCard from '../components/MediaCard'
-import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import type { Movie, TVShow } from '../types'
+import { useEffect, useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search as SearchIcon, Clapperboard } from 'lucide-react';
+import { api } from '../api/client';
+import MediaCard from '../components/MediaCard';
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import type { Movie, TVShow } from '../types';
 
 /** Jellyfin “mixed” library: movies + TV in one grid. */
 export default function Mixed() {
-  const filterInputId = useId()
-  const libraryHeadingId = useId()
-  const [movies, setMovies] = useState<Movie[]>([])
-  const [shows, setShows] = useState<TVShow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [q, setQ] = useState('')
+  const filterInputId = useId();
+  const libraryHeadingId = useId();
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [shows, setShows] = useState<TVShow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState('');
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const [m, t] = await Promise.all([api.listMovies(1, 100), api.listTVShows(1, 100)])
+        const [m, t] = await Promise.all([api.listMovies(1, 100), api.listTVShows(1, 100)]);
         if (!cancelled) {
-          setMovies(m.items)
-          setShows(t.items)
+          setMovies(m.items);
+          setShows(t.items);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
-  const needle = q.trim().toLowerCase()
-  const movieRows = movies.filter((m) => !needle || m.title.toLowerCase().includes(needle))
-  const showRows = shows.filter((s) => !needle || s.title.toLowerCase().includes(needle))
+  const needle = q.trim().toLowerCase();
+  const movieRows = movies.filter((m) => !needle || m.title.toLowerCase().includes(needle));
+  const showRows = shows.filter((s) => !needle || s.title.toLowerCase().includes(needle));
 
   return (
     <div className="space-y-6" data-testid="mixed-page">
@@ -80,9 +80,14 @@ export default function Mixed() {
       ) : movieRows.length === 0 && showRows.length === 0 ? (
         <EmptyState
           icon={Clapperboard}
-          message={needle ? 'No titles match your filter.' : 'No movies or TV shows in your library yet.'}
+          message={
+            needle ? 'No titles match your filter.' : 'No movies or TV shows in your library yet.'
+          }
           action={
-            <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+            <Link
+              to="/search"
+              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            >
               Search
             </Link>
           }
@@ -103,5 +108,5 @@ export default function Mixed() {
         </section>
       )}
     </div>
-  )
+  );
 }

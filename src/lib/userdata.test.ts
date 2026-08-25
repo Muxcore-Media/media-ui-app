@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest';
 import {
   continueWatching,
   isServerAuthoritative,
@@ -7,12 +7,12 @@ import {
   resolveNextUp,
   showIdFromHref,
   upsertProgress,
-} from './userdata'
+} from './userdata';
 
 describe('userdata server cache', () => {
   beforeEach(() => {
-    localStorage.clear()
-  })
+    localStorage.clear();
+  });
 
   it('marks server authoritative after successful pull and prefers server progress', async () => {
     upsertProgress({
@@ -23,7 +23,7 @@ describe('userdata server cache', () => {
       positionSec: 5,
       durationSec: 100,
       updatedAt: '2025-01-01T00:00:00.000Z',
-    })
+    });
 
     const fetchMock = async () =>
       ({
@@ -42,21 +42,21 @@ describe('userdata server cache', () => {
           },
           favorites: {},
         }),
-      }) as Response
-    globalThis.fetch = fetchMock as typeof fetch
+      }) as Response;
+    globalThis.fetch = fetchMock as typeof fetch;
 
-    const ok = await pullUserdataFromServer()
-    expect(ok).toBe(true)
-    expect(isServerAuthoritative()).toBe(true)
-    expect(listProgress()[0]?.positionSec).toBe(50)
-    expect(continueWatching(1)[0]?.title).toBe('Server')
-  })
+    const ok = await pullUserdataFromServer();
+    expect(ok).toBe(true);
+    expect(isServerAuthoritative()).toBe(true);
+    expect(listProgress()[0]?.positionSec).toBe(50);
+    expect(continueWatching(1)[0]?.title).toBe('Server');
+  });
 
   it('parses show id from progress href', () => {
-    expect(showIdFromHref('/tv/show-42')).toBe('show-42')
-    expect(showIdFromHref('/player?back=%2Ftv%2Fabc')).toBe(null)
-    expect(showIdFromHref('/movies/m1')).toBe(null)
-  })
+    expect(showIdFromHref('/tv/show-42')).toBe('show-42');
+    expect(showIdFromHref('/player?back=%2Ftv%2Fabc')).toBe(null);
+    expect(showIdFromHref('/movies/m1')).toBe(null);
+  });
 
   it('resolves next episode after a watched episode via TV detail', async () => {
     upsertProgress({
@@ -68,10 +68,10 @@ describe('userdata server cache', () => {
       durationSec: 100,
       watched: true,
       updatedAt: '2026-01-01T00:00:00.000Z',
-    })
+    });
 
     const next = await resolveNextUp(async (id) => {
-      expect(id).toBe('show-1')
+      expect(id).toBe('show-1');
       return {
         id: 'show-1',
         title: 'Demo Show',
@@ -92,12 +92,12 @@ describe('userdata server cache', () => {
             ],
           },
         ],
-      }
-    })
+      };
+    });
 
-    expect(next).toHaveLength(1)
-    expect(next[0]?.id).toBe('ep2')
-    expect(next[0]?.subtitle).toBe('Next up')
-    expect(next[0]?.href).toContain('ep2')
-  })
-})
+    expect(next).toHaveLength(1);
+    expect(next[0]?.id).toBe('ep2');
+    expect(next[0]?.subtitle).toBe('Next up');
+    expect(next[0]?.href).toContain('ep2');
+  });
+});

@@ -1,17 +1,17 @@
-import { api } from '../api/client'
-import { isWatchable } from './acquisition'
-import type { Capabilities, LibraryKey } from './capabilities'
-import { featureEnabled, libraryEnabled } from './capabilities'
-import type { Movie, SearchResult, TVShow } from '../types'
+import { api } from '../api/client';
+import { isWatchable } from './acquisition';
+import type { Capabilities, LibraryKey } from './capabilities';
+import { featureEnabled, libraryEnabled } from './capabilities';
+import type { Movie, SearchResult, TVShow } from '../types';
 
-export type SearchScope = 'all' | LibraryKey | 'add'
+export type SearchScope = 'all' | LibraryKey | 'add';
 
 export type LibraryHit =
   | { kind: 'movie'; item: Movie }
   | { kind: 'tv'; item: TVShow }
-  | { kind: 'other'; href: string; title: string; subtitle: string; poster?: string }
+  | { kind: 'other'; href: string; title: string; subtitle: string; poster?: string };
 
-type ListRow = { id: string; title?: string; name?: string; poster_url?: string }
+type ListRow = { id: string; title?: string; name?: string; poster_url?: string };
 
 const SCOPE_LABELS: Record<SearchScope, string> = {
   all: 'All',
@@ -24,11 +24,11 @@ const SCOPE_LABELS: Record<SearchScope, string> = {
   homevideos: 'Home Videos',
   musicvideos: 'Music Videos',
   add: 'Add new',
-}
+};
 
 export function parseSearchScope(raw: string | null | undefined): SearchScope {
-  const v = (raw || 'all').trim().toLowerCase()
-  if (v === 'add' || v === 'request') return 'add'
+  const v = (raw || 'all').trim().toLowerCase();
+  if (v === 'add' || v === 'request') return 'add';
   if (
     v === 'movies' ||
     v === 'tv' ||
@@ -39,17 +39,26 @@ export function parseSearchScope(raw: string | null | undefined): SearchScope {
     v === 'homevideos' ||
     v === 'musicvideos'
   ) {
-    return v
+    return v;
   }
-  return 'all'
+  return 'all';
 }
 
 export function searchScopesForCaps(caps: Capabilities): { id: SearchScope; label: string }[] {
-  const scopes: { id: SearchScope; label: string }[] = [{ id: 'all', label: SCOPE_LABELS.all }]
-  const libs: LibraryKey[] = ['movies', 'tv', 'music', 'books', 'comics', 'audiobooks', 'homevideos', 'musicvideos']
+  const scopes: { id: SearchScope; label: string }[] = [{ id: 'all', label: SCOPE_LABELS.all }];
+  const libs: LibraryKey[] = [
+    'movies',
+    'tv',
+    'music',
+    'books',
+    'comics',
+    'audiobooks',
+    'homevideos',
+    'musicvideos',
+  ];
   for (const lib of libs) {
     if (libraryEnabled(caps, lib)) {
-      scopes.push({ id: lib, label: SCOPE_LABELS[lib] })
+      scopes.push({ id: lib, label: SCOPE_LABELS[lib] });
     }
   }
   if (
@@ -59,26 +68,26 @@ export function searchScopesForCaps(caps: Capabilities): { id: SearchScope; labe
     libraryEnabled(caps, 'tv') ||
     libraryEnabled(caps, 'music')
   ) {
-    scopes.push({ id: 'add', label: SCOPE_LABELS.add })
+    scopes.push({ id: 'add', label: SCOPE_LABELS.add });
   }
-  return scopes
+  return scopes;
 }
 
 function rowTitle(m: ListRow) {
-  return (m.title || m.name || '').toLowerCase()
+  return (m.title || m.name || '').toLowerCase();
 }
 
 function scopeIncludesLibrary(scope: SearchScope, lib: LibraryKey): boolean {
-  return scope === 'all' || scope === lib
+  return scope === 'all' || scope === lib;
 }
 
 function scopeIncludesMovieTVRemote(scope: SearchScope): boolean {
-  return scope === 'all' || scope === 'add' || scope === 'movies' || scope === 'tv'
+  return scope === 'all' || scope === 'add' || scope === 'movies' || scope === 'tv';
 }
 
 function scopeIncludesMusicRemote(scope: SearchScope, caps: Capabilities): boolean {
-  if (!libraryEnabled(caps, 'music')) return false
-  return scope === 'all' || scope === 'add' || scope === 'music'
+  if (!libraryEnabled(caps, 'music')) return false;
+  return scope === 'all' || scope === 'add' || scope === 'music';
 }
 
 export async function runUnifiedSearch(
@@ -86,52 +95,56 @@ export async function runUnifiedSearch(
   query: string,
   scope: SearchScope,
 ): Promise<{ library: LibraryHit[]; remote: SearchResult[] }> {
-  const needle = query.trim().toLowerCase()
+  const needle = query.trim().toLowerCase();
   if (needle.length < 2) {
-    return { library: [], remote: [] }
+    return { library: [], remote: [] };
   }
 
-  const emptyLib = { items: [] as ListRow[] }
-  const tasks: Promise<unknown>[] = []
+  const emptyLib = { items: [] as ListRow[] };
+  const tasks: Promise<unknown>[] = [];
 
   if (scopeIncludesLibrary(scope, 'movies') && libraryEnabled(caps, 'movies')) {
-    tasks.push(api.listMovies(1, 200))
-  } else tasks.push(Promise.resolve({ items: [] as Movie[] }))
+    tasks.push(api.listMovies(1, 200));
+  } else tasks.push(Promise.resolve({ items: [] as Movie[] }));
 
   if (scopeIncludesLibrary(scope, 'tv') && libraryEnabled(caps, 'tv')) {
-    tasks.push(api.listTVShows(1, 200))
-  } else tasks.push(Promise.resolve({ items: [] as TVShow[] }))
+    tasks.push(api.listTVShows(1, 200));
+  } else tasks.push(Promise.resolve({ items: [] as TVShow[] }));
 
   if (scopeIncludesLibrary(scope, 'music') && libraryEnabled(caps, 'music')) {
-    tasks.push(api.listMusic().catch(() => emptyLib))
-  } else tasks.push(Promise.resolve(emptyLib))
+    tasks.push(api.listMusic().catch(() => emptyLib));
+  } else tasks.push(Promise.resolve(emptyLib));
 
   if (scopeIncludesLibrary(scope, 'books') && libraryEnabled(caps, 'books')) {
-    tasks.push(api.listBooks().catch(() => emptyLib))
-  } else tasks.push(Promise.resolve(emptyLib))
+    tasks.push(api.listBooks().catch(() => emptyLib));
+  } else tasks.push(Promise.resolve(emptyLib));
 
   if (scopeIncludesLibrary(scope, 'comics') && libraryEnabled(caps, 'comics')) {
-    tasks.push(api.listComics().catch(() => emptyLib))
-  } else tasks.push(Promise.resolve(emptyLib))
+    tasks.push(api.listComics().catch(() => emptyLib));
+  } else tasks.push(Promise.resolve(emptyLib));
 
   if (scopeIncludesLibrary(scope, 'audiobooks') && libraryEnabled(caps, 'audiobooks')) {
-    tasks.push(api.listAudiobooks().catch(() => emptyLib))
-  } else tasks.push(Promise.resolve(emptyLib))
+    tasks.push(api.listAudiobooks().catch(() => emptyLib));
+  } else tasks.push(Promise.resolve(emptyLib));
 
-  const remoteTasks: Promise<SearchResult[]>[] = []
+  const remoteTasks: Promise<SearchResult[]>[] = [];
   if (scopeIncludesMovieTVRemote(scope)) {
-    remoteTasks.push(api.search(query.trim()).catch(() => [] as SearchResult[]))
+    remoteTasks.push(api.search(query.trim()).catch(() => [] as SearchResult[]));
   }
   if (scopeIncludesMusicRemote(scope, caps)) {
-    remoteTasks.push(api.search(query.trim(), { type: 'music' }).catch(() => [] as SearchResult[]))
-    remoteTasks.push(api.search(query.trim(), { type: 'music_album' }).catch(() => [] as SearchResult[]))
-    remoteTasks.push(api.search(query.trim(), { type: 'music_track' }).catch(() => [] as SearchResult[]))
+    remoteTasks.push(api.search(query.trim(), { type: 'music' }).catch(() => [] as SearchResult[]));
+    remoteTasks.push(
+      api.search(query.trim(), { type: 'music_album' }).catch(() => [] as SearchResult[]),
+    );
+    remoteTasks.push(
+      api.search(query.trim(), { type: 'music_track' }).catch(() => [] as SearchResult[]),
+    );
   }
   tasks.push(
     remoteTasks.length > 0
       ? Promise.all(remoteTasks).then((chunks) => chunks.flat())
       : Promise.resolve([] as SearchResult[]),
-  )
+  );
 
   const [movies, shows, music, books, comics, audiobooks, remote] = (await Promise.all(tasks)) as [
     { items: Movie[] },
@@ -141,23 +154,23 @@ export async function runUnifiedSearch(
     typeof emptyLib,
     typeof emptyLib,
     SearchResult[],
-  ]
+  ];
 
-  const lib: LibraryHit[] = []
+  const lib: LibraryHit[] = [];
 
   if (scopeIncludesLibrary(scope, 'movies')) {
     lib.push(
       ...movies.items
         .filter((m) => isWatchable(m) && m.title.toLowerCase().includes(needle))
         .map((item) => ({ kind: 'movie' as const, item })),
-    )
+    );
   }
   if (scopeIncludesLibrary(scope, 'tv')) {
     lib.push(
       ...shows.items
         .filter((s) => isWatchable(s) && s.title.toLowerCase().includes(needle))
         .map((item) => ({ kind: 'tv' as const, item })),
-    )
+    );
   }
   if (scopeIncludesLibrary(scope, 'music')) {
     lib.push(
@@ -170,7 +183,7 @@ export async function runUnifiedSearch(
           subtitle: 'Music',
           poster: typeof m.poster_url === 'string' ? m.poster_url : undefined,
         })),
-    )
+    );
   }
   if (scopeIncludesLibrary(scope, 'books')) {
     lib.push(
@@ -183,7 +196,7 @@ export async function runUnifiedSearch(
           subtitle: 'Books',
           poster: typeof m.poster_url === 'string' ? m.poster_url : undefined,
         })),
-    )
+    );
   }
   if (scopeIncludesLibrary(scope, 'comics')) {
     lib.push(
@@ -196,7 +209,7 @@ export async function runUnifiedSearch(
           subtitle: 'Comics',
           poster: typeof m.poster_url === 'string' ? m.poster_url : undefined,
         })),
-    )
+    );
   }
   if (scopeIncludesLibrary(scope, 'audiobooks')) {
     lib.push(
@@ -209,42 +222,43 @@ export async function runUnifiedSearch(
           subtitle: 'Audiobooks',
           poster: typeof m.poster_url === 'string' ? m.poster_url : undefined,
         })),
-    )
+    );
   }
 
-  let filteredRemote = remote
-  if (scope === 'movies') filteredRemote = filteredRemote.filter((r) => r.mediaType === 'movie')
-  if (scope === 'tv') filteredRemote = filteredRemote.filter((r) => r.mediaType === 'tv')
+  let filteredRemote = remote;
+  if (scope === 'movies') filteredRemote = filteredRemote.filter((r) => r.mediaType === 'movie');
+  if (scope === 'tv') filteredRemote = filteredRemote.filter((r) => r.mediaType === 'tv');
   if (scope === 'music') {
     filteredRemote = filteredRemote.filter(
-      (r) => r.mediaType === 'music' || r.mediaType === 'music_album' || r.mediaType === 'music_track',
-    )
+      (r) =>
+        r.mediaType === 'music' || r.mediaType === 'music_album' || r.mediaType === 'music_track',
+    );
   }
   if (scope === 'add') {
     /* keep remote only — library cleared below when scope is add-only display */
   }
 
-  return { library: scope === 'add' ? [] : lib, remote: filteredRemote }
+  return { library: scope === 'add' ? [] : lib, remote: filteredRemote };
 }
 
 export function remoteNotInLibrary(library: LibraryHit[], remote: SearchResult[]): SearchResult[] {
   const titles = new Set(
     library.flatMap((h) => {
       if (h.kind === 'movie' || h.kind === 'tv') {
-        return [`${h.kind}:${h.item.title.toLowerCase()}`]
+        return [`${h.kind}:${h.item.title.toLowerCase()}`];
       }
       if (h.kind === 'other' && h.subtitle === 'Music') {
-        return [`music:${h.title.toLowerCase()}`]
+        return [`music:${h.title.toLowerCase()}`];
       }
-      return []
+      return [];
     }),
-  )
+  );
   return remote.filter((r) => {
     if (r.mediaType === 'music' || r.mediaType === 'music_album' || r.mediaType === 'music_track') {
-      return !titles.has(`music:${(r.artistName || r.title).toLowerCase()}`)
+      return !titles.has(`music:${(r.artistName || r.title).toLowerCase()}`);
     }
-    return !titles.has(`${r.mediaType}:${r.title.toLowerCase()}`)
-  })
+    return !titles.has(`${r.mediaType}:${r.title.toLowerCase()}`);
+  });
 }
 
 export function groupLibraryHits(library: LibraryHit[]) {
@@ -252,5 +266,5 @@ export function groupLibraryHits(library: LibraryHit[]) {
     movies: library.filter((h) => h.kind === 'movie'),
     shows: library.filter((h) => h.kind === 'tv'),
     other: library.filter((h) => h.kind === 'other') as Extract<LibraryHit, { kind: 'other' }>[],
-  }
+  };
 }

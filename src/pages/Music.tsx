@@ -1,46 +1,46 @@
-import { useEffect, useId, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Music2, Pause, Play } from 'lucide-react'
-import { api } from '../api/client'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { ShelfSkeleton } from '../components/ui/Skeleton'
-import type { LibraryRow } from '../types'
+import { useEffect, useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Music2, Pause, Play } from 'lucide-react';
+import { api } from '../api/client';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { ShelfSkeleton } from '../components/ui/Skeleton';
+import type { LibraryRow } from '../types';
 
 type FlatTrack = {
-  id: string
-  title: string
-  artistId: string
-  artistName: string
-  albumTitle: string
-  stream_url?: string
-}
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  albumTitle: string;
+  stream_url?: string;
+};
 
 export default function Music() {
-  const tabsId = useId()
-  const [items, setItems] = useState<LibraryRow[]>([])
-  const [tracks, setTracks] = useState<FlatTrack[]>([])
-  const [tab, setTab] = useState<'artists' | 'songs'>('artists')
-  const [loading, setLoading] = useState(true)
-  const [available, setAvailable] = useState(true)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [playing, setPlaying] = useState<string | null>(null)
+  const tabsId = useId();
+  const [items, setItems] = useState<LibraryRow[]>([]);
+  const [tracks, setTracks] = useState<FlatTrack[]>([]);
+  const [tab, setTab] = useState<'artists' | 'songs'>('artists');
+  const [loading, setLoading] = useState(true);
+  const [available, setAvailable] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const list = await api.listMusic()
-        if (cancelled) return
-        setItems(list.items)
-        setAvailable(list.available !== false)
-        setMessage(list.message || null)
-        const flat: FlatTrack[] = []
+        const list = await api.listMusic();
+        if (cancelled) return;
+        setItems(list.items);
+        setAvailable(list.available !== false);
+        setMessage(list.message || null);
+        const flat: FlatTrack[] = [];
         for (const a of list.items.slice(0, 40)) {
           try {
-            const d = await api.getMusicArtist(a.id)
+            const d = await api.getMusicArtist(a.id);
             for (const al of d.albums || []) {
               for (const t of al.tracks || []) {
                 flat.push({
@@ -50,32 +50,32 @@ export default function Music() {
                   artistName: String(a.name || d.artist?.name || ''),
                   albumTitle: al.title,
                   stream_url: t.stream_url,
-                })
+                });
               }
             }
           } catch {
             /* skip artist */
           }
         }
-        if (!cancelled) setTracks(flat)
+        if (!cancelled) setTracks(flat);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load music')
-          setAvailable(false)
+          setError(err instanceof Error ? err.message : 'Failed to load music');
+          setAvailable(false);
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
-  const filteredTracks = tracks
-  const artistsPanelId = `${tabsId}-artists`
-  const songsPanelId = `${tabsId}-songs`
-  const panelId = tab === 'artists' ? artistsPanelId : songsPanelId
+  const filteredTracks = tracks;
+  const artistsPanelId = `${tabsId}-artists`;
+  const songsPanelId = `${tabsId}-songs`;
+  const panelId = tab === 'artists' ? artistsPanelId : songsPanelId;
 
   if (loading) {
     return (
@@ -91,7 +91,7 @@ export default function Music() {
           <ShelfSkeleton count={4} />
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -148,7 +148,10 @@ export default function Music() {
         <div id={panelId} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`}>
           {tab === 'artists' && (
             <section className="space-y-3" aria-labelledby="music-artists-heading">
-              <h2 id="music-artists-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+              <h2
+                id="music-artists-heading"
+                className="text-lg font-semibold text-[var(--text-primary)]"
+              >
                 Artists ({items.length})
               </h2>
               {items.length === 0 ? (
@@ -161,9 +164,15 @@ export default function Music() {
               ) : (
                 <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
                   {items.map((a) => (
-                    <li key={a.id} className="flex items-center justify-between px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
+                    <li
+                      key={a.id}
+                      className="flex items-center justify-between px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]"
+                    >
                       <div>
-                        <Link to={`/music/${a.id}`} className="font-medium text-[var(--accent-color)] hover:underline">
+                        <Link
+                          to={`/music/${a.id}`}
+                          className="font-medium text-[var(--accent-color)] hover:underline"
+                        >
                           {a.name || a.title || a.id}
                         </Link>
                         {a.monitored === false ? (
@@ -179,7 +188,10 @@ export default function Music() {
 
           {tab === 'songs' && (
             <section className="space-y-3" aria-labelledby="music-songs-heading">
-              <h2 id="music-songs-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+              <h2
+                id="music-songs-heading"
+                className="text-lg font-semibold text-[var(--text-primary)]"
+              >
                 Songs ({filteredTracks.length})
               </h2>
               <p className="text-sm text-[var(--text-secondary)]">
@@ -196,9 +208,14 @@ export default function Music() {
                 <>
                   <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
                     {filteredTracks.slice(0, 200).map((t) => (
-                      <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm transition hover:bg-[var(--bg-elevated-2)]">
+                      <li
+                        key={t.id}
+                        className="flex items-center justify-between gap-3 px-4 py-2 text-sm transition hover:bg-[var(--bg-elevated-2)]"
+                      >
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-[var(--text-primary)]">{t.title}</p>
+                          <p className="truncate font-medium text-[var(--text-primary)]">
+                            {t.title}
+                          </p>
                           <p className="truncate text-xs text-[var(--text-tertiary)]">
                             {t.artistName} · {t.albumTitle}
                           </p>
@@ -225,10 +242,16 @@ export default function Music() {
                   </ul>
                   {playing &&
                     (() => {
-                      const t = filteredTracks.find((x) => x.id === playing)
+                      const t = filteredTracks.find((x) => x.id === playing);
                       return t?.stream_url ? (
-                        <audio className="w-full" controls autoPlay src={t.stream_url} aria-label={`Now playing ${t.title}`} />
-                      ) : null
+                        <audio
+                          className="w-full"
+                          controls
+                          autoPlay
+                          src={t.stream_url}
+                          aria-label={`Now playing ${t.title}`}
+                        />
+                      ) : null;
                     })()}
                 </>
               )}
@@ -237,5 +260,5 @@ export default function Music() {
         </div>
       )}
     </div>
-  )
+  );
 }

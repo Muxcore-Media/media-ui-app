@@ -1,71 +1,71 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { QUALITY_OPTIONS, type AspectMode } from '../lib/player/types'
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { QUALITY_OPTIONS, type AspectMode } from '../lib/player/types';
 import {
   getPreferences,
   getProgress,
   updatePreferences,
   type MediaKind,
   type UserPreferences,
-} from '../lib/userdata'
-import { usePlaybackSource } from './player/hooks/usePlaybackSource'
-import { useVideoElement } from './player/hooks/useVideoElement'
-import { usePlaybackSegments } from './player/hooks/usePlaybackSegments'
-import { usePlaybackChapters } from './player/hooks/usePlaybackChapters'
-import { usePlaybackAnalysis } from './player/hooks/usePlaybackAnalysis'
-import { useTrickplay } from './player/hooks/useTrickplay'
-import { useSubtitleCues } from './player/hooks/useSubtitleCues'
-import { useUpNext } from './player/hooks/useUpNext'
-import { useProgressReporting } from './player/hooks/useProgressReporting'
-import { usePlayerChrome } from './player/hooks/usePlayerChrome'
-import { useKeyboardShortcuts } from './player/hooks/useKeyboardShortcuts'
-import { useGestures } from './player/hooks/useGestures'
-import { useStats } from './player/hooks/useStats'
-import TopBar from './player/TopBar'
-import ControlsBar from './player/ControlsBar'
-import CenterOverlay from './player/CenterOverlay'
-import SubtitleOverlay from './player/SubtitleOverlay'
-import SkipSegmentButton from './player/SkipSegmentButton'
-import UpNextOverlay from './player/UpNextOverlay'
-import ResumeDialog from './player/ResumeDialog'
-import StatsOverlay from './player/StatsOverlay'
-import ShortcutsHelp from './player/ShortcutsHelp'
-import ErrorScreen from './player/ErrorScreen'
-import PlayerEpisodeDrawer from './player/PlayerEpisodeDrawer'
-import { LoadingStatus } from './ui/LoadingStatus'
+} from '../lib/userdata';
+import { usePlaybackSource } from './player/hooks/usePlaybackSource';
+import { useVideoElement } from './player/hooks/useVideoElement';
+import { usePlaybackSegments } from './player/hooks/usePlaybackSegments';
+import { usePlaybackChapters } from './player/hooks/usePlaybackChapters';
+import { usePlaybackAnalysis } from './player/hooks/usePlaybackAnalysis';
+import { useTrickplay } from './player/hooks/useTrickplay';
+import { useSubtitleCues } from './player/hooks/useSubtitleCues';
+import { useUpNext } from './player/hooks/useUpNext';
+import { useProgressReporting } from './player/hooks/useProgressReporting';
+import { usePlayerChrome } from './player/hooks/usePlayerChrome';
+import { useKeyboardShortcuts } from './player/hooks/useKeyboardShortcuts';
+import { useGestures } from './player/hooks/useGestures';
+import { useStats } from './player/hooks/useStats';
+import TopBar from './player/TopBar';
+import ControlsBar from './player/ControlsBar';
+import CenterOverlay from './player/CenterOverlay';
+import SubtitleOverlay from './player/SubtitleOverlay';
+import SkipSegmentButton from './player/SkipSegmentButton';
+import UpNextOverlay from './player/UpNextOverlay';
+import ResumeDialog from './player/ResumeDialog';
+import StatsOverlay from './player/StatsOverlay';
+import ShortcutsHelp from './player/ShortcutsHelp';
+import ErrorScreen from './player/ErrorScreen';
+import PlayerEpisodeDrawer from './player/PlayerEpisodeDrawer';
+import { LoadingStatus } from './ui/LoadingStatus';
 import {
   audioTracksFromAnalysis,
   mergeAudioTracks,
   mergeTextTracks,
   subtitleTracksFromAnalysis,
-} from '../lib/player/tracks'
+} from '../lib/player/tracks';
 
 const ASPECT_CLASS: Record<AspectMode, string> = {
   contain: 'object-contain',
   cover: 'object-cover',
   fill: 'object-fill',
-}
+};
 
 type CaptionTrack = {
-  label: string
-  src: string
-  srclang?: string
-  language?: string
-  default?: boolean
-}
+  label: string;
+  src: string;
+  srclang?: string;
+  language?: string;
+  default?: boolean;
+};
 
 type Props = {
-  src: string
-  title?: string
-  mediaId?: string
-  mediaKind?: MediaKind
-  posterUrl?: string
-  href?: string
-  showId?: string
-  seasonNumber?: number
-  episodeNumber?: number
-  subtitleTracks?: CaptionTrack[]
-}
+  src: string;
+  title?: string;
+  mediaId?: string;
+  mediaKind?: MediaKind;
+  posterUrl?: string;
+  href?: string;
+  showId?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  subtitleTracks?: CaptionTrack[];
+};
 
 export default function VideoPlayer({
   src,
@@ -79,28 +79,28 @@ export default function VideoPlayer({
   episodeNumber,
   subtitleTracks = [],
 }: Props) {
-  const navigate = useNavigate()
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const prefs = getPreferences()
+  const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prefs = getPreferences();
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [statsVisible, setStatsVisible] = useState(false)
-  const [resumeDialogOpen, setResumeDialogOpen] = useState(false)
-  const [savedPositionSec, setSavedPositionSec] = useState(0)
-  const [subtitlePrefs, setSubtitlePrefs] = useState<UserPreferences['subtitles']>(prefs.subtitles)
-  const [seekBubble, setSeekBubble] = useState<number | null>(null)
-  const [aspectMode, setAspectMode] = useState<AspectMode>(prefs.player.aspectMode)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [statsVisible, setStatsVisible] = useState(false);
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+  const [savedPositionSec, setSavedPositionSec] = useState(0);
+  const [subtitlePrefs, setSubtitlePrefs] = useState<UserPreferences['subtitles']>(prefs.subtitles);
+  const [seekBubble, setSeekBubble] = useState<number | null>(null);
+  const [aspectMode, setAspectMode] = useState<AspectMode>(prefs.player.aspectMode);
 
-  const resumeCheckedSrcRef = useRef<string | null>(null)
-  const autoSubtitleAppliedRef = useRef(false)
-  const outroTriggeredRef = useRef(false)
-  const resumePlayRef = useRef(false)
-  const seekBubbleTimerRef = useRef<number | null>(null)
+  const resumeCheckedSrcRef = useRef<string | null>(null);
+  const autoSubtitleAppliedRef = useRef(false);
+  const outroTriggeredRef = useRef(false);
+  const resumePlayRef = useRef(false);
+  const seekBubbleTimerRef = useRef<number | null>(null);
 
-  const source = usePlaybackSource(src)
+  const source = usePlaybackSource(src);
 
   const upNext = useUpNext({
     showId,
@@ -108,24 +108,24 @@ export default function VideoPlayer({
     mediaKind,
     autoplayEnabled: prefs.playback.autoplayNext,
     onAdvance: (nextHref) => navigate(nextHref),
-  })
+  });
 
   // Stable callback identities (source/upNext are fresh objects every render)
   // so useVideoElement's listener-setup effect doesn't re-subscribe on every
   // render, which would otherwise loop forever via its unconditional setState.
-  const upNextRef = useRef(upNext)
-  upNextRef.current = upNext
-  const sourceRef = useRef(source)
-  sourceRef.current = source
-  const handleEnded = useCallback(() => upNextRef.current.trigger(), [])
-  const handleStalled = useCallback(() => sourceRef.current.scheduleRetry(0), [])
-  const handleFatalError = useCallback(() => sourceRef.current.scheduleRetry(0), [])
+  const upNextRef = useRef(upNext);
+  upNextRef.current = upNext;
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
+  const handleEnded = useCallback(() => upNextRef.current.trigger(), []);
+  const handleStalled = useCallback(() => sourceRef.current.scheduleRetry(0), []);
+  const handleFatalError = useCallback(() => sourceRef.current.scheduleRetry(0), []);
   const handleLoadedMetadata = useCallback(() => {
     if (resumePlayRef.current) {
-      resumePlayRef.current = false
-      videoRef.current?.play()?.catch?.(() => {})
+      resumePlayRef.current = false;
+      videoRef.current?.play()?.catch?.(() => {});
     }
-  }, [])
+  }, []);
 
   const videoEl = useVideoElement({
     videoRef,
@@ -135,33 +135,34 @@ export default function VideoPlayer({
     onStalled: handleStalled,
     onFatalError: handleFatalError,
     onLoadedMetadata: handleLoadedMetadata,
-  })
+  });
 
-  const absoluteDurationSec = videoEl.duration > 0 ? source.transcodeOffsetSec + videoEl.duration : 0
+  const absoluteDurationSec =
+    videoEl.duration > 0 ? source.transcodeOffsetSec + videoEl.duration : 0;
 
   const segments = usePlaybackSegments({
     mediaId,
     durationSec: absoluteDurationSec,
     legacyIntroSkipSec: prefs.playback.skipIntroSec,
-  })
-  const chapters = usePlaybackChapters({ src, durationSec: absoluteDurationSec })
-  const probe = usePlaybackAnalysis(src)
+  });
+  const chapters = usePlaybackChapters({ src, durationSec: absoluteDurationSec });
+  const probe = usePlaybackAnalysis(src);
 
-  const probeAudio = audioTracksFromAnalysis(probe.analysis?.audio ?? [])
-  const probeSubs = subtitleTracksFromAnalysis(probe.analysis?.subtitles ?? [])
-  const displayAudio = mergeAudioTracks(videoEl.audioTracks, probeAudio)
-  const displayText = mergeTextTracks(videoEl.textTracks, probeSubs).filter((t) => !t.pictureBased)
-  const pictureSubtitles = probeSubs.filter((t) => t.pictureBased)
+  const probeAudio = audioTracksFromAnalysis(probe.analysis?.audio ?? []);
+  const probeSubs = subtitleTracksFromAnalysis(probe.analysis?.subtitles ?? []);
+  const displayAudio = mergeAudioTracks(videoEl.audioTracks, probeAudio);
+  const displayText = mergeTextTracks(videoEl.textTracks, probeSubs).filter((t) => !t.pictureBased);
+  const pictureSubtitles = probeSubs.filter((t) => t.pictureBased);
 
   const trickplay = useTrickplay({
     src,
     durationSec: absoluteDurationSec,
     enabled: source.trickplayEnabled,
-  })
+  });
 
-  const captionTracks: CaptionTrack[] = [...subtitleTracks, ...source.remoteTracks]
-  const activeCaption = videoEl.textIdx >= 0 ? captionTracks[videoEl.textIdx] : undefined
-  const subtitles = useSubtitleCues(activeCaption?.src ?? null)
+  const captionTracks: CaptionTrack[] = [...subtitleTracks, ...source.remoteTracks];
+  const activeCaption = videoEl.textIdx >= 0 ? captionTracks[videoEl.textIdx] : undefined;
+  const subtitles = useSubtitleCues(activeCaption?.src ?? null);
 
   const stats = useStats({
     videoRef,
@@ -169,14 +170,14 @@ export default function VideoPlayer({
     maxBitrateMbps: source.maxBitrateMbps,
     streamUrl: source.playSrc,
     enabled: statsVisible,
-  })
+  });
 
   const chrome = usePlayerChrome({
     containerRef,
     videoRef,
     initialTheaterMode: prefs.player.theaterMode,
     keepControlsVisible: resumeDialogOpen || settingsOpen || shortcutsOpen || drawerOpen,
-  })
+  });
 
   useProgressReporting({
     mediaId,
@@ -190,148 +191,149 @@ export default function VideoPlayer({
     positionSec: videoEl.absoluteCurrent,
     durationSec: absoluteDurationSec,
     suppress: resumeDialogOpen,
-  })
+  });
 
   // Resume-vs-start-over prompt: once per title, the first time metadata is ready.
   useEffect(() => {
-    if (!src || resumeCheckedSrcRef.current === src) return
+    if (!src || resumeCheckedSrcRef.current === src) return;
     if (!mediaId || !prefs.playback.rememberPosition) {
-      resumeCheckedSrcRef.current = src
-      return
+      resumeCheckedSrcRef.current = src;
+      return;
     }
-    if (videoEl.duration <= 0) return
-    resumeCheckedSrcRef.current = src
-    const saved = getProgress(mediaId)
+    if (videoEl.duration <= 0) return;
+    resumeCheckedSrcRef.current = src;
+    const saved = getProgress(mediaId);
     if (saved && saved.positionSec > 5 && videoEl.duration - saved.positionSec > 5) {
-      setSavedPositionSec(saved.positionSec)
-      setResumeDialogOpen(true)
+      setSavedPositionSec(saved.positionSec);
+      setResumeDialogOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, mediaId, videoEl.duration])
+  }, [src, mediaId, videoEl.duration]);
 
   useEffect(() => {
-    autoSubtitleAppliedRef.current = false
-    outroTriggeredRef.current = false
-  }, [src])
+    autoSubtitleAppliedRef.current = false;
+    outroTriggeredRef.current = false;
+  }, [src]);
 
   // Auto-select the user's preferred subtitle language once tracks are known.
   useEffect(() => {
-    if (autoSubtitleAppliedRef.current || displayText.length === 0) return
-    autoSubtitleAppliedRef.current = true
-    if (!prefs.subtitles.enabled) return
-    const pref = prefs.subtitles.language.toLowerCase()
+    if (autoSubtitleAppliedRef.current || displayText.length === 0) return;
+    autoSubtitleAppliedRef.current = true;
+    if (!prefs.subtitles.enabled) return;
+    const pref = prefs.subtitles.language.toLowerCase();
     const match = displayText.find(
-      (t) => (t.language || '').toLowerCase().includes(pref) || t.label.toLowerCase().includes(pref),
-    )
-    if (match) videoEl.setTextIdx(match.index)
+      (t) =>
+        (t.language || '').toLowerCase().includes(pref) || t.label.toLowerCase().includes(pref),
+    );
+    if (match) videoEl.setTextIdx(match.index);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayText])
+  }, [displayText]);
 
-  const activeSegment = segments.activeSegmentAt(videoEl.absoluteCurrent)
+  const activeSegment = segments.activeSegmentAt(videoEl.absoluteCurrent);
 
   // Trigger the Up Next overlay a little early, once we enter the outro/credits window.
   useEffect(() => {
-    if (outroTriggeredRef.current) return
+    if (outroTriggeredRef.current) return;
     if (activeSegment && (activeSegment.kind === 'outro' || activeSegment.kind === 'credits')) {
-      outroTriggeredRef.current = true
-      upNextRef.current.trigger()
+      outroTriggeredRef.current = true;
+      upNextRef.current.trigger();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSegment])
+  }, [activeSegment]);
 
   function seekAbsolute(sec: number) {
-    const target = Math.max(0, absoluteDurationSec > 0 ? Math.min(absoluteDurationSec, sec) : sec)
+    const target = Math.max(0, absoluteDurationSec > 0 ? Math.min(absoluteDurationSec, sec) : sec);
     if (source.playMode === 'transcode') {
-      resumePlayRef.current = videoEl.playing
-      source.seekWithinTranscode(target)
+      resumePlayRef.current = videoEl.playing;
+      source.seekWithinTranscode(target);
     } else {
-      videoEl.seekRelative(target)
+      videoEl.seekRelative(target);
     }
   }
 
   function seekBy(deltaSec: number) {
-    seekAbsolute(videoEl.absoluteCurrent + deltaSec)
+    seekAbsolute(videoEl.absoluteCurrent + deltaSec);
   }
 
   function showSeekBubble(deltaSec: number) {
-    setSeekBubble(deltaSec)
-    if (seekBubbleTimerRef.current) window.clearTimeout(seekBubbleTimerRef.current)
-    seekBubbleTimerRef.current = window.setTimeout(() => setSeekBubble(null), 650)
+    setSeekBubble(deltaSec);
+    if (seekBubbleTimerRef.current) window.clearTimeout(seekBubbleTimerRef.current);
+    seekBubbleTimerRef.current = window.setTimeout(() => setSeekBubble(null), 650);
   }
 
   function handleQuality(id: string) {
-    resumePlayRef.current = videoEl.playing
-    source.setQuality(id)
-    updatePreferences({ player: { ...prefs.player, preferredQuality: id } })
+    resumePlayRef.current = videoEl.playing;
+    source.setQuality(id);
+    updatePreferences({ player: { ...prefs.player, preferredQuality: id } });
   }
 
   function handleSubtitlePrefs(patch: Partial<UserPreferences['subtitles']>) {
-    setSubtitlePrefs((s) => ({ ...s, ...patch }))
-    updatePreferences({ subtitles: { ...subtitlePrefs, ...patch } })
+    setSubtitlePrefs((s) => ({ ...s, ...patch }));
+    updatePreferences({ subtitles: { ...subtitlePrefs, ...patch } });
   }
 
   function handleToggleTheater() {
-    chrome.toggleTheater()
-    updatePreferences({ player: { ...prefs.player, theaterMode: !chrome.theaterMode } })
+    chrome.toggleTheater();
+    updatePreferences({ player: { ...prefs.player, theaterMode: !chrome.theaterMode } });
   }
 
   function handleAspectMode(mode: AspectMode) {
-    setAspectMode(mode)
-    updatePreferences({ player: { ...prefs.player, aspectMode: mode } })
+    setAspectMode(mode);
+    updatePreferences({ player: { ...prefs.player, aspectMode: mode } });
   }
 
   function goToPrevMarker() {
-    const chapterBoundary = chapters.prevChapterBefore(videoEl.absoluteCurrent)
+    const chapterBoundary = chapters.prevChapterBefore(videoEl.absoluteCurrent);
     if (chapterBoundary != null) {
-      seekAbsolute(chapterBoundary)
-      return
+      seekAbsolute(chapterBoundary);
+      return;
     }
-    const boundary = segments.prevBoundaryBefore(videoEl.absoluteCurrent)
-    seekAbsolute(boundary ?? 0)
+    const boundary = segments.prevBoundaryBefore(videoEl.absoluteCurrent);
+    seekAbsolute(boundary ?? 0);
   }
 
   function goToNextMarker() {
-    const chapterBoundary = chapters.nextChapterAfter(videoEl.absoluteCurrent)
+    const chapterBoundary = chapters.nextChapterAfter(videoEl.absoluteCurrent);
     if (chapterBoundary != null) {
-      seekAbsolute(chapterBoundary)
-      return
+      seekAbsolute(chapterBoundary);
+      return;
     }
-    const boundary = segments.nextBoundaryAfter(videoEl.absoluteCurrent)
-    if (boundary != null) seekAbsolute(boundary)
+    const boundary = segments.nextBoundaryAfter(videoEl.absoluteCurrent);
+    if (boundary != null) seekAbsolute(boundary);
   }
 
-  const markerNavEnabled = chapters.chapters.length > 0 || segments.segments.length > 0
+  const markerNavEnabled = chapters.chapters.length > 0 || segments.segments.length > 0;
 
   function handleResume() {
-    if (source.playMode === 'transcode') source.seekWithinTranscode(savedPositionSec)
-    else videoEl.seekRelative(savedPositionSec)
-    setResumeDialogOpen(false)
+    if (source.playMode === 'transcode') source.seekWithinTranscode(savedPositionSec);
+    else videoEl.seekRelative(savedPositionSec);
+    setResumeDialogOpen(false);
   }
 
   function handleStartOver() {
-    setResumeDialogOpen(false)
+    setResumeDialogOpen(false);
   }
 
   function handleAudio(idx: number) {
-    const track = displayAudio.find((t) => t.index === idx)
+    const track = displayAudio.find((t) => t.index === idx);
     if (source.playMode === 'transcode' && track?.streamIndex != null && track.streamIndex >= 0) {
-      resumePlayRef.current = videoEl.playing
-      source.setAudioStreamIndex(track.streamIndex, videoEl.absoluteCurrent)
-      videoEl.setAudioIdx(idx)
-      return
+      resumePlayRef.current = videoEl.playing;
+      source.setAudioStreamIndex(track.streamIndex, videoEl.absoluteCurrent);
+      videoEl.setAudioIdx(idx);
+      return;
     }
-    videoEl.setAudioIdx(idx)
+    videoEl.setAudioIdx(idx);
   }
 
   function handleText(idx: number) {
-    videoEl.setTextIdx(idx)
+    videoEl.setTextIdx(idx);
   }
 
   function toggleSubtitlesShortcut() {
-    handleText(videoEl.textIdx === -1 ? (displayText[0]?.index ?? -1) : -1)
+    handleText(videoEl.textIdx === -1 ? (displayText[0]?.index ?? -1) : -1);
   }
 
-  const anyOverlayOpen = resumeDialogOpen || settingsOpen || shortcutsOpen || drawerOpen
+  const anyOverlayOpen = resumeDialogOpen || settingsOpen || shortcutsOpen || drawerOpen;
 
   const gestures = useGestures({
     enabled: !anyOverlayOpen,
@@ -340,7 +342,7 @@ export default function VideoPlayer({
     volumeBy: (d) => videoEl.setVolume(videoEl.volume + d),
     bumpControls: chrome.bumpControls,
     showSeekBubble,
-  })
+  });
 
   useKeyboardShortcuts({
     enabled: prefs.controls.enableKeyboardShortcuts,
@@ -354,35 +356,37 @@ export default function VideoPlayer({
     togglePiP: chrome.togglePiP,
     toggleSubtitles: toggleSubtitlesShortcut,
     cycleSpeed: (dir) => {
-      const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
-      const idx = speeds.indexOf(videoEl.rate)
-      const next = speeds[Math.min(speeds.length - 1, Math.max(0, (idx < 0 ? 2 : idx) + dir))]
-      videoEl.setRate(next)
+      const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+      const idx = speeds.indexOf(videoEl.rate);
+      const next = speeds[Math.min(speeds.length - 1, Math.max(0, (idx < 0 ? 2 : idx) + dir))];
+      videoEl.setRate(next);
     },
     skipActiveSegment: () => activeSegment && seekAbsolute(activeSegment.end_seconds + 0.1),
     toggleEpisodeDrawer: showId ? () => setDrawerOpen((o) => !o) : undefined,
     toggleHelp: () => setShortcutsOpen((o) => !o),
     closeOverlays: () => {
-      setDrawerOpen(false)
-      setShortcutsOpen(false)
-      setSettingsOpen(false)
+      setDrawerOpen(false);
+      setShortcutsOpen(false);
+      setSettingsOpen(false);
     },
     anyOverlayOpen,
-  })
+  });
 
   if (!src) {
-    return <ErrorScreen message="This title isn't available to play." href={href} />
+    return <ErrorScreen message="This title isn't available to play." href={href} />;
   }
   if (source.error) {
-    return <ErrorScreen message={source.error} href={href} onRetry={source.retry} />
+    return <ErrorScreen message={source.error} href={href} onRetry={source.retry} />;
   }
 
-  const metaLineParts: string[] = []
+  const metaLineParts: string[] = [];
   if (mediaKind === 'episode' && seasonNumber != null && episodeNumber != null) {
-    metaLineParts.push(`S${String(seasonNumber).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`)
+    metaLineParts.push(
+      `S${String(seasonNumber).padStart(2, '0')}E${String(episodeNumber).padStart(2, '0')}`,
+    );
   }
-  if (probe.analysis?.info_line) metaLineParts.push(probe.analysis.info_line)
-  const metaLine = metaLineParts.length > 0 ? metaLineParts.join(' · ') : null
+  if (probe.analysis?.info_line) metaLineParts.push(probe.analysis.info_line);
+  const metaLine = metaLineParts.length > 0 ? metaLineParts.join(' · ') : null;
 
   return (
     <div
@@ -393,8 +397,8 @@ export default function VideoPlayer({
       data-testid="video-player"
       onMouseMove={chrome.bumpControls}
       onTouchStart={(e) => {
-        chrome.bumpControls()
-        gestures.onTouchStart(e)
+        chrome.bumpControls();
+        gestures.onTouchStart(e);
       }}
       onTouchMove={gestures.onTouchMove}
       onTouchEnd={gestures.onTouchEnd}
@@ -423,7 +427,8 @@ export default function VideoPlayer({
                 default={
                   Boolean(t.default) ||
                   (prefs.subtitles.enabled &&
-                    (t.srclang || t.language || '').toLowerCase() === prefs.subtitles.language.toLowerCase())
+                    (t.srclang || t.language || '').toLowerCase() ===
+                      prefs.subtitles.language.toLowerCase())
                 }
               />
             ))}
@@ -525,7 +530,10 @@ export default function VideoPlayer({
         />
 
         {activeSegment && !upNext.countdownActive ? (
-          <SkipSegmentButton segment={activeSegment} onSkip={() => seekAbsolute(activeSegment.end_seconds + 0.1)} />
+          <SkipSegmentButton
+            segment={activeSegment}
+            onSkip={() => seekAbsolute(activeSegment.end_seconds + 0.1)}
+          />
         ) : null}
 
         {upNext.countdownActive && upNext.next ? (
@@ -538,7 +546,11 @@ export default function VideoPlayer({
         ) : null}
 
         {resumeDialogOpen ? (
-          <ResumeDialog positionSec={savedPositionSec} onResume={handleResume} onStartOver={handleStartOver} />
+          <ResumeDialog
+            positionSec={savedPositionSec}
+            onResume={handleResume}
+            onStartOver={handleStartOver}
+          />
         ) : null}
 
         {shortcutsOpen ? <ShortcutsHelp onClose={() => setShortcutsOpen(false)} /> : null}
@@ -549,12 +561,12 @@ export default function VideoPlayer({
             currentEpisodeId={mediaId}
             onClose={() => setDrawerOpen(false)}
             onPick={(nextHref) => {
-              setDrawerOpen(false)
-              navigate(nextHref)
+              setDrawerOpen(false);
+              navigate(nextHref);
             }}
           />
         ) : null}
       </div>
     </div>
-  )
+  );
 }

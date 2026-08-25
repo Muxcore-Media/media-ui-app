@@ -1,9 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import CapabilitiesProvider from './components/CapabilitiesProvider'
-import Layout from './components/Layout'
-import { ErrorBanner } from './components/ui/ErrorBanner'
-import { PosterGridSkeleton } from './components/media/PosterGrid'
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import CapabilitiesProvider from './components/CapabilitiesProvider';
+import Layout from './components/Layout';
+import { ErrorBanner } from './components/ui/ErrorBanner';
+import { PosterGridSkeleton } from './components/media/PosterGrid';
 import {
   DetailHeroSkeleton,
   FormPageSkeleton,
@@ -13,48 +13,48 @@ import {
   QueueListSkeleton,
   SettingsSkeleton,
   ShelfSkeleton,
-} from './components/ui/Skeleton'
-import { applyTheme, getPreferences, pullUserdataFromServer } from './lib/userdata'
-import { featureEnabled, libraryEnabled, useCapabilities } from './lib/capabilities'
+} from './components/ui/Skeleton';
+import { applyTheme, getPreferences, pullUserdataFromServer } from './lib/userdata';
+import { featureEnabled, libraryEnabled, useCapabilities } from './lib/capabilities';
 
-const Player = lazy(() => import('./pages/Player'))
-const LiveTV = lazy(() => import('./pages/LiveTV'))
-const Settings = lazy(() => import('./pages/Settings'))
-const Discover = lazy(() => import('./pages/Discover'))
-const DiscoverDetail = lazy(() => import('./pages/DiscoverDetail'))
-const MovieDetail = lazy(() => import('./pages/MovieDetail'))
-const TVShowDetail = lazy(() => import('./pages/TVShowDetail'))
-const Movies = lazy(() => import('./pages/Movies'))
-const TVShows = lazy(() => import('./pages/TVShows'))
-const Home = lazy(() => import('./pages/Home'))
-const Search = lazy(() => import('./pages/Search'))
-const Watchlist = lazy(() => import('./pages/Watchlist'))
-const Collections = lazy(() => import('./pages/Collections'))
-const Music = lazy(() => import('./pages/Music'))
-const InProgress = lazy(() => import('./pages/InProgress'))
-const Upcoming = lazy(() => import('./pages/Upcoming'))
-const Mixed = lazy(() => import('./pages/Mixed'))
-const MusicVideos = lazy(() => import('./pages/MusicVideos'))
-const HomeVideos = lazy(() => import('./pages/HomeVideos'))
-const Studios = lazy(() => import('./pages/Studios'))
-const Books = lazy(() => import('./pages/Books'))
-const BookAuthor = lazy(() => import('./pages/BookAuthor'))
-const Comics = lazy(() => import('./pages/Comics'))
-const Audiobooks = lazy(() => import('./pages/Audiobooks'))
-const Favorites = lazy(() => import('./pages/Favorites'))
-const Queue = lazy(() => import('./pages/Queue'))
-const Playlists = lazy(() => import('./pages/Playlists'))
-const QuickConnect = lazy(() => import('./pages/QuickConnect'))
-const MusicArtist = lazy(() => import('./pages/MusicArtist'))
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
-const InviteJoin = lazy(() => import('./pages/InviteJoin'))
+const Player = lazy(() => import('./pages/Player'));
+const LiveTV = lazy(() => import('./pages/LiveTV'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Discover = lazy(() => import('./pages/Discover'));
+const DiscoverDetail = lazy(() => import('./pages/DiscoverDetail'));
+const MovieDetail = lazy(() => import('./pages/MovieDetail'));
+const TVShowDetail = lazy(() => import('./pages/TVShowDetail'));
+const Movies = lazy(() => import('./pages/Movies'));
+const TVShows = lazy(() => import('./pages/TVShows'));
+const Home = lazy(() => import('./pages/Home'));
+const Search = lazy(() => import('./pages/Search'));
+const Watchlist = lazy(() => import('./pages/Watchlist'));
+const Collections = lazy(() => import('./pages/Collections'));
+const Music = lazy(() => import('./pages/Music'));
+const InProgress = lazy(() => import('./pages/InProgress'));
+const Upcoming = lazy(() => import('./pages/Upcoming'));
+const Mixed = lazy(() => import('./pages/Mixed'));
+const MusicVideos = lazy(() => import('./pages/MusicVideos'));
+const HomeVideos = lazy(() => import('./pages/HomeVideos'));
+const Studios = lazy(() => import('./pages/Studios'));
+const Books = lazy(() => import('./pages/Books'));
+const BookAuthor = lazy(() => import('./pages/BookAuthor'));
+const Comics = lazy(() => import('./pages/Comics'));
+const Audiobooks = lazy(() => import('./pages/Audiobooks'));
+const Favorites = lazy(() => import('./pages/Favorites'));
+const Queue = lazy(() => import('./pages/Queue'));
+const Playlists = lazy(() => import('./pages/Playlists'));
+const QuickConnect = lazy(() => import('./pages/QuickConnect'));
+const MusicArtist = lazy(() => import('./pages/MusicArtist'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const InviteJoin = lazy(() => import('./pages/InviteJoin'));
 
 function LazyLiveTV() {
   return (
     <Suspense fallback={<LiveTVSkeleton />}>
       <LiveTV />
     </Suspense>
-  )
+  );
 }
 
 function LazySettings() {
@@ -62,7 +62,7 @@ function LazySettings() {
     <Suspense fallback={<SettingsSkeleton />}>
       <Settings />
     </Suspense>
-  )
+  );
 }
 
 function LazyDiscover() {
@@ -70,7 +70,7 @@ function LazyDiscover() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <Discover />
     </Suspense>
-  )
+  );
 }
 
 function LazyDiscoverDetail() {
@@ -78,7 +78,7 @@ function LazyDiscoverDetail() {
     <Suspense fallback={<DetailHeroSkeleton />}>
       <DiscoverDetail />
     </Suspense>
-  )
+  );
 }
 
 function LazyMovieDetail() {
@@ -86,7 +86,7 @@ function LazyMovieDetail() {
     <Suspense fallback={<DetailHeroSkeleton />}>
       <MovieDetail />
     </Suspense>
-  )
+  );
 }
 
 function LazyTVShowDetail() {
@@ -94,7 +94,7 @@ function LazyTVShowDetail() {
     <Suspense fallback={<DetailHeroSkeleton />}>
       <TVShowDetail />
     </Suspense>
-  )
+  );
 }
 
 function LazyMovies() {
@@ -102,7 +102,7 @@ function LazyMovies() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <Movies />
     </Suspense>
-  )
+  );
 }
 
 function LazyTVShows() {
@@ -110,7 +110,7 @@ function LazyTVShows() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <TVShows />
     </Suspense>
-  )
+  );
 }
 
 function LazyHome() {
@@ -126,7 +126,7 @@ function LazyHome() {
     >
       <Home />
     </Suspense>
-  )
+  );
 }
 
 function LazySearch() {
@@ -134,7 +134,7 @@ function LazySearch() {
     <Suspense fallback={<PosterGridSkeleton count={6} />}>
       <Search />
     </Suspense>
-  )
+  );
 }
 
 function LazyWatchlist() {
@@ -142,7 +142,7 @@ function LazyWatchlist() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <Watchlist />
     </Suspense>
-  )
+  );
 }
 
 function LazyCollections() {
@@ -150,7 +150,7 @@ function LazyCollections() {
     <Suspense fallback={<PosterGridSkeleton count={6} />}>
       <Collections />
     </Suspense>
-  )
+  );
 }
 
 function LazyMusic() {
@@ -158,7 +158,7 @@ function LazyMusic() {
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <Music />
     </Suspense>
-  )
+  );
 }
 
 function LazyInProgress() {
@@ -166,7 +166,7 @@ function LazyInProgress() {
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <InProgress />
     </Suspense>
-  )
+  );
 }
 
 function LazyUpcoming() {
@@ -174,7 +174,7 @@ function LazyUpcoming() {
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <Upcoming />
     </Suspense>
-  )
+  );
 }
 
 function LazyMixed() {
@@ -182,7 +182,7 @@ function LazyMixed() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <Mixed />
     </Suspense>
-  )
+  );
 }
 
 function LazyMusicVideos() {
@@ -190,7 +190,7 @@ function LazyMusicVideos() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <MusicVideos />
     </Suspense>
-  )
+  );
 }
 
 function LazyHomeVideos() {
@@ -198,7 +198,7 @@ function LazyHomeVideos() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <HomeVideos />
     </Suspense>
-  )
+  );
 }
 
 function LazyStudios() {
@@ -206,7 +206,7 @@ function LazyStudios() {
     <Suspense fallback={<PosterGridSkeleton count={9} />}>
       <Studios />
     </Suspense>
-  )
+  );
 }
 
 function LazyBooks() {
@@ -214,7 +214,7 @@ function LazyBooks() {
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <Books />
     </Suspense>
-  )
+  );
 }
 
 function LazyBookAuthor() {
@@ -222,7 +222,7 @@ function LazyBookAuthor() {
     <Suspense fallback={<DetailHeroSkeleton />}>
       <BookAuthor />
     </Suspense>
-  )
+  );
 }
 
 function LazyComics() {
@@ -230,7 +230,7 @@ function LazyComics() {
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <Comics />
     </Suspense>
-  )
+  );
 }
 
 function LazyAudiobooks() {
@@ -238,7 +238,7 @@ function LazyAudiobooks() {
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <Audiobooks />
     </Suspense>
-  )
+  );
 }
 
 function LazyFavorites() {
@@ -246,7 +246,7 @@ function LazyFavorites() {
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
       <Favorites />
     </Suspense>
-  )
+  );
 }
 
 function LazyQueue() {
@@ -254,7 +254,7 @@ function LazyQueue() {
     <Suspense fallback={<QueueListSkeleton />}>
       <Queue />
     </Suspense>
-  )
+  );
 }
 
 function LazyPlaylists() {
@@ -262,7 +262,7 @@ function LazyPlaylists() {
     <Suspense fallback={<PosterGridSkeleton count={6} />}>
       <Playlists />
     </Suspense>
-  )
+  );
 }
 
 function LazyQuickConnect() {
@@ -270,7 +270,7 @@ function LazyQuickConnect() {
     <Suspense fallback={<FormPageSkeleton label="Loading Quick Connect" />}>
       <QuickConnect />
     </Suspense>
-  )
+  );
 }
 
 function LazyMusicArtist() {
@@ -278,7 +278,7 @@ function LazyMusicArtist() {
     <Suspense fallback={<DetailHeroSkeleton />}>
       <MusicArtist />
     </Suspense>
-  )
+  );
 }
 
 function LazyForgotPassword() {
@@ -286,7 +286,7 @@ function LazyForgotPassword() {
     <Suspense fallback={<FormPageSkeleton label="Loading forgot password" />}>
       <ForgotPassword />
     </Suspense>
-  )
+  );
 }
 
 function LazyInviteJoin() {
@@ -294,18 +294,18 @@ function LazyInviteJoin() {
     <Suspense fallback={<FormPageSkeleton label="Loading invite" />}>
       <InviteJoin />
     </Suspense>
-  )
+  );
 }
 
 function AppRoutes() {
-  const { caps, loading, error, retry } = useCapabilities()
+  const { caps, loading, error, retry } = useCapabilities();
 
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-sm text-[var(--text-secondary)]">
         Loading your library…
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -313,7 +313,8 @@ function AppRoutes() {
       <div className="mx-auto max-w-lg space-y-4 px-4 py-16">
         <ErrorBanner message={error} testId="capabilities-error" />
         <p className="text-sm text-[var(--text-secondary)]">
-          We couldn&apos;t load which libraries and features are available. Check your connection and try again.
+          We couldn&apos;t load which libraries and features are available. Check your connection
+          and try again.
         </p>
         <button
           type="button"
@@ -323,7 +324,7 @@ function AppRoutes() {
           Retry
         </button>
       </div>
-    )
+    );
   }
 
   return (
@@ -341,16 +342,24 @@ function AppRoutes() {
         <Route index element={<LazyHome />} />
         <Route path="search" element={<LazySearch />} />
         {featureEnabled(caps, 'request') && <Route path="discover" element={<LazyDiscover />} />}
-        {featureEnabled(caps, 'watchlist') && <Route path="watchlist" element={<LazyWatchlist />} />}
+        {featureEnabled(caps, 'watchlist') && (
+          <Route path="watchlist" element={<LazyWatchlist />} />
+        )}
         <Route path="discover/:type/:id" element={<LazyDiscoverDetail />} />
         <Route path="favorites" element={<LazyFavorites />} />
         {featureEnabled(caps, 'queue') && <Route path="queue" element={<LazyQueue />} />}
         {featureEnabled(caps, 'request') && <Route path="requests" element={<LazyInProgress />} />}
-        {featureEnabled(caps, 'collections') && <Route path="collections" element={<LazyCollections />} />}
+        {featureEnabled(caps, 'collections') && (
+          <Route path="collections" element={<LazyCollections />} />
+        )}
         {featureEnabled(caps, 'upcoming') && <Route path="upcoming" element={<LazyUpcoming />} />}
-        {featureEnabled(caps, 'playlists') && <Route path="playlists" element={<LazyPlaylists />} />}
+        {featureEnabled(caps, 'playlists') && (
+          <Route path="playlists" element={<LazyPlaylists />} />
+        )}
         {featureEnabled(caps, 'livetv') && <Route path="livetv" element={<LazyLiveTV />} />}
-        {featureEnabled(caps, 'quickconnect') && <Route path="quickconnect" element={<LazyQuickConnect />} />}
+        {featureEnabled(caps, 'quickconnect') && (
+          <Route path="quickconnect" element={<LazyQuickConnect />} />
+        )}
         <Route path="settings" element={<LazySettings />} />
         <Route path="settings/profile" element={<LazySettings />} />
         <Route path="settings/display" element={<LazySettings />} />
@@ -358,7 +367,9 @@ function AppRoutes() {
         <Route path="settings/playback" element={<LazySettings />} />
         <Route path="settings/subtitles" element={<LazySettings />} />
         <Route path="settings/controls" element={<LazySettings />} />
-        {featureEnabled(caps, 'debrid') && <Route path="settings/debrid" element={<LazySettings />} />}
+        {featureEnabled(caps, 'debrid') && (
+          <Route path="settings/debrid" element={<LazySettings />} />
+        )}
         {featureEnabled(caps, 'studios') && <Route path="studios" element={<LazyStudios />} />}
         {libraryEnabled(caps, 'movies') && (
           <>
@@ -378,9 +389,13 @@ function AppRoutes() {
             <Route path="music/:id" element={<LazyMusicArtist />} />
           </>
         )}
-        {libraryEnabled(caps, 'homevideos') && <Route path="homevideos" element={<LazyHomeVideos />} />}
+        {libraryEnabled(caps, 'homevideos') && (
+          <Route path="homevideos" element={<LazyHomeVideos />} />
+        )}
         {featureEnabled(caps, 'mixed') && <Route path="mixed" element={<LazyMixed />} />}
-        {libraryEnabled(caps, 'musicvideos') && <Route path="musicvideos" element={<LazyMusicVideos />} />}
+        {libraryEnabled(caps, 'musicvideos') && (
+          <Route path="musicvideos" element={<LazyMusicVideos />} />
+        )}
         {libraryEnabled(caps, 'books') && (
           <>
             <Route path="books" element={<LazyBooks />} />
@@ -388,24 +403,26 @@ function AppRoutes() {
           </>
         )}
         {libraryEnabled(caps, 'comics') && <Route path="comics" element={<LazyComics />} />}
-        {libraryEnabled(caps, 'audiobooks') && <Route path="audiobooks" element={<LazyAudiobooks />} />}
+        {libraryEnabled(caps, 'audiobooks') && (
+          <Route path="audiobooks" element={<LazyAudiobooks />} />
+        )}
         <Route path="forgot-password" element={<LazyForgotPassword />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
-  )
+  );
 }
 
 export default function App() {
-  const [userdataSyncFailed, setUserdataSyncFailed] = useState(false)
+  const [userdataSyncFailed, setUserdataSyncFailed] = useState(false);
 
   useEffect(() => {
-    applyTheme(getPreferences().display.theme)
+    applyTheme(getPreferences().display.theme);
     void pullUserdataFromServer().then((ok) => {
-      setUserdataSyncFailed(!ok)
-      applyTheme(getPreferences().display.theme)
-    })
-  }, [])
+      setUserdataSyncFailed(!ok);
+      applyTheme(getPreferences().display.theme);
+    });
+  }, []);
 
   return (
     <CapabilitiesProvider>
@@ -422,5 +439,5 @@ export default function App() {
         <AppRoutes />
       </BrowserRouter>
     </CapabilitiesProvider>
-  )
+  );
 }

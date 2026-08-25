@@ -1,11 +1,11 @@
-import { SkipForward } from 'lucide-react'
-import { segmentKindLabel } from '../../lib/player/format'
-import type { PlaybackSegment } from '../../api/client'
+import { SkipForward } from 'lucide-react';
+import { segmentKindLabel } from '../../lib/player/format';
+import type { PlaybackSegment } from '../../api/client';
 
 type Props = {
-  segment: PlaybackSegment
-  onSkip: () => void
-}
+  segment: PlaybackSegment;
+  onSkip: () => void;
+};
 
 /** Backend-wired intro/outro/credits/recap skip button (media-intro-outro). */
 export default function SkipSegmentButton({ segment, onSkip }: Props) {
@@ -21,5 +21,5 @@ export default function SkipSegmentButton({ segment, onSkip }: Props) {
         <SkipForward className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
-  )
+  );
 }

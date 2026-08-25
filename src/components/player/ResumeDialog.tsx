@@ -1,10 +1,10 @@
-import { formatTime } from '../../lib/player/format'
+import { formatTime } from '../../lib/player/format';
 
 type Props = {
-  positionSec: number
-  onResume: () => void
-  onStartOver: () => void
-}
+  positionSec: number;
+  onResume: () => void;
+  onStartOver: () => void;
+};
 
 /** Resume-vs-start-over prompt shown when a title has saved progress, matching
  * Jellyfin/Plex/Emby's "Continue Watching" confirmation on load. */
@@ -37,5 +37,5 @@ export default function ResumeDialog({ positionSec, onResume, onStartOver }: Pro
         </div>
       </div>
     </div>
-  )
+  );
 }

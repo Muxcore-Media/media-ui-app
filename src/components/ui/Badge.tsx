@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
-import { cn } from '../../lib/cn'
+import type { ReactNode } from 'react';
+import { cn } from '../../lib/cn';
 
-type Tone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger'
+type Tone = 'accent' | 'neutral' | 'success' | 'warning' | 'danger';
 
 const toneClass: Record<Tone, string> = {
   accent: 'bg-[var(--accent-color)] text-black',
@@ -9,10 +9,18 @@ const toneClass: Record<Tone, string> = {
   success: 'bg-[var(--success)] text-black',
   warning: 'bg-[var(--warning)] text-black',
   danger: 'bg-[var(--danger-color)] text-white',
-}
+};
 
 /** Small consistent badge for "Ready", content ratings, and score chips (AGENTS.md §5). */
-export function Badge({ tone = 'neutral', className, children }: { tone?: Tone; className?: string; children: ReactNode }) {
+export function Badge({
+  tone = 'neutral',
+  className,
+  children,
+}: {
+  tone?: Tone;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cn(
@@ -23,5 +31,5 @@ export function Badge({ tone = 'neutral', className, children }: { tone?: Tone; 
     >
       {children}
     </span>
-  )
+  );
 }

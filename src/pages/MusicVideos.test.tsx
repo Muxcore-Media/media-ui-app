@@ -1,23 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import MusicVideos from './MusicVideos'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import MusicVideos from './MusicVideos';
 
-const listMovies = vi.fn()
+const listMovies = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
       listMovies: (...args: unknown[]) => listMovies(...args),
     },
-  }
-})
+  };
+});
 
 describe('MusicVideos page', () => {
   beforeEach(() => {
-    listMovies.mockReset()
+    listMovies.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -35,24 +35,24 @@ describe('MusicVideos page', () => {
         },
       ],
       total: 1,
-    })
-  })
+    });
+  });
 
   it('loads musicvideos library filter', async () => {
     render(
       <MemoryRouter>
         <MusicVideos />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('musicvideos-page')).toBeInTheDocument()
-    expect(await screen.findByText('Official Music Video')).toBeInTheDocument()
-    expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'musicvideos' })
-  })
-})
+    );
+    expect(await screen.findByTestId('musicvideos-page')).toBeInTheDocument();
+    expect(await screen.findByText('Official Music Video')).toBeInTheDocument();
+    expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'musicvideos' });
+  });
+});
 
 describe('MusicVideos accessibility', () => {
   beforeEach(() => {
-    listMovies.mockReset()
+    listMovies.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -70,19 +70,19 @@ describe('MusicVideos accessibility', () => {
         },
       ],
       total: 1,
-    })
-  })
+    });
+  });
 
   it('has a page h1 and loading status announcement', async () => {
-    listMovies.mockImplementation(() => new Promise(() => {}))
+    listMovies.mockImplementation(() => new Promise(() => {}));
     render(
       <MemoryRouter>
         <MusicVideos />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Music Videos' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading music videos' })).toBeInTheDocument()
-    expect(screen.getByTestId('musicvideos-loading')).toHaveAttribute('aria-busy', 'true')
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'Music Videos' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading music videos' })).toBeInTheDocument();
+    expect(screen.getByTestId('musicvideos-loading')).toHaveAttribute('aria-busy', 'true');
+  });
+});

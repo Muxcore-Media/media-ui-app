@@ -1,23 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import HomeVideos from './HomeVideos'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import HomeVideos from './HomeVideos';
 
-const listMovies = vi.fn()
+const listMovies = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
       listMovies: (...args: unknown[]) => listMovies(...args),
     },
-  }
-})
+  };
+});
 
 describe('HomeVideos page', () => {
   beforeEach(() => {
-    listMovies.mockReset()
+    listMovies.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -35,24 +35,24 @@ describe('HomeVideos page', () => {
         },
       ],
       total: 1,
-    })
-  })
+    });
+  });
 
   it('loads homevideos library filter', async () => {
     render(
       <MemoryRouter>
         <HomeVideos />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('homevideos-page')).toBeInTheDocument()
-    expect(await screen.findByText('Family Reunion 2024')).toBeInTheDocument()
-    expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'homevideos' })
-  })
-})
+    );
+    expect(await screen.findByTestId('homevideos-page')).toBeInTheDocument();
+    expect(await screen.findByText('Family Reunion 2024')).toBeInTheDocument();
+    expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'homevideos' });
+  });
+});
 
 describe('HomeVideos accessibility', () => {
   beforeEach(() => {
-    listMovies.mockReset()
+    listMovies.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -70,19 +70,19 @@ describe('HomeVideos accessibility', () => {
         },
       ],
       total: 1,
-    })
-  })
+    });
+  });
 
   it('has a page h1 and loading status announcement', async () => {
-    listMovies.mockImplementation(() => new Promise(() => {}))
+    listMovies.mockImplementation(() => new Promise(() => {}));
     render(
       <MemoryRouter>
         <HomeVideos />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Home Videos' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading home videos' })).toBeInTheDocument()
-    expect(screen.getByTestId('homevideos-loading')).toHaveAttribute('aria-busy', 'true')
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'Home Videos' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading home videos' })).toBeInTheDocument();
+    expect(screen.getByTestId('homevideos-loading')).toHaveAttribute('aria-busy', 'true');
+  });
+});

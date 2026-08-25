@@ -1,13 +1,13 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { Button } from './Button'
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Button } from './Button';
 
 type Props = {
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 type State = {
-  error: Error | null
-}
+  error: Error | null;
+};
 
 function ErrorFallback() {
   return (
@@ -24,25 +24,25 @@ function ErrorFallback() {
         Reload page
       </Button>
     </div>
-  )
+  );
 }
 
 /** Catches render errors in route content and shows a friendly fallback. */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null }
+  state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
-    return { error }
+    return { error };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Render error caught by ErrorBoundary:', error, info.componentStack)
+    console.error('Render error caught by ErrorBoundary:', error, info.componentStack);
   }
 
   render() {
     if (this.state.error) {
-      return <ErrorFallback />
+      return <ErrorFallback />;
     }
-    return this.props.children
+    return this.props.children;
   }
 }

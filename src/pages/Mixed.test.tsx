@@ -1,26 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import Mixed from './Mixed'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import Mixed from './Mixed';
 
-const listMovies = vi.fn()
-const listTVShows = vi.fn()
+const listMovies = vi.fn();
+const listTVShows = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
       listMovies: (...args: unknown[]) => listMovies(...args),
       listTVShows: (...args: unknown[]) => listTVShows(...args),
     },
-  }
-})
+  };
+});
 
 describe('Mixed page', () => {
   beforeEach(() => {
-    listMovies.mockReset()
-    listTVShows.mockReset()
+    listMovies.mockReset();
+    listTVShows.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -38,7 +38,7 @@ describe('Mixed page', () => {
         },
       ],
       total: 1,
-    })
+    });
     listTVShows.mockResolvedValue({
       items: [
         {
@@ -53,42 +53,42 @@ describe('Mixed page', () => {
         },
       ],
       total: 1,
-    })
-  })
+    });
+  });
 
   it('filters movies and TV in one grid', async () => {
     render(
       <MemoryRouter>
         <Mixed />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('mixed-page')).toBeInTheDocument()
-    expect(await screen.findByText('Alpha Movie')).toBeInTheDocument()
-    expect(screen.getByText('Beta Show')).toBeInTheDocument()
-    fireEvent.change(screen.getByPlaceholderText('Filter…'), { target: { value: 'beta' } })
-    expect(screen.queryByText('Alpha Movie')).not.toBeInTheDocument()
-    expect(screen.getByText('Beta Show')).toBeInTheDocument()
-  })
-})
+    );
+    expect(await screen.findByTestId('mixed-page')).toBeInTheDocument();
+    expect(await screen.findByText('Alpha Movie')).toBeInTheDocument();
+    expect(screen.getByText('Beta Show')).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('Filter…'), { target: { value: 'beta' } });
+    expect(screen.queryByText('Alpha Movie')).not.toBeInTheDocument();
+    expect(screen.getByText('Beta Show')).toBeInTheDocument();
+  });
+});
 
 describe('Mixed accessibility', () => {
   beforeEach(() => {
-    listMovies.mockReset()
-    listTVShows.mockReset()
-    listMovies.mockImplementation(() => new Promise(() => {}))
-    listTVShows.mockImplementation(() => new Promise(() => {}))
-  })
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listMovies.mockImplementation(() => new Promise(() => {}));
+    listTVShows.mockImplementation(() => new Promise(() => {}));
+  });
 
   it('has a page h1 and labelled filter input', () => {
     render(
       <MemoryRouter>
         <Mixed />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Mixed' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Filter titles')).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading mixed library' })).toBeInTheDocument()
-    expect(screen.getByTestId('mixed-loading')).toHaveAttribute('aria-busy', 'true')
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'Mixed' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter titles')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading mixed library' })).toBeInTheDocument();
+    expect(screen.getByTestId('mixed-loading')).toHaveAttribute('aria-busy', 'true');
+  });
+});

@@ -1,32 +1,38 @@
-import { type FormEvent, useId, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ListMusic, Plus } from 'lucide-react'
-import { Badge } from '../components/ui/Badge'
-import { EmptyState } from '../components/ui/EmptyState'
-import { listFavorites, listPlaylists, savePlaylists, type FavoriteEntry, type Playlist } from '../lib/userdata'
+import { type FormEvent, useId, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ListMusic, Plus } from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import {
+  listFavorites,
+  listPlaylists,
+  savePlaylists,
+  type FavoriteEntry,
+  type Playlist,
+} from '../lib/userdata';
 
 export default function Playlists() {
-  const nameInputId = useId()
-  const [playlists, setPlaylists] = useState<Playlist[]>(() => listPlaylists())
-  const favorites = useMemo(() => listFavorites(), [])
+  const nameInputId = useId();
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => listPlaylists());
+  const favorites = useMemo(() => listFavorites(), []);
   const favById = useMemo(() => {
-    const m = new Map<string, FavoriteEntry>()
-    for (const f of favorites) m.set(f.id, f)
-    return m
-  }, [favorites])
+    const m = new Map<string, FavoriteEntry>();
+    for (const f of favorites) m.set(f.id, f);
+    return m;
+  }, [favorites]);
 
   function persist(next: Playlist[]) {
-    setPlaylists(next)
-    savePlaylists(next)
+    setPlaylists(next);
+    savePlaylists(next);
   }
 
   function onCreate(e: FormEvent) {
-    e.preventDefault()
-    const fd = new FormData(e.target as HTMLFormElement)
-    const name = String(fd.get('name') || '').trim()
-    if (!name) return
-    persist([...playlists, { id: crypto.randomUUID(), name, itemIds: [] }])
-    ;(e.target as HTMLFormElement).reset()
+    e.preventDefault();
+    const fd = new FormData(e.target as HTMLFormElement);
+    const name = String(fd.get('name') || '').trim();
+    if (!name) return;
+    persist([...playlists, { id: crypto.randomUUID(), name, itemIds: [] }]);
+    (e.target as HTMLFormElement).reset();
   }
 
   function addFavorite(playlistId: string, itemId: string) {
@@ -36,7 +42,7 @@ export default function Playlists() {
           ? { ...p, itemIds: [...p.itemIds, itemId] }
           : p,
       ),
-    )
+    );
   }
 
   return (
@@ -49,7 +55,10 @@ export default function Playlists() {
       </header>
 
       <section className="space-y-3" aria-labelledby="playlists-create-heading">
-        <h2 id="playlists-create-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2
+          id="playlists-create-heading"
+          className="text-lg font-semibold text-[var(--text-primary)]"
+        >
           Create playlist
         </h2>
         <form onSubmit={onCreate} className="flex flex-wrap gap-2">
@@ -74,7 +83,10 @@ export default function Playlists() {
       </section>
 
       <section className="space-y-4" aria-labelledby="playlists-list-heading">
-        <h2 id="playlists-list-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2
+          id="playlists-list-heading"
+          className="text-lg font-semibold text-[var(--text-primary)]"
+        >
           Your playlists ({playlists.length})
         </h2>
         {playlists.length === 0 ? (
@@ -93,14 +105,17 @@ export default function Playlists() {
                 aria-labelledby={`playlist-${p.id}-heading`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <h3 id={`playlist-${p.id}-heading`} className="font-semibold text-[var(--text-primary)]">
+                  <h3
+                    id={`playlist-${p.id}-heading`}
+                    className="font-semibold text-[var(--text-primary)]"
+                  >
                     {p.name}
                   </h3>
                   <Badge tone="neutral">{p.itemIds.length} items</Badge>
                 </div>
                 <ul className="space-y-1 text-sm" aria-label={`${p.name} tracks`}>
                   {p.itemIds.map((id) => {
-                    const f = favById.get(id)
+                    const f = favById.get(id);
                     return (
                       <li key={id}>
                         {f ? (
@@ -111,14 +126,20 @@ export default function Playlists() {
                           <span className="text-[var(--text-tertiary)]">{id}</span>
                         )}
                       </li>
-                    )
+                    );
                   })}
                   {p.itemIds.length === 0 && (
-                    <li className="text-[var(--text-tertiary)]">Empty — add from favorites below.</li>
+                    <li className="text-[var(--text-tertiary)]">
+                      Empty — add from favorites below.
+                    </li>
                   )}
                 </ul>
                 {favorites.length > 0 && (
-                  <div className="flex flex-wrap gap-2" role="group" aria-label={`Add favorites to ${p.name}`}>
+                  <div
+                    className="flex flex-wrap gap-2"
+                    role="group"
+                    aria-label={`Add favorites to ${p.name}`}
+                  >
                     {favorites.map((f) => (
                       <button
                         key={f.id}
@@ -137,5 +158,5 @@ export default function Playlists() {
         )}
       </section>
     </div>
-  )
+  );
 }

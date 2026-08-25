@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import dts from 'vite-plugin-dts'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import dts from 'vite-plugin-dts';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [
@@ -22,13 +22,7 @@ export default defineConfig({
       fileName: () => 'index.es.js',
     },
     rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        'react-dom/client',
-        'react/jsx-runtime',
-        'react-router-dom',
-      ],
+      external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react-router-dom'],
       output: {
         globals: {
           react: 'React',
@@ -41,4 +35,4 @@ export default defineConfig({
     emptyOutDir: false,
     cssCodeSplit: false,
   },
-})
+});

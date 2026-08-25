@@ -1,6 +1,6 @@
-import { Outlet } from 'react-router-dom'
-import Nav from './layout/Nav'
-import { ErrorBoundary } from './ui/ErrorBoundary'
+import { Outlet } from 'react-router-dom';
+import Nav from './layout/Nav';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 
 export default function Layout() {
   return (
@@ -12,5 +12,5 @@ export default function Layout() {
         </ErrorBoundary>
       </main>
     </div>
-  )
+  );
 }

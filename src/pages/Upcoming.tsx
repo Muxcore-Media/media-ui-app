@@ -1,87 +1,87 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
-import { api } from '../api/client'
-import { ShelfSkeleton } from '../components/ui/Skeleton'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import type { Episode, TVShow } from '../types'
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { api } from '../api/client';
+import { ShelfSkeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import type { Episode, TVShow } from '../types';
 
 type UpcomingRow = {
-  show: TVShow
-  episode: Episode
-  air: string
-}
+  show: TVShow;
+  episode: Episode;
+  air: string;
+};
 
 export default function Upcoming() {
-  const [shows, setShows] = useState<TVShow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [monthOffset, setMonthOffset] = useState(0)
+  const [shows, setShows] = useState<TVShow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [monthOffset, setMonthOffset] = useState(0);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const list = await api.listTVShows(1, 100)
-        const detailed: TVShow[] = []
+        const list = await api.listTVShows(1, 100);
+        const detailed: TVShow[] = [];
         for (const s of list.items.slice(0, 40)) {
           try {
-            detailed.push(await api.getTVShow(s.id))
+            detailed.push(await api.getTVShow(s.id));
           } catch {
-            detailed.push(s)
+            detailed.push(s);
           }
         }
-        if (!cancelled) setShows(detailed)
+        if (!cancelled) setShows(detailed);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   const rows = useMemo(() => {
-    const out: UpcomingRow[] = []
-    const now = Date.now()
-    const horizon = now + 1000 * 60 * 60 * 24 * 120
+    const out: UpcomingRow[] = [];
+    const now = Date.now();
+    const horizon = now + 1000 * 60 * 60 * 24 * 120;
     for (const show of shows) {
       for (const season of show.seasons || []) {
         for (const ep of season.episodes || []) {
-          if (!ep.air_date) continue
-          const t = Date.parse(ep.air_date)
-          if (!Number.isFinite(t)) continue
+          if (!ep.air_date) continue;
+          const t = Date.parse(ep.air_date);
+          if (!Number.isFinite(t)) continue;
           if (t >= now - 1000 * 60 * 60 * 24 * 14 && t <= horizon) {
-            out.push({ show, episode: ep, air: ep.air_date })
+            out.push({ show, episode: ep, air: ep.air_date });
           }
         }
       }
     }
-    return out.sort((a, b) => a.air.localeCompare(b.air))
-  }, [shows])
+    return out.sort((a, b) => a.air.localeCompare(b.air));
+  }, [shows]);
 
   const view = useMemo(() => {
-    const base = new Date()
-    base.setDate(1)
-    base.setMonth(base.getMonth() + monthOffset)
-    const y = base.getFullYear()
-    const m = base.getMonth()
-    const label = base.toLocaleString(undefined, { month: 'long', year: 'numeric' })
-    const byDay = new Map<string, UpcomingRow[]>()
+    const base = new Date();
+    base.setDate(1);
+    base.setMonth(base.getMonth() + monthOffset);
+    const y = base.getFullYear();
+    const m = base.getMonth();
+    const label = base.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    const byDay = new Map<string, UpcomingRow[]>();
     for (const r of rows) {
-      const d = new Date(r.air)
-      if (d.getFullYear() !== y || d.getMonth() !== m) continue
-      const key = r.air.slice(0, 10)
-      const arr = byDay.get(key) || []
-      arr.push(r)
-      byDay.set(key, arr)
+      const d = new Date(r.air);
+      if (d.getFullYear() !== y || d.getMonth() !== m) continue;
+      const key = r.air.slice(0, 10);
+      const arr = byDay.get(key) || [];
+      arr.push(r);
+      byDay.set(key, arr);
     }
-    return { label, byDay: [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])) }
-  }, [rows, monthOffset])
+    return { label, byDay: [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])) };
+  }, [rows, monthOffset]);
 
   return (
     <div className="min-w-0 space-y-6 overflow-x-hidden" data-testid="upcoming-page">
@@ -134,7 +134,10 @@ export default function Upcoming() {
           title="No upcoming episodes"
           message={`No air dates in ${view.label}.`}
           action={
-            <Link to="/tv" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+            <Link
+              to="/tv"
+              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            >
               Browse TV
             </Link>
           }
@@ -149,12 +152,15 @@ export default function Upcoming() {
           </h2>
           {view.byDay.map(([day, dayRows]) => (
             <section key={day} className="space-y-2" aria-labelledby={`upcoming-day-${day}`}>
-              <h3 id={`upcoming-day-${day}`} className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+              <h3
+                id={`upcoming-day-${day}`}
+                className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]"
+              >
                 {day}
               </h3>
               <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
                 {dayRows.map((r) => {
-                  const episodeLabel = `S${String(r.episode.season_number).padStart(2, '0')}E${String(r.episode.episode_number).padStart(2, '0')}${r.episode.title ? ` · ${r.episode.title}` : ''}`
+                  const episodeLabel = `S${String(r.episode.season_number).padStart(2, '0')}E${String(r.episode.episode_number).padStart(2, '0')}${r.episode.title ? ` · ${r.episode.title}` : ''}`;
                   return (
                     <li
                       key={`${r.show.id}-${r.episode.id}`}
@@ -162,12 +168,20 @@ export default function Upcoming() {
                     >
                       <div className="h-14 w-10 shrink-0 overflow-hidden rounded bg-[var(--bg-elevated-2)]">
                         {r.show.poster_url ? (
-                          <img src={r.show.poster_url} alt="" className="h-full w-full object-cover" />
+                          <img
+                            src={r.show.poster_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
                         ) : null}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-[var(--text-primary)]">{r.show.title}</p>
-                        <p className="truncate text-xs text-[var(--text-tertiary)]">{episodeLabel}</p>
+                        <p className="truncate font-medium text-[var(--text-primary)]">
+                          {r.show.title}
+                        </p>
+                        <p className="truncate text-xs text-[var(--text-tertiary)]">
+                          {episodeLabel}
+                        </p>
                       </div>
                       <Link
                         to={`/tv/${r.show.id}`}
@@ -177,7 +191,7 @@ export default function Upcoming() {
                         Open
                       </Link>
                     </li>
-                  )
+                  );
                 })}
               </ul>
             </section>
@@ -185,5 +199,5 @@ export default function Upcoming() {
         </section>
       )}
     </div>
-  )
+  );
 }

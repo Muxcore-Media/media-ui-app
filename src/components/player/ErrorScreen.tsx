@@ -1,11 +1,11 @@
-import { Link } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 
 type Props = {
-  message: string
-  href: string
-  onRetry?: () => void
-}
+  message: string;
+  href: string;
+  onRetry?: () => void;
+};
 
 export default function ErrorScreen({ message, href, onRetry }: Props) {
   return (
@@ -36,5 +36,5 @@ export default function ErrorScreen({ message, href, onRetry }: Props) {
         </div>
       </div>
     </div>
-  )
+  );
 }

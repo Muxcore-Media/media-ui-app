@@ -1,16 +1,23 @@
-import { Play, RotateCcw, RotateCw } from 'lucide-react'
-import Spinner from '../Spinner'
+import { Play, RotateCcw, RotateCw } from 'lucide-react';
+import Spinner from '../Spinner';
 
 type Props = {
-  loading: boolean
-  buffering: boolean
-  playing: boolean
-  showControls: boolean
-  onTogglePlay: () => void
-  seekBubble: number | null
-}
+  loading: boolean;
+  buffering: boolean;
+  playing: boolean;
+  showControls: boolean;
+  onTogglePlay: () => void;
+  seekBubble: number | null;
+};
 
-export default function CenterOverlay({ loading, buffering, playing, showControls, onTogglePlay, seekBubble }: Props) {
+export default function CenterOverlay({
+  loading,
+  buffering,
+  playing,
+  showControls,
+  onTogglePlay,
+  seekBubble,
+}: Props) {
   return (
     <>
       {loading ? (
@@ -40,8 +47,8 @@ export default function CenterOverlay({ loading, buffering, playing, showControl
         <button
           type="button"
           onClick={(e) => {
-            e.stopPropagation()
-            onTogglePlay()
+            e.stopPropagation();
+            onTogglePlay();
           }}
           aria-label="Play"
           className={`absolute inset-0 z-10 flex items-center justify-center bg-[var(--player-scrim-faint)] transition-opacity ${showControls ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
@@ -53,13 +60,20 @@ export default function CenterOverlay({ loading, buffering, playing, showControl
       ) : null}
 
       {seekBubble != null ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center" data-testid="player-seek-bubble">
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          data-testid="player-seek-bubble"
+        >
           <span className="flex items-center gap-2 rounded-full bg-black/70 px-5 py-3 text-lg font-semibold text-white">
-            {seekBubble < 0 ? <RotateCcw className="h-5 w-5" aria-hidden="true" /> : <RotateCw className="h-5 w-5" aria-hidden="true" />}
+            {seekBubble < 0 ? (
+              <RotateCcw className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <RotateCw className="h-5 w-5" aria-hidden="true" />
+            )}
             {Math.abs(seekBubble)}s
           </span>
         </div>
       ) : null}
     </>
-  )
+  );
 }

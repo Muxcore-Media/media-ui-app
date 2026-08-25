@@ -1,67 +1,68 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Building2, ChevronRight } from 'lucide-react'
-import { api } from '../api/client'
-import MediaCard from '../components/MediaCard'
-import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
-import { Badge } from '../components/ui/Badge'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import type { Movie } from '../types'
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Building2, ChevronRight } from 'lucide-react';
+import { api } from '../api/client';
+import MediaCard from '../components/MediaCard';
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import type { Movie } from '../types';
 
 /** Studio browse from collection_name / genre buckets (Jellyfin studios parity). */
 export default function Studios() {
-  const [params, setParams] = useSearchParams()
-  const selected = params.get('studio') || ''
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [movies, setMovies] = useState<Movie[]>([])
+  const [params, setParams] = useSearchParams();
+  const selected = params.get('studio') || '';
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [movies, setMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await api.listMovies(1, 500)
-        if (!cancelled) setMovies(res.items)
+        const res = await api.listMovies(1, 500);
+        if (!cancelled) setMovies(res.items);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   const studios = useMemo(() => {
-    const counts = new Map<string, number>()
+    const counts = new Map<string, number>();
     for (const m of movies) {
-      const keys =
-        m.collection_name?.trim()
-          ? [m.collection_name.trim()]
-          : m.genres.length
-            ? m.genres
-            : ['Unknown']
-      for (const k of keys) counts.set(k, (counts.get(k) || 0) + 1)
+      const keys = m.collection_name?.trim()
+        ? [m.collection_name.trim()]
+        : m.genres.length
+          ? m.genres
+          : ['Unknown'];
+      for (const k of keys) counts.set(k, (counts.get(k) || 0) + 1);
     }
-    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [movies])
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [movies]);
 
   const filtered = useMemo(() => {
-    if (!selected) return []
+    if (!selected) return [];
     return movies.filter((m) => {
-      if (m.collection_name?.trim() === selected) return true
-      return m.genres.includes(selected)
-    })
-  }, [movies, selected])
+      if (m.collection_name?.trim() === selected) return true;
+      return m.genres.includes(selected);
+    });
+  }, [movies, selected]);
 
   return (
     <div className="space-y-6" data-testid="studios-page">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Studios &amp; collections</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Studios &amp; collections
+        </h1>
         <p className="text-sm text-[var(--text-secondary)]">
           Browse by studio, franchise, or genre.
         </p>
@@ -75,7 +76,10 @@ export default function Studios() {
           icon={Building2}
           message="No studios or franchises found in your movie library yet."
           action={
-            <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+            <Link
+              to="/movies"
+              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            >
               Browse movies
             </Link>
           }
@@ -98,7 +102,10 @@ export default function Studios() {
                 </span>
                 <span className="flex items-center gap-1">
                   <Badge tone="neutral">{count}</Badge>
-                  <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)]" aria-hidden="true" />
+                  <ChevronRight
+                    className="h-4 w-4 text-[var(--text-tertiary)]"
+                    aria-hidden="true"
+                  />
                 </span>
               </button>
             </li>
@@ -143,5 +150,5 @@ export default function Studios() {
         </section>
       )}
     </div>
-  )
+  );
 }

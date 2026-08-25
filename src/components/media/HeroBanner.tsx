@@ -1,27 +1,27 @@
-import { Link } from 'react-router-dom'
-import { Info, Play, Star } from 'lucide-react'
-import { Badge } from '../ui/Badge'
+import { Link } from 'react-router-dom';
+import { Info, Play, Star } from 'lucide-react';
+import { Badge } from '../ui/Badge';
 
 export type HeroItem = {
-  id: string
-  title: string
-  overview: string
-  year?: number
-  vote_average?: number
-  genres?: string[]
-  backdropUrl?: string
-  posterUrl?: string
-  playHref: string
-  detailHref: string
-  ready?: boolean
-}
+  id: string;
+  title: string;
+  overview: string;
+  year?: number;
+  vote_average?: number;
+  genres?: string[];
+  backdropUrl?: string;
+  posterUrl?: string;
+  playHref: string;
+  detailHref: string;
+  ready?: boolean;
+};
 
 /**
  * Full-bleed featured banner (AGENTS.md §4.2): backdrop image, gradient scrim so nav/text
  * stay legible, metadata chips, and primary Play / More Info actions.
  */
 export function HeroBanner({ item }: { item: HeroItem }) {
-  const backdrop = item.backdropUrl || item.posterUrl
+  const backdrop = item.backdropUrl || item.posterUrl;
 
   return (
     <section className="relative -mx-4 -mt-6 h-[52vh] min-h-[360px] overflow-hidden rounded-b-[var(--radius-lg)] sm:-mx-6 lg:-mx-10 lg:h-[64vh]">
@@ -48,7 +48,9 @@ export function HeroBanner({ item }: { item: HeroItem }) {
             </Badge>
           )}
           {item.year ? <span>{item.year}</span> : null}
-          {item.genres && item.genres.length > 0 ? <span>{item.genres.slice(0, 3).join(' · ')}</span> : null}
+          {item.genres && item.genres.length > 0 ? (
+            <span>{item.genres.slice(0, 3).join(' · ')}</span>
+          ) : null}
         </div>
 
         <h1 className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-[var(--text-primary)] drop-shadow-lg sm:text-5xl">
@@ -79,5 +81,5 @@ export function HeroBanner({ item }: { item: HeroItem }) {
         </div>
       </div>
     </section>
-  )
+  );
 }

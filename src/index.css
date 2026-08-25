@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   color-scheme: dark;
@@ -41,10 +41,10 @@
   --radius-md: 10px;
   --radius-lg: 16px;
 
-  font-family: "Inter", "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: 'Inter', 'IBM Plex Sans', 'Segoe UI', sans-serif;
 }
 
-:root[data-theme="light"] {
+:root[data-theme='light'] {
   color-scheme: light;
   --bg: #f4f4f6;
   --surface: #ffffff;
@@ -76,8 +76,16 @@ body,
 body {
   margin: 0;
   background:
-    radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--accent-color) 14%, transparent) 0%, transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, color-mix(in srgb, var(--warning) 10%, transparent) 0%, transparent 50%),
+    radial-gradient(
+      1200px 600px at 10% -10%,
+      color-mix(in srgb, var(--accent-color) 14%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      900px 500px at 90% 0%,
+      color-mix(in srgb, var(--warning) 10%, transparent) 0%,
+      transparent 50%
+    ),
     var(--bg);
   color: var(--text);
 }
@@ -165,7 +173,7 @@ select {
   }
 
   .skeleton::after {
-    content: "";
+    content: '';
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
@@ -206,19 +214,19 @@ select {
   background-color: var(--surface-2);
 }
 
-video[data-subtitle-size="sm"]::cue {
+video[data-subtitle-size='sm']::cue {
   font-size: 0.85rem;
 }
 
-video[data-subtitle-size="md"]::cue {
+video[data-subtitle-size='md']::cue {
   font-size: 1rem;
 }
 
-video[data-subtitle-size="lg"]::cue {
+video[data-subtitle-size='lg']::cue {
   font-size: 1.25rem;
 }
 
-video[data-subtitle-size="xl"]::cue {
+video[data-subtitle-size='xl']::cue {
   font-size: 1.5rem;
 }
 
@@ -229,7 +237,7 @@ video::cue {
 }
 
 /* Video player OSD — tokenized overlay on black scrim (AGENTS.md §3) */
-[data-testid="video-player"] {
+[data-testid='video-player'] {
   --player-fg: var(--surface-contrast);
   --player-fg-muted: color-mix(in srgb, var(--surface-contrast) 68%, transparent);
   --player-fg-subtle: color-mix(in srgb, var(--surface-contrast) 52%, transparent);
@@ -248,6 +256,6 @@ video::cue {
 }
 
 /* Theater mode: pure-black immersive backdrop instead of the theme's base color. */
-[data-testid="video-player"].theater-mode {
+[data-testid='video-player'].theater-mode {
   --player-bg: #000;
 }

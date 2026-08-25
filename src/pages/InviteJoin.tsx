@@ -1,69 +1,69 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { UserPlus } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 
 type PeekResponse = {
-  valid?: boolean
-  role?: string
-  expires_at?: string
-  error?: string
-}
+  valid?: boolean;
+  role?: string;
+  expires_at?: string;
+  error?: string;
+};
 
 /** Wizarr-style household invite signup on the consumer SPA (proxied to auth-local). */
 export default function InviteJoin() {
-  const { token: routeToken } = useParams()
-  const token = (routeToken || '').trim()
+  const { token: routeToken } = useParams();
+  const token = (routeToken || '').trim();
 
-  const [role, setRole] = useState<string>('user')
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
-  const [invalid, setInvalid] = useState(false)
+  const [role, setRole] = useState<string>('user');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [invalid, setInvalid] = useState(false);
 
   useEffect(() => {
     if (!token) {
-      setInvalid(true)
-      setError('Missing invite link — ask your administrator for a new invite.')
-      setLoading(false)
-      return
+      setInvalid(true);
+      setError('Missing invite link — ask your administrator for a new invite.');
+      setLoading(false);
+      return;
     }
-    let cancelled = false
+    let cancelled = false;
     void fetch(`/api/invite/peek?token=${encodeURIComponent(token)}`, {
       headers: { Accept: 'application/json' },
     })
       .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as PeekResponse
+        const data = (await res.json().catch(() => ({}))) as PeekResponse;
         if (!res.ok) {
-          throw new Error(data.error || `Invite invalid (${res.status})`)
+          throw new Error(data.error || `Invite invalid (${res.status})`);
         }
         if (!cancelled) {
-          setRole(data.role || 'user')
-          setInvalid(false)
-          setError(null)
+          setRole(data.role || 'user');
+          setInvalid(false);
+          setError(null);
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          setInvalid(true)
-          setError(err instanceof Error ? err.message : 'Invite link invalid or expired')
+          setInvalid(true);
+          setError(err instanceof Error ? err.message : 'Invite link invalid or expired');
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      cancelled = true
-    }
-  }, [token])
+      cancelled = true;
+    };
+  }, [token]);
 
   async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (!token) return
-    setBusy(true)
-    setError(null)
+    e.preventDefault();
+    if (!token) return;
+    setBusy(true);
+    setError(null);
     try {
       const res = await fetch('/api/invite/redeem', {
         method: 'POST',
@@ -73,16 +73,16 @@ export default function InviteJoin() {
           username: username.trim(),
           password,
         }),
-      })
-      const data = (await res.json().catch(() => ({}))) as { error?: string; username?: string }
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; username?: string };
       if (!res.ok) {
-        throw new Error(data.error || `Signup failed (${res.status})`)
+        throw new Error(data.error || `Signup failed (${res.status})`);
       }
-      setDone(true)
+      setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed')
+      setError(err instanceof Error ? err.message : 'Signup failed');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
@@ -96,8 +96,12 @@ export default function InviteJoin() {
           M
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Join your household</h1>
-          <p className="text-sm text-[var(--text-secondary)]">Create your account with an invite link.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            Join your household
+          </h1>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Create your account with an invite link.
+          </p>
         </div>
       </div>
 
@@ -112,7 +116,9 @@ export default function InviteJoin() {
           className="space-y-3 rounded-[var(--radius-md)] border border-[var(--success)]/40 bg-[var(--bg-elevated)] p-4 text-sm"
           data-testid="invite-join-success"
         >
-          <p className="font-medium text-[var(--success)]">Account created — you can sign in now.</p>
+          <p className="font-medium text-[var(--success)]">
+            Account created — you can sign in now.
+          </p>
           <a
             href="/login"
             className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-4 py-2 font-semibold text-black transition hover:bg-[var(--accent-hover)]"
@@ -138,7 +144,8 @@ export default function InviteJoin() {
           data-testid="invite-join-form"
         >
           <p className="text-sm text-[var(--text-secondary)]">
-            You&apos;ll join as <span className="font-medium text-[var(--text-primary)]">{role}</span>.
+            You&apos;ll join as{' '}
+            <span className="font-medium text-[var(--text-primary)]">{role}</span>.
           </p>
           {error && (
             <p className="rounded-[var(--radius-sm)] border border-[var(--danger-color)]/40 px-3 py-2 text-sm text-[var(--danger-color)]">
@@ -185,10 +192,14 @@ export default function InviteJoin() {
 
       <p className="text-center text-xs text-[var(--text-tertiary)]">
         Already have an account?{' '}
-        <a href="/login" className="font-medium text-[var(--accent-color)] hover:underline">Sign in</a>
+        <a href="/login" className="font-medium text-[var(--accent-color)] hover:underline">
+          Sign in
+        </a>
         {' · '}
-        <Link to="/" className="font-medium text-[var(--accent-color)] hover:underline">Browse library</Link>
+        <Link to="/" className="font-medium text-[var(--accent-color)] hover:underline">
+          Browse library
+        </Link>
       </p>
     </div>
-  )
+  );
 }

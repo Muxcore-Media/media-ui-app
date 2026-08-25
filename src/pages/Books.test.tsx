@@ -35,3 +35,26 @@ describe('Books library page', () => {
     expect(await screen.findByText('Tolkien')).toBeInTheDocument()
   })
 })
+
+describe('Books accessibility', () => {
+  beforeEach(() => {
+    listBooks.mockReset()
+    listBooks.mockResolvedValue({
+      items: [{ id: 'a1', name: 'Tolkien', title: 'Tolkien', available: true }],
+      available: true,
+      total: 1,
+    })
+  })
+
+  it('has a page h1 and labelled library list', async () => {
+    render(
+      <MemoryRouter>
+        <Books />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Books' })).toBeInTheDocument()
+    expect(await screen.findByRole('list', { name: 'Books items' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Tolkien' })).toBeInTheDocument()
+  })
+})

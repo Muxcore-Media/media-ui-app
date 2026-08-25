@@ -49,3 +49,40 @@ describe('HomeVideos page', () => {
     expect(listMovies).toHaveBeenCalledWith(1, 200, { library: 'homevideos' })
   })
 })
+
+describe('HomeVideos accessibility', () => {
+  beforeEach(() => {
+    listMovies.mockReset()
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'hv1',
+          title: 'Family Reunion 2024',
+          year: 2024,
+          overview: '',
+          runtime: 0,
+          vote_average: 0,
+          genres: [],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/movies/hv1',
+          created_at: '',
+        },
+      ],
+      total: 1,
+    })
+  })
+
+  it('has a page h1 and loading status announcement', async () => {
+    listMovies.mockImplementation(() => new Promise(() => {}))
+    render(
+      <MemoryRouter>
+        <HomeVideos />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Home Videos' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading home videos' })).toBeInTheDocument()
+    expect(screen.getByTestId('homevideos-loading')).toHaveAttribute('aria-busy', 'true')
+  })
+})

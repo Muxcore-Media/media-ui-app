@@ -1,11 +1,14 @@
 import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { ArrowLeft, Pause, Play } from 'lucide-react'
 import { api } from '../api/client'
 import Spinner from '../components/Spinner'
+import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import type { MusicAlbum, MusicArtistDetail } from '../types'
 
 export default function MusicArtist() {
+  const albumsHeadingId = useId()
   const { id = '' } = useParams()
   const [detail, setDetail] = useState<MusicArtistDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,16 +55,18 @@ export default function MusicArtist() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="flex justify-center py-16" data-testid="music-artist-page" aria-busy="true">
+        <LoadingStatus label="Loading artist" />
         <Spinner />
       </div>
     )
   }
   if (!detail) {
     return (
-      <div className="space-y-3">
-        <p className="text-[var(--text-secondary)]">{error || 'Artist not found'}</p>
-        <Link to="/music" className="text-[var(--accent-color)]">
+      <div className="space-y-3" data-testid="music-artist-page">
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Artist not found</h1>
+        <ErrorBanner message={error || 'Artist not found.'} />
+        <Link to="/music" className="text-[var(--accent-color)] hover:underline">
           Back to music
         </Link>
       </div>
@@ -87,13 +92,20 @@ export default function MusicArtist() {
       {albums.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No albums for this artist yet.</p>
       ) : (
-        albums.map((al) => (
-          <section key={al.id} className="space-y-3">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+        <section className="space-y-6" aria-labelledby={albumsHeadingId}>
+          <h2 id={albumsHeadingId} className="sr-only">
+            Albums
+          </h2>
+          {albums.map((al) => (
+          <section key={al.id} className="space-y-3" aria-labelledby={`album-${al.id}`}>
+            <h3 id={`album-${al.id}`} className="text-lg font-semibold text-[var(--text-primary)]">
               {al.title}
               {al.year ? <span className="text-sm font-normal text-[var(--text-tertiary)]"> · {al.year}</span> : null}
-            </h2>
-            <ul className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+            </h3>
+            <ul
+              className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+              aria-label={`${al.title} tracks`}
+            >
               {(al.tracks || []).map((t, i) => (
                 <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm transition hover:bg-[var(--bg-elevated-2)]">
                   <div className="min-w-0">
@@ -104,7 +116,8 @@ export default function MusicArtist() {
                     <button
                       type="button"
                       className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
-                      aria-label={playing === t.id ? `Hide ${t.title}` : `Play ${t.title}`}
+                      aria-label={playing === t.id ? `Pause ${t.title}` : `Play ${t.title}`}
+                      aria-pressed={playing === t.id}
                       onClick={() => setPlaying(playing === t.id ? null : t.id)}
                     >
                       {playing === t.id ? (
@@ -130,14 +143,20 @@ export default function MusicArtist() {
                 return (
                   <div className="space-y-2">
                     {src ? (
-                      <audio className="w-full" controls autoPlay src={src} />
+                      <audio className="w-full" controls autoPlay src={src} aria-label={`Now playing ${track.title}`} />
                     ) : (
                       <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                         This track isn&apos;t available to play yet.
                       </div>
                     )}
-                    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm">
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                    <div
+                      className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm"
+                      aria-labelledby={`lyrics-${track.id}`}
+                    >
+                      <div
+                        id={`lyrics-${track.id}`}
+                        className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]"
+                      >
                         Lyrics
                       </div>
                       {lyrics?.found && lyrics.text ? (
@@ -152,7 +171,8 @@ export default function MusicArtist() {
                 )
               })()}
           </section>
-        ))
+          ))}
+        </section>
       )}
     </div>
   )

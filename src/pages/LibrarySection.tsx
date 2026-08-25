@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Clock, Library } from 'lucide-react'
 import { Badge } from '../components/ui/Badge'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import { ShelfSkeleton } from '../components/ui/Skeleton'
 import type { LibraryListResponse, LibraryRow } from '../types'
 
@@ -26,6 +27,7 @@ export default function LibrarySection({
   emptyReadyMessage,
   rowHref,
 }: Props) {
+  const listHeadingId = useId()
   const [items, setItems] = useState<LibraryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [available, setAvailable] = useState(true)
@@ -70,11 +72,15 @@ export default function LibrarySection({
       {error ? <ErrorBanner message={error} testId="library-error" /> : null}
 
       {loading ? (
-        <ShelfSkeleton count={4} />
+        <div aria-busy="true" data-testid="library-loading">
+          <LoadingStatus label={`Loading ${title.toLowerCase()}`} />
+          <ShelfSkeleton count={4} />
+        </div>
       ) : error ? null : comingSoon || !available ? (
         <div
           className="flex flex-col items-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] px-4 py-14 text-center"
           data-testid="library-coming-soon"
+          role="status"
         >
           <Clock className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
           <p className="font-semibold text-[var(--text-primary)]">Coming soon</p>
@@ -86,10 +92,15 @@ export default function LibrarySection({
       ) : items.length === 0 ? (
         <EmptyState icon={Library} message={emptyReadyMessage} testId="library-empty" />
       ) : (
-        <ul
-          className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
-          data-testid="library-list"
-        >
+        <section className="space-y-3" aria-labelledby={listHeadingId}>
+          <h2 id={listHeadingId} className="sr-only">
+            {title} library
+          </h2>
+          <ul
+            className="divide-y divide-[var(--border-subtle)] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+            data-testid="library-list"
+            aria-label={`${title} items`}
+          >
           {items.map((row) => {
             const href = rowHref?.(row)
             return (
@@ -110,7 +121,8 @@ export default function LibrarySection({
               </li>
             )
           })}
-        </ul>
+          </ul>
+        </section>
       )}
     </div>
   )

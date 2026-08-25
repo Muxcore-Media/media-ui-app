@@ -70,3 +70,25 @@ describe('Mixed page', () => {
     expect(screen.getByText('Beta Show')).toBeInTheDocument()
   })
 })
+
+describe('Mixed accessibility', () => {
+  beforeEach(() => {
+    listMovies.mockReset()
+    listTVShows.mockReset()
+    listMovies.mockImplementation(() => new Promise(() => {}))
+    listTVShows.mockImplementation(() => new Promise(() => {}))
+  })
+
+  it('has a page h1 and labelled filter input', () => {
+    render(
+      <MemoryRouter>
+        <Mixed />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Mixed' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Filter titles')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading mixed library' })).toBeInTheDocument()
+    expect(screen.getByTestId('mixed-loading')).toHaveAttribute('aria-busy', 'true')
+  })
+})

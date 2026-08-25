@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Music2 } from 'lucide-react'
 import { api } from '../api/client'
@@ -6,10 +6,12 @@ import MediaCard from '../components/MediaCard'
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ErrorBanner } from '../components/ui/ErrorBanner'
+import { LoadingStatus } from '../components/ui/LoadingStatus'
 import type { Movie } from '../types'
 
 /** Music videos library via BFF `?library=musicvideos` (path prefixes / tags; heuristic when config empty). */
 export default function MusicVideos() {
+  const libraryHeadingId = useId()
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +41,12 @@ export default function MusicVideos() {
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Music Videos</h1>
         <p className="text-sm text-[var(--text-secondary)]">Music videos from your library.</p>
       </div>
-      {loading && <PosterGridSkeleton />}
+      {loading && (
+        <div aria-busy="true" data-testid="musicvideos-loading">
+          <LoadingStatus label="Loading music videos" />
+          <PosterGridSkeleton />
+        </div>
+      )}
       {error && <ErrorBanner message={error} />}
       {!loading && !error && movies.length === 0 && (
         <EmptyState
@@ -52,12 +59,17 @@ export default function MusicVideos() {
           }
         />
       )}
-      {!error && movies.length > 0 && (
-        <PosterGrid>
-          {movies.map((item) => (
-            <MediaCard key={item.id} item={item} type="movie" />
-          ))}
-        </PosterGrid>
+      {!loading && !error && movies.length > 0 && (
+        <section className="space-y-4" aria-labelledby={libraryHeadingId}>
+          <h2 id={libraryHeadingId} className="sr-only">
+            Music video library
+          </h2>
+          <PosterGrid>
+            {movies.map((item) => (
+              <MediaCard key={item.id} item={item} type="movie" />
+            ))}
+          </PosterGrid>
+        </section>
       )}
     </div>
   )

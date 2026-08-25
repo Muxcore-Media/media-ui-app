@@ -51,3 +51,35 @@ describe('MusicArtist page', () => {
     expect(getTrackLyrics).toHaveBeenCalledWith('tr1')
   })
 })
+
+describe('MusicArtist accessibility', () => {
+  beforeEach(() => {
+    getMusicArtist.mockReset()
+    getTrackLyrics.mockReset()
+    getMusicArtist.mockResolvedValue({
+      artist: { id: 'a1', name: 'Daft Punk', path: '/music/daft' },
+      albums: [
+        {
+          id: 'al1',
+          title: 'Discovery',
+          year: 2001,
+          tracks: [{ id: 'tr1', title: 'One More Time', duration_sec: 320, stream_url: '/stream/music/tr1' }],
+        },
+      ],
+    })
+  })
+
+  it('has a page h1 and labelled album tracks', async () => {
+    render(
+      <MemoryRouter initialEntries={['/music/a1']}>
+        <Routes>
+          <Route path="/music/:id" element={<MusicArtist />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Daft Punk' })).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Discovery tracks' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Play One More Time' })).toBeInTheDocument()
+  })
+})

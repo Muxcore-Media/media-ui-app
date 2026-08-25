@@ -63,7 +63,7 @@ describe('Mixed page', () => {
       </MemoryRouter>,
     )
     expect(await screen.findByTestId('mixed-page')).toBeInTheDocument()
-    expect(screen.getByText('Alpha Movie')).toBeInTheDocument()
+    expect(await screen.findByText('Alpha Movie')).toBeInTheDocument()
     expect(screen.getByText('Beta Show')).toBeInTheDocument()
     fireEvent.change(screen.getByPlaceholderText('Filter…'), { target: { value: 'beta' } })
     expect(screen.queryByText('Alpha Movie')).not.toBeInTheDocument()

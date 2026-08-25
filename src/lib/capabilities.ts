@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, useContext } from 'react';
 
 /** Library sections backed by module HTTP/gRPC (see GET /api/capabilities). */
 export type LibraryKey =
@@ -9,7 +9,7 @@ export type LibraryKey =
   | 'comics'
   | 'audiobooks'
   | 'homevideos'
-  | 'musicvideos'
+  | 'musicvideos';
 
 /** Cross-library product features (search, livetv, userdata, etc.). */
 export type FeatureKey =
@@ -25,12 +25,12 @@ export type FeatureKey =
   | 'queue'
   | 'favorites'
   | 'debrid'
-  | 'watchlist'
+  | 'watchlist';
 
 export type Capabilities = {
-  libraries: Record<LibraryKey, boolean>
-  features: Record<FeatureKey, boolean>
-}
+  libraries: Record<LibraryKey, boolean>;
+  features: Record<FeatureKey, boolean>;
+};
 
 export const ALL_CAPABILITIES: Capabilities = {
   libraries: {
@@ -58,7 +58,7 @@ export const ALL_CAPABILITIES: Capabilities = {
     debrid: false,
     watchlist: true,
   },
-}
+};
 
 /** Default MVP stack: movies + TV only (optional library-plus modules off). */
 export const DEFAULT_CAPABILITIES: Capabilities = {
@@ -87,30 +87,30 @@ export const DEFAULT_CAPABILITIES: Capabilities = {
     debrid: false,
     watchlist: false,
   },
-}
+};
 
 export type CapabilitiesContextValue = {
-  caps: Capabilities
-  loading: boolean
-  error: string | null
-  retry: () => void
-}
+  caps: Capabilities;
+  loading: boolean;
+  error: string | null;
+  retry: () => void;
+};
 
 export const CapabilitiesContext = createContext<CapabilitiesContextValue>({
   caps: DEFAULT_CAPABILITIES,
   loading: true,
   error: null,
   retry: () => {},
-})
+});
 
 export function useCapabilities() {
-  return useContext(CapabilitiesContext)
+  return useContext(CapabilitiesContext);
 }
 
 export function libraryEnabled(caps: Capabilities, key: LibraryKey): boolean {
-  return caps.libraries[key] === true
+  return caps.libraries[key] === true;
 }
 
 export function featureEnabled(caps: Capabilities, key: FeatureKey): boolean {
-  return caps.features[key] === true
+  return caps.features[key] === true;
 }

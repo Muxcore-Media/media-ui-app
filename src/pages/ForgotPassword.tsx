@@ -1,44 +1,45 @@
 /** Contact-admin password reset — auth-local has no self-service email flow. */
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react';
 
 export default function ForgotPassword() {
-  const [username, setUsername] = useState('')
-  const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState<string | null>(null)
+  const [username, setUsername] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState<string | null>(null);
 
   async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    setBusy(true)
-    setError(null)
-    setDone(null)
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setDone(null);
     try {
       const res = await fetch('/api/password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ username: username.trim(), note: note.trim() }),
-      })
-      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!res.ok) {
-        throw new Error(data.error || `Request failed (${res.status})`)
+        throw new Error(data.error || `Request failed (${res.status})`);
       }
       setDone(
-        data.message ||
-          'Request submitted. Your administrator will reset your password soon.',
-      )
-      setUsername('')
-      setNote('')
+        data.message || 'Request submitted. Your administrator will reset your password soon.',
+      );
+      setUsername('');
+      setNote('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed')
+      setError(err instanceof Error ? err.message : 'Request failed');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   return (
     <div className="mx-auto max-w-md space-y-4" data-testid="forgot-password-page">
-      <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Forgot password</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+        Forgot password
+      </h1>
       <p className="text-sm text-[var(--text-secondary)]">
         Enter your username and we&apos;ll notify your administrator to reset your password.
       </p>
@@ -108,5 +109,5 @@ export default function ForgotPassword() {
         </a>
       </div>
     </div>
-  )
+  );
 }

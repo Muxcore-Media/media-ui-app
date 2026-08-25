@@ -1,6 +1,6 @@
 type Props = {
-  label: string
-}
+  label: string;
+};
 
 /** Screen-reader-only loading announcement (WCAG 4.1.3 status messages). */
 export function LoadingStatus({ label }: Props) {
@@ -8,5 +8,5 @@ export function LoadingStatus({ label }: Props) {
     <p role="status" aria-live="polite" aria-label={label} className="sr-only">
       {label}
     </p>
-  )
+  );
 }

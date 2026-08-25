@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, useId, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Clock3, Download, Search, ShieldAlert, TriangleAlert } from 'lucide-react'
-import { api } from '../api/client'
+import { useEffect, useMemo, useState, useId, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { Clock3, Download, Search, ShieldAlert, TriangleAlert } from 'lucide-react';
+import { api } from '../api/client';
 import {
   detailHrefForRequest,
   groupInProgressByPhase,
@@ -13,88 +13,85 @@ import {
   requestStatusTone,
   requestPhase,
   type InProgressEntry,
-} from '../lib/acquisition'
-import { ShelfSkeleton } from '../components/ui/Skeleton'
-import { Badge } from '../components/ui/Badge'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { EmptyState } from '../components/ui/EmptyState'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
+} from '../lib/acquisition';
+import { ShelfSkeleton } from '../components/ui/Skeleton';
+import { Badge } from '../components/ui/Badge';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
 
 function entryTitle(entry: InProgressEntry): string {
-  return entry.source === 'request' ? entry.request.title : entry.item.title
+  return entry.source === 'request' ? entry.request.title : entry.item.title;
 }
 
 function entryYear(entry: InProgressEntry): number | undefined {
-  return entry.source === 'request' ? entry.request.year : entry.item.year
+  return entry.source === 'request' ? entry.request.year : entry.item.year;
 }
 
 function entryPoster(entry: InProgressEntry): string {
-  if (entry.source === 'request') return posterUrlForRequest(entry.request.poster)
-  return entry.item.poster_url || ''
+  if (entry.source === 'request') return posterUrlForRequest(entry.request.poster);
+  return entry.item.poster_url || '';
 }
 
 function entryStatus(entry: InProgressEntry): string {
-  if (entry.source === 'request') return entry.request.status
-  return 'added'
+  if (entry.source === 'request') return entry.request.status;
+  return 'added';
 }
 
 function entryHref(entry: InProgressEntry): string | null {
   if (entry.source === 'request') {
-    return detailHrefForRequest(entry.request)
+    return detailHrefForRequest(entry.request);
   }
-  return entry.kind === 'tv' ? `/tv/${entry.item.id}` : `/movies/${entry.item.id}`
+  return entry.kind === 'tv' ? `/tv/${entry.item.id}` : `/movies/${entry.item.id}`;
 }
 
 function entryKey(entry: InProgressEntry): string {
-  if (entry.source === 'request') return `req-${entry.request.id}`
-  return `lib-${entry.kind}-${entry.item.id}`
+  if (entry.source === 'request') return `req-${entry.request.id}`;
+  return `lib-${entry.kind}-${entry.item.id}`;
 }
 
 function kindLabelForEntry(entry: InProgressEntry): string {
   if (entry.source === 'request') {
     switch (entry.request.itemType) {
       case 'tv':
-        return 'TV Show'
+        return 'TV Show';
       case 'music':
-        return 'Music'
+        return 'Music';
       default:
-        return 'Movie'
+        return 'Movie';
     }
   }
-  return entry.kind === 'tv' ? 'TV Show' : 'Movie'
+  return entry.kind === 'tv' ? 'TV Show' : 'Movie';
 }
 
 function attentionHint(status: string): string | null {
   switch (status.trim().toLowerCase()) {
     case 'import_failed':
-      return 'Download finished but could not be added to your library yet.'
+      return 'Download finished but could not be added to your library yet.';
     case 'failed':
-      return 'The grab did not complete successfully.'
+      return 'The grab did not complete successfully.';
     case 'stalled':
-      return 'Download is stuck and may need attention.'
+      return 'Download is stuck and may need attention.';
     case 'denied':
-      return 'This request was not approved.'
+      return 'This request was not approved.';
     default:
-      return null
+      return null;
   }
 }
 
 function InProgressCard({ entry }: { entry: InProgressEntry }) {
-  const href = entryHref(entry)
-  const status = entryStatus(entry)
-  const poster = entryPoster(entry)
-  const kindLabel = kindLabelForEntry(entry)
-  const apiDetail = entry.source === 'request' ? requestDisplayDetail(entry.request) : null
-  const hint =
-    entry.source === 'request' ? apiDetail ?? attentionHint(status) : null
+  const href = entryHref(entry);
+  const status = entryStatus(entry);
+  const poster = entryPoster(entry);
+  const kindLabel = kindLabelForEntry(entry);
+  const apiDetail = entry.source === 'request' ? requestDisplayDetail(entry.request) : null;
+  const hint = entry.source === 'request' ? (apiDetail ?? attentionHint(status)) : null;
   const badgeLabel =
-    entry.source === 'request'
-      ? requestDisplayLabel(entry.request)
-      : requestStatusLabel(status)
+    entry.source === 'request' ? requestDisplayLabel(entry.request) : requestStatusLabel(status);
   const cardBorder =
     entry.source === 'request' && requestPhase(status) === 'attention'
       ? 'border-[var(--danger-color)]/35'
-      : 'border-[var(--border-subtle)]'
+      : 'border-[var(--border-subtle)]';
 
   const body = (
     <>
@@ -111,14 +108,16 @@ function InProgressCard({ entry }: { entry: InProgressEntry }) {
         {hint ? <p className="text-xs leading-snug text-[var(--text-secondary)]">{hint}</p> : null}
       </div>
     </>
-  )
+  );
 
   if (!href) {
     return (
-      <li className={`flex min-w-0 gap-3 rounded-[var(--radius-md)] border ${cardBorder} bg-[var(--bg-elevated)] p-3`}>
+      <li
+        className={`flex min-w-0 gap-3 rounded-[var(--radius-md)] border ${cardBorder} bg-[var(--bg-elevated)] p-3`}
+      >
         {body}
       </li>
-    )
+    );
   }
 
   return (
@@ -130,7 +129,7 @@ function InProgressCard({ entry }: { entry: InProgressEntry }) {
         {body}
       </Link>
     </li>
-  )
+  );
 }
 
 function PhaseSection({
@@ -139,13 +138,13 @@ function PhaseSection({
   entries,
   testId,
 }: {
-  title: string
-  icon: ReactNode
-  entries: InProgressEntry[]
-  testId: string
+  title: string;
+  icon: ReactNode;
+  entries: InProgressEntry[];
+  testId: string;
 }) {
-  const headingId = useId()
-  if (entries.length === 0) return null
+  const headingId = useId();
+  if (entries.length === 0) return null;
   return (
     <section className="space-y-3" data-testid={testId} aria-labelledby={headingId}>
       <div className="flex items-center gap-2">
@@ -160,46 +159,50 @@ function PhaseSection({
         ))}
       </ul>
     </section>
-  )
+  );
 }
 
 /** Titles being requested, searched, or downloaded — kept out of main library feeds. */
 export default function InProgress() {
-  const [entries, setEntries] = useState<InProgressEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [entries, setEntries] = useState<InProgressEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
         const [requests, movies, shows] = await Promise.all([
           api.listRequests(),
           api.listMovies(1, 200),
           api.listTVShows(1, 200),
-        ])
-        if (cancelled) return
-        setEntries(mergeInProgressEntries(requests, movies.items, shows.items))
-        setError(null)
+        ]);
+        if (cancelled) return;
+        setEntries(mergeInProgressEntries(requests, movies.items, shows.items));
+        setError(null);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load in-progress titles')
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : 'Failed to load in-progress titles');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
-  const grouped = useMemo(() => groupInProgressByPhase(entries), [entries])
+  const grouped = useMemo(() => groupInProgressByPhase(entries), [entries]);
 
   return (
     <div className="min-w-0 space-y-8 overflow-x-hidden" data-testid="in-progress-page">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">In progress</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          In progress
+        </h1>
         <p className="text-sm text-[var(--text-secondary)]">
-          Titles you&apos;ve requested that aren&apos;t ready to watch yet. Your main library only shows what you can play now.
+          Titles you&apos;ve requested that aren&apos;t ready to watch yet. Your main library only
+          shows what you can play now.
         </p>
       </header>
 
@@ -217,7 +220,10 @@ export default function InProgress() {
           title="Nothing in progress"
           message="Search to add titles that are still downloading or awaiting approval."
           action={
-            <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+            <Link
+              to="/search"
+              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            >
               Search to add titles
             </Link>
           }
@@ -229,13 +235,20 @@ export default function InProgress() {
         <div className="space-y-10">
           <PhaseSection
             title="Needs attention"
-            icon={<TriangleAlert className="h-5 w-5 text-[var(--danger-color)]" aria-hidden="true" />}
+            icon={
+              <TriangleAlert className="h-5 w-5 text-[var(--danger-color)]" aria-hidden="true" />
+            }
             entries={grouped.attention}
             testId="in-progress-attention"
           />
           <PhaseSection
             title="Pending approval"
-            icon={<ShieldAlert className="h-5 w-5 text-[var(--warning-color,#f5a623)]" aria-hidden="true" />}
+            icon={
+              <ShieldAlert
+                className="h-5 w-5 text-[var(--warning-color,#f5a623)]"
+                aria-hidden="true"
+              />
+            }
             entries={grouped.pending}
             testId="in-progress-pending"
           />
@@ -247,7 +260,9 @@ export default function InProgress() {
           />
           <PhaseSection
             title="Searching"
-            icon={<Search className="h-5 w-5 text-[var(--warning-color,#f5a623)]" aria-hidden="true" />}
+            icon={
+              <Search className="h-5 w-5 text-[var(--warning-color,#f5a623)]" aria-hidden="true" />
+            }
             entries={grouped.searching}
             testId="in-progress-searching"
           />
@@ -260,5 +275,5 @@ export default function InProgress() {
         </div>
       )}
     </div>
-  )
+  );
 }

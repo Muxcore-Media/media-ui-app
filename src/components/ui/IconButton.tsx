@@ -1,19 +1,19 @@
-import { forwardRef } from 'react'
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
-import { cn } from '../../lib/cn'
+import { forwardRef } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { cn } from '../../lib/cn';
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: ReactNode
-  'aria-label': string
-  size?: 'sm' | 'md' | 'lg'
-  active?: boolean
+  icon: ReactNode;
+  'aria-label': string;
+  size?: 'sm' | 'md' | 'lg';
+  active?: boolean;
 }
 
 const sizeClass = {
   sm: 'h-8 w-8',
   md: 'h-10 w-10',
   lg: 'h-12 w-12',
-}
+};
 
 /** Circular icon-only control used in nav, cards, and the player OSD. */
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
@@ -34,5 +34,5 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
     >
       {icon}
     </button>
-  )
-})
+  );
+});

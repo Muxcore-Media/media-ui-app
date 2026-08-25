@@ -1,8 +1,10 @@
-import { cn } from '../../lib/cn'
+import { cn } from '../../lib/cn';
 
 /** Shimmering placeholder — never a blank flash while data/images load (AGENTS.md §4.3, §6). */
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('skeleton rounded-[var(--radius-md)]', className)} aria-hidden="true" />
+  return (
+    <div className={cn('skeleton rounded-[var(--radius-md)]', className)} aria-hidden="true" />
+  );
 }
 
 export function PosterCardSkeleton() {
@@ -12,7 +14,7 @@ export function PosterCardSkeleton() {
       <Skeleton className="h-3.5 w-4/5" />
       <Skeleton className="h-3 w-1/2" />
     </div>
-  )
+  );
 }
 
 export function ShelfSkeleton({ count = 6 }: { count?: number }) {
@@ -24,7 +26,7 @@ export function ShelfSkeleton({ count = 6 }: { count?: number }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 /** Featured hero placeholder for Home while catalog data loads. */
@@ -47,7 +49,7 @@ export function HeroBannerSkeleton() {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
 /** Full-screen player shell while the player route chunk loads. */
@@ -66,13 +68,18 @@ export function PlayerSkeleton() {
         <Skeleton className="h-2 flex-1 rounded-full" />
       </div>
     </div>
-  )
+  );
 }
 
 /** Live TV page shell while the route chunk loads (guide layout with player pane). */
 export function LiveTVSkeleton() {
   return (
-    <div className="space-y-4" data-testid="livetv-skeleton" aria-busy="true" aria-label="Loading Live TV">
+    <div
+      className="space-y-4"
+      data-testid="livetv-skeleton"
+      aria-busy="true"
+      aria-label="Loading Live TV"
+    >
       <div className="space-y-2">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-4 w-full max-w-md" />
@@ -97,13 +104,18 @@ export function LiveTVSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /** Settings page shell while the route chunk loads. */
 export function SettingsSkeleton() {
   return (
-    <div className="space-y-6" data-testid="settings-skeleton" aria-busy="true" aria-label="Loading settings">
+    <div
+      className="space-y-6"
+      data-testid="settings-skeleton"
+      aria-busy="true"
+      aria-label="Loading settings"
+    >
       <div className="space-y-2">
         <Skeleton className="h-8 w-36" />
         <Skeleton className="h-4 w-full max-w-lg" />
@@ -121,7 +133,7 @@ export function SettingsSkeleton() {
         <Skeleton className="h-10 w-28" />
       </div>
     </div>
-  )
+  );
 }
 
 /** Simple form page shell (Quick Connect, forgot password, invite join). */
@@ -145,13 +157,18 @@ export function FormPageSkeleton({ label = 'Loading page' }: { label?: string })
         <Skeleton className="h-10 w-full" />
       </div>
     </div>
-  )
+  );
 }
 
 /** Play queue list shell while the route chunk loads. */
 export function QueueListSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="space-y-6" data-testid="queue-skeleton" aria-busy="true" aria-label="Loading queue">
+    <div
+      className="space-y-6"
+      data-testid="queue-skeleton"
+      aria-busy="true"
+      aria-label="Loading queue"
+    >
       <div className="space-y-2">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-4 w-full max-w-lg" />
@@ -169,7 +186,7 @@ export function QueueListSkeleton({ count = 6 }: { count?: number }) {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 /** Detail page header placeholder (movie/show) — preserves layout without CLS. */
@@ -200,5 +217,5 @@ export function DetailHeroSkeleton() {
         </div>
       </div>
     </section>
-  )
+  );
 }

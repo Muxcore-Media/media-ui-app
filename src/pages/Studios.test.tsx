@@ -1,23 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import Studios from './Studios'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import Studios from './Studios';
 
-const listMovies = vi.fn()
+const listMovies = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
       listMovies: (...args: unknown[]) => listMovies(...args),
     },
-  }
-})
+  };
+});
 
 describe('Studios page', () => {
   beforeEach(() => {
-    listMovies.mockReset()
+    listMovies.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -49,17 +49,17 @@ describe('Studios page', () => {
         },
       ],
       total: 2,
-    })
-  })
+    });
+  });
 
   it('lists studio buckets from collections and genres', async () => {
     render(
       <MemoryRouter>
         <Studios />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('studios-page')).toBeInTheDocument()
-    expect(await screen.findByText('Marvel Cinematic Universe')).toBeInTheDocument()
-    expect(screen.getByText('Action')).toBeInTheDocument()
-  })
-})
+    );
+    expect(await screen.findByTestId('studios-page')).toBeInTheDocument();
+    expect(await screen.findByText('Marvel Cinematic Universe')).toBeInTheDocument();
+    expect(screen.getByText('Action')).toBeInTheDocument();
+  });
+});

@@ -1,18 +1,18 @@
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Info, Keyboard, ListVideo } from 'lucide-react'
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Info, Keyboard, ListVideo } from 'lucide-react';
 
 type Props = {
-  href: string
-  title: string
-  metaLine: string | null
-  showEpisodesButton: boolean
-  drawerOpen: boolean
-  onToggleDrawer: () => void
-  statsVisible: boolean
-  onToggleStats: () => void
-  onShowShortcuts: () => void
-  visible: boolean
-}
+  href: string;
+  title: string;
+  metaLine: string | null;
+  showEpisodesButton: boolean;
+  drawerOpen: boolean;
+  onToggleDrawer: () => void;
+  statsVisible: boolean;
+  onToggleStats: () => void;
+  onShowShortcuts: () => void;
+  visible: boolean;
+};
 
 export default function TopBar({
   href,
@@ -40,7 +40,9 @@ export default function TopBar({
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-semibold text-[var(--player-fg)] sm:text-lg">{title}</h1>
+          <h1 className="truncate text-base font-semibold text-[var(--player-fg)] sm:text-lg">
+            {title}
+          </h1>
           {metaLine ? <p className="text-xs text-[var(--player-fg-muted)]">{metaLine}</p> : null}
         </div>
         <button
@@ -74,5 +76,5 @@ export default function TopBar({
         ) : null}
       </div>
     </div>
-  )
+  );
 }

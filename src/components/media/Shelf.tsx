@@ -1,7 +1,7 @@
-import { useId, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { cn } from '../../lib/cn'
+import { useId, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '../../lib/cn';
 
 /**
  * Horizontally scrollable "shelf" row (AGENTS.md §4.2): title + optional "See all",
@@ -14,28 +14,28 @@ export function Shelf({
   children,
   testId,
 }: {
-  title: string
-  seeAllHref?: string
-  children: ReactNode
-  testId?: string
+  title: string;
+  seeAllHref?: string;
+  children: ReactNode;
+  testId?: string;
 }) {
-  const headingId = useId()
-  const trackRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
+  const headingId = useId();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   const updateArrows = () => {
-    const el = trackRef.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 4)
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
-  }
+    const el = trackRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  };
 
   const scrollBy = (dir: 1 | -1) => {
-    const el = trackRef.current
-    if (!el) return
-    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' })
-  }
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+  };
 
   return (
     <section className="group/shelf space-y-3" data-testid={testId} aria-labelledby={headingId}>
@@ -87,9 +87,13 @@ export function Shelf({
         )}
       </div>
     </section>
-  )
+  );
 }
 
 export function ShelfItem({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn('w-[38%] shrink-0 sm:w-[28%] md:w-[20%] lg:w-[15%] xl:w-[12%]', className)}>{children}</div>
+  return (
+    <div className={cn('w-[38%] shrink-0 sm:w-[28%] md:w-[20%] lg:w-[15%] xl:w-[12%]', className)}>
+      {children}
+    </div>
+  );
 }

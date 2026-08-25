@@ -1,67 +1,67 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { api } from '../api/client'
-import { DetailHero } from '../components/media/DetailHero'
-import { DetailHeroSkeleton } from '../components/ui/Skeleton'
-import { Badge } from '../components/ui/Badge'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { tmdbImageUrl, youtubeEmbedUrl } from '../lib/tmdbImages'
-import type { DiscoverDetail } from '../types'
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { api } from '../api/client';
+import { DetailHero } from '../components/media/DetailHero';
+import { DetailHeroSkeleton } from '../components/ui/Skeleton';
+import { Badge } from '../components/ui/Badge';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { tmdbImageUrl, youtubeEmbedUrl } from '../lib/tmdbImages';
+import type { DiscoverDetail } from '../types';
 
 export default function DiscoverDetail() {
-  const { type, id } = useParams()
-  const [params] = useSearchParams()
-  const mediaType = type === 'tv' ? 'tv' : type === 'movie' ? 'movie' : null
-  const tmdbId = Number(id)
+  const { type, id } = useParams();
+  const [params] = useSearchParams();
+  const mediaType = type === 'tv' ? 'tv' : type === 'movie' ? 'movie' : null;
+  const tmdbId = Number(id);
 
-  const [detail, setDetail] = useState<DiscoverDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [requested, setRequested] = useState<string | null>(null)
+  const [detail, setDetail] = useState<DiscoverDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [requested, setRequested] = useState<string | null>(null);
 
-  const backHref = params.get('return') || '/search'
+  const backHref = params.get('return') || '/search';
 
   useEffect(() => {
     if (!mediaType || !Number.isFinite(tmdbId) || tmdbId <= 0) {
-      setLoading(false)
-      setError('Invalid title')
-      return
+      setLoading(false);
+      setError('Invalid title');
+      return;
     }
-    let cancelled = false
-    setLoading(true)
-    setError(null)
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     void api
       .getDiscoverDetail(mediaType, tmdbId)
       .then((res) => {
-        if (!cancelled) setDetail(res)
+        if (!cancelled) setDetail(res);
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load details')
-          setDetail(null)
+          setError(err instanceof Error ? err.message : 'Failed to load details');
+          setDetail(null);
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      cancelled = true
-    }
-  }, [mediaType, tmdbId])
+      cancelled = true;
+    };
+  }, [mediaType, tmdbId]);
 
   const meta = useMemo(() => {
-    if (!detail) return null
-    const bits: string[] = []
-    if (detail.year) bits.push(String(detail.year))
-    if (detail.runtime) bits.push(`${detail.runtime} min`)
-    if (detail.status) bits.push(detail.status)
-    if (detail.voteAvg > 0) bits.push(`${detail.voteAvg.toFixed(1)} rating`)
-    return bits.join(' · ')
-  }, [detail])
+    if (!detail) return null;
+    const bits: string[] = [];
+    if (detail.year) bits.push(String(detail.year));
+    if (detail.runtime) bits.push(`${detail.runtime} min`);
+    if (detail.status) bits.push(detail.status);
+    if (detail.voteAvg > 0) bits.push(`${detail.voteAvg.toFixed(1)} rating`);
+    return bits.join(' · ');
+  }, [detail]);
 
   async function requestTitle() {
-    if (!detail) return
+    if (!detail) return;
     const res = await api.requestTitle({
       tmdbId: detail.id,
       title: detail.title,
@@ -69,8 +69,8 @@ export default function DiscoverDetail() {
       overview: detail.overview,
       poster: detail.poster,
       mediaType: detail.mediaType,
-    })
-    setRequested(res.status || 'requested')
+    });
+    setRequested(res.status || 'requested');
   }
 
   if (loading) {
@@ -79,28 +79,34 @@ export default function DiscoverDetail() {
         <LoadingStatus label="Loading title details" />
         <DetailHeroSkeleton />
       </>
-    )
+    );
   }
 
   if (error || !detail) {
     return (
       <div className="space-y-3" data-testid="discover-detail-page">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Title not found</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Title not found
+        </h1>
         <ErrorBanner message={error || 'Title not found'} />
         <Link to={backHref} className="text-sm text-[var(--accent-color)] hover:underline">
           Back to search
         </Link>
       </div>
-    )
+    );
   }
 
-  const posterUrl = tmdbImageUrl(detail.poster, 'w500')
-  const backdropUrl = tmdbImageUrl(detail.backdrop, 'w780') || tmdbImageUrl(detail.backdrop, 'original')
+  const posterUrl = tmdbImageUrl(detail.poster, 'w500');
+  const backdropUrl =
+    tmdbImageUrl(detail.backdrop, 'w780') || tmdbImageUrl(detail.backdrop, 'original');
 
   return (
     <div className="space-y-8" data-testid="discover-detail-page">
       <nav aria-label="Breadcrumb">
-        <Link to={backHref} className="inline-flex text-sm text-[var(--text-secondary)] hover:text-[var(--accent-color)]">
+        <Link
+          to={backHref}
+          className="inline-flex text-sm text-[var(--text-secondary)] hover:text-[var(--accent-color)]"
+        >
           ← Back to search
         </Link>
       </nav>
@@ -136,7 +142,10 @@ export default function DiscoverDetail() {
 
       {detail.genres.length > 0 && (
         <section className="space-y-3" aria-labelledby="discover-genres-heading">
-          <h2 id="discover-genres-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+          <h2
+            id="discover-genres-heading"
+            className="text-lg font-semibold text-[var(--text-primary)]"
+          >
             Genres
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -151,7 +160,10 @@ export default function DiscoverDetail() {
 
       {detail.trailer?.youtubeKey && (
         <section className="space-y-3" aria-labelledby="discover-trailer-heading">
-          <h2 id="discover-trailer-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+          <h2
+            id="discover-trailer-heading"
+            className="text-lg font-semibold text-[var(--text-primary)]"
+          >
             Trailer
           </h2>
           <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--player-bg)] shadow-xl">
@@ -172,8 +184,15 @@ export default function DiscoverDetail() {
       )}
 
       {detail.cast && detail.cast.length > 0 && (
-        <section className="space-y-3" data-testid="discover-cast" aria-labelledby="discover-cast-heading">
-          <h2 id="discover-cast-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+        <section
+          className="space-y-3"
+          data-testid="discover-cast"
+          aria-labelledby="discover-cast-heading"
+        >
+          <h2
+            id="discover-cast-heading"
+            className="text-lg font-semibold text-[var(--text-primary)]"
+          >
             Cast
           </h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -197,9 +216,13 @@ export default function DiscoverDetail() {
                   )}
                 </div>
                 <div className="space-y-0.5 p-2">
-                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{member.name}</p>
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+                    {member.name}
+                  </p>
                   {member.character ? (
-                    <p className="truncate text-xs text-[var(--text-tertiary)]">{member.character}</p>
+                    <p className="truncate text-xs text-[var(--text-tertiary)]">
+                      {member.character}
+                    </p>
                   ) : null}
                 </div>
               </li>
@@ -208,5 +231,5 @@ export default function DiscoverDetail() {
         </section>
       )}
     </div>
-  )
+  );
 }

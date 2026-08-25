@@ -1,13 +1,13 @@
-import { X } from 'lucide-react'
-import type { Episode, TVShow } from '../../types'
-import { buildEpisodePlayerHref } from '../../lib/playHref'
+import { X } from 'lucide-react';
+import type { Episode, TVShow } from '../../types';
+import { buildEpisodePlayerHref } from '../../lib/playHref';
 
 type Props = {
-  show: TVShow
-  currentEpisodeId?: string
-  onClose: () => void
-  onPick: (href: string) => void
-}
+  show: TVShow;
+  currentEpisodeId?: string;
+  onClose: () => void;
+  onPick: (href: string) => void;
+};
 
 export default function PlayerEpisodeDrawer({ show, currentEpisodeId, onClose, onPick }: Props) {
   return (
@@ -21,13 +21,22 @@ export default function PlayerEpisodeDrawer({ show, currentEpisodeId, onClose, o
       <aside className="relative flex h-full w-full max-w-md flex-col border-l border-[var(--border-on-media)] bg-[var(--bg-overlay)] shadow-2xl backdrop-blur-md">
         <div className="flex items-start gap-3 border-b border-[var(--border-on-media)] p-4">
           {show.poster_url ? (
-            <img src={show.poster_url} alt="" className="h-16 w-11 rounded object-cover" loading="lazy" />
+            <img
+              src={show.poster_url}
+              alt=""
+              className="h-16 w-11 rounded object-cover"
+              loading="lazy"
+            />
           ) : (
             <div className="h-16 w-11 rounded bg-[var(--surface-glass)]" />
           )}
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold text-[var(--player-fg)]">{show.title}</h2>
-            <p className="mt-1 line-clamp-2 text-xs text-[var(--player-fg-muted)]">{show.overview || 'Episodes'}</p>
+            <h2 className="truncate text-base font-semibold text-[var(--player-fg)]">
+              {show.title}
+            </h2>
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--player-fg-muted)]">
+              {show.overview || 'Episodes'}
+            </p>
           </div>
           <button
             type="button"
@@ -61,7 +70,7 @@ export default function PlayerEpisodeDrawer({ show, currentEpisodeId, onClose, o
         </div>
       </aside>
     </div>
-  )
+  );
 }
 
 function EpisodeRow({
@@ -70,14 +79,14 @@ function EpisodeRow({
   active,
   onPick,
 }: {
-  show: TVShow
-  ep: Episode
-  active: boolean
-  onPick: (href: string) => void
+  show: TVShow;
+  ep: Episode;
+  active: boolean;
+  onPick: (href: string) => void;
 }) {
-  const href = buildEpisodePlayerHref(show, ep)
-  const playable = Boolean(href)
-  const code = `S${String(ep.season_number).padStart(2, '0')}E${String(ep.episode_number).padStart(2, '0')}`
+  const href = buildEpisodePlayerHref(show, ep);
+  const playable = Boolean(href);
+  const code = `S${String(ep.season_number).padStart(2, '0')}E${String(ep.episode_number).padStart(2, '0')}`;
 
   return (
     <li>
@@ -86,15 +95,23 @@ function EpisodeRow({
         disabled={!playable}
         onClick={() => href && onPick(href)}
         className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition ${
-          active ? 'bg-[var(--accent-color)]/20 ring-1 ring-[var(--accent-color)]/50' : 'hover:bg-[var(--player-chip-hover)]'
+          active
+            ? 'bg-[var(--accent-color)]/20 ring-1 ring-[var(--accent-color)]/50'
+            : 'hover:bg-[var(--player-chip-hover)]'
         } ${!playable ? 'cursor-not-allowed opacity-45' : ''}`}
       >
-        <span className="w-12 shrink-0 text-xs font-medium tabular-nums text-[var(--player-fg-muted)]">{code}</span>
+        <span className="w-12 shrink-0 text-xs font-medium tabular-nums text-[var(--player-fg-muted)]">
+          {code}
+        </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm text-[var(--player-fg)]">{ep.title || `Episode ${ep.episode_number}`}</span>
-          {!playable ? <span className="text-[11px] text-[var(--player-fg-subtle)]">Not available yet</span> : null}
+          <span className="block truncate text-sm text-[var(--player-fg)]">
+            {ep.title || `Episode ${ep.episode_number}`}
+          </span>
+          {!playable ? (
+            <span className="text-[11px] text-[var(--player-fg-subtle)]">Not available yet</span>
+          ) : null}
         </span>
       </button>
     </li>
-  )
+  );
 }

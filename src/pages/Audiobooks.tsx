@@ -1,9 +1,9 @@
-import { useCallback } from 'react'
-import { api } from '../api/client'
-import LibrarySection from './LibrarySection'
+import { useCallback } from 'react';
+import { api } from '../api/client';
+import LibrarySection from './LibrarySection';
 
 export default function Audiobooks() {
-  const load = useCallback(() => api.listAudiobooks(), [])
+  const load = useCallback(() => api.listAudiobooks(), []);
   return (
     <LibrarySection
       title="Audiobooks"
@@ -13,5 +13,5 @@ export default function Audiobooks() {
       secondaryLabel={(row) => [row.narrator, row.asin].filter(Boolean).join(' · ')}
       emptyReadyMessage="No audiobooks in your library yet."
     />
-  )
+  );
 }

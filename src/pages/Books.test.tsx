@@ -1,60 +1,60 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import Books from './Books'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import Books from './Books';
 
-const listBooks = vi.fn()
+const listBooks = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
       listBooks: (...args: unknown[]) => listBooks(...args),
     },
-  }
-})
+  };
+});
 
 describe('Books library page', () => {
   beforeEach(() => {
-    listBooks.mockReset()
+    listBooks.mockReset();
     listBooks.mockResolvedValue({
       items: [{ id: 'a1', name: 'Tolkien', title: 'Tolkien', available: true }],
       available: true,
       total: 1,
-    })
-  })
+    });
+  });
 
   it('lists authors from BFF', async () => {
     render(
       <MemoryRouter>
         <Books />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('books-page')).toBeInTheDocument()
-    expect(await screen.findByText('Tolkien')).toBeInTheDocument()
-  })
-})
+    );
+    expect(await screen.findByTestId('books-page')).toBeInTheDocument();
+    expect(await screen.findByText('Tolkien')).toBeInTheDocument();
+  });
+});
 
 describe('Books accessibility', () => {
   beforeEach(() => {
-    listBooks.mockReset()
+    listBooks.mockReset();
     listBooks.mockResolvedValue({
       items: [{ id: 'a1', name: 'Tolkien', title: 'Tolkien', available: true }],
       available: true,
       total: 1,
-    })
-  })
+    });
+  });
 
   it('has a page h1 and labelled library list', async () => {
     render(
       <MemoryRouter>
         <Books />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Books' })).toBeInTheDocument()
-    expect(await screen.findByRole('list', { name: 'Books items' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Tolkien' })).toBeInTheDocument()
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'Books' })).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: 'Books items' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Tolkien' })).toBeInTheDocument();
+  });
+});

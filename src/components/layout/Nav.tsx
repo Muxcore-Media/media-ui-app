@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Baby,
   BookOpen,
@@ -16,9 +16,9 @@ import {
   Settings,
   Tv,
   X,
-} from 'lucide-react'
-import { cn } from '../../lib/cn'
-import { useCapabilities } from '../../lib/capabilities'
+} from 'lucide-react';
+import { cn } from '../../lib/cn';
+import { useCapabilities } from '../../lib/capabilities';
 import {
   mobileMoreMenuItems,
   showDesktopMoreMenu,
@@ -26,8 +26,8 @@ import {
   visibleOverflowNav,
   visiblePrimaryNav,
   type NavItem,
-} from '../../lib/nav-catalog'
-import HeaderSearch from './HeaderSearch'
+} from '../../lib/nav-catalog';
+import HeaderSearch from './HeaderSearch';
 
 const PRIMARY_ICONS: Record<string, React.ReactNode> = {
   '/': <LayoutGrid className="h-4 w-4" aria-hidden="true" />,
@@ -37,7 +37,7 @@ const PRIMARY_ICONS: Record<string, React.ReactNode> = {
   '/books': <BookOpen className="h-4 w-4" aria-hidden="true" />,
   '/comics': <Clapperboard className="h-4 w-4" aria-hidden="true" />,
   '/audiobooks': <Baby className="h-4 w-4" aria-hidden="true" />,
-}
+};
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -45,52 +45,52 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive
       ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]'
       : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
-  )
+  );
 
 function withIcons(items: NavItem[]): (NavItem & { icon?: React.ReactNode })[] {
-  return items.map((item) => ({ ...item, icon: PRIMARY_ICONS[item.to] }))
+  return items.map((item) => ({ ...item, icon: PRIMARY_ICONS[item.to] }));
 }
 
 export default function Nav() {
-  const { caps } = useCapabilities()
-  const primary = withIcons(visiblePrimaryNav(caps))
-  const mobileMenuItems = mobileMoreMenuItems(caps)
-  const showDesktopMore = showDesktopMoreMenu(caps)
-  const showMobileMore = showMobileMoreMenu(caps)
+  const { caps } = useCapabilities();
+  const primary = withIcons(visiblePrimaryNav(caps));
+  const mobileMenuItems = mobileMoreMenuItems(caps);
+  const showDesktopMore = showDesktopMoreMenu(caps);
+  const showMobileMore = showMobileMoreMenu(caps);
 
-  const [scrolled, setScrolled] = useState(false)
-  const [moreOpen, setMoreOpen] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const moreRef = useRef<HTMLDivElement>(null)
-  const location = useLocation()
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  const [scrolled, setScrolled] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   useEffect(() => {
-    setMoreOpen(false)
-    setMobileOpen(false)
-  }, [location.pathname])
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
-    if (!moreOpen) return
+    setMoreOpen(false);
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
     const onClick = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false)
-    }
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+    };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMoreOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    document.addEventListener('keydown', onKeyDown)
+      if (e.key === 'Escape') setMoreOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.removeEventListener('mousedown', onClick)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [moreOpen])
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [moreOpen]);
 
   return (
     <>
@@ -103,11 +103,18 @@ export default function Nav() {
         )}
       >
         <div className="mx-auto flex w-full min-w-0 max-w-[1920px] items-center gap-3 px-4 py-3 sm:px-6 lg:px-10">
-          <NavLink to="/" className="shrink-0 text-lg font-bold tracking-tight" aria-label="MuxCore Media home">
+          <NavLink
+            to="/"
+            className="shrink-0 text-lg font-bold tracking-tight"
+            aria-label="MuxCore Media home"
+          >
             MuxCore <span className="text-[var(--accent-color)]">Media</span>
           </NavLink>
 
-          <nav className="hidden min-w-0 flex-1 items-center gap-1 lg:flex" aria-label="Primary navigation">
+          <nav
+            className="hidden min-w-0 flex-1 items-center gap-1 lg:flex"
+            aria-label="Primary navigation"
+          >
             <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
               {primary.map((item) => (
                 <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
@@ -227,14 +234,20 @@ export default function Nav() {
                 className={({ isActive }) =>
                   cn(
                     'rounded-[var(--radius-sm)] px-3 py-2 text-sm',
-                    isActive ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]' : 'text-[var(--text-secondary)]',
+                    isActive
+                      ? 'bg-[var(--accent-color)] text-[var(--text-on-accent)]'
+                      : 'text-[var(--text-secondary)]',
                   )
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-            <a href="/logout" aria-label="Sign out" className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+            <a
+              href="/logout"
+              aria-label="Sign out"
+              className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+            >
               Logout
             </a>
           </div>
@@ -247,14 +260,14 @@ export default function Nav() {
         showMore={showMobileMore}
       />
     </>
-  )
+  );
 }
 
 const MOBILE_TABS: { to: string; label: string; icon: React.ReactNode; end?: boolean }[] = [
   { to: '/', label: 'Home', end: true, icon: <HomeIcon className="h-5 w-5" aria-hidden="true" /> },
   { to: '/search', label: 'Search', icon: <Search className="h-5 w-5" aria-hidden="true" /> },
   { to: '/movies', label: 'Library', icon: <Library className="h-5 w-5" aria-hidden="true" /> },
-]
+];
 
 /** Bottom tab bar for thumb reach on small screens (AGENTS.md §4.1): Home/Search/Library/More. */
 function MobileTabBar({
@@ -262,9 +275,9 @@ function MobileTabBar({
   onToggleMore,
   showMore,
 }: {
-  open: boolean
-  onToggleMore: () => void
-  showMore: boolean
+  open: boolean;
+  onToggleMore: () => void;
+  showMore: boolean;
 }) {
   return (
     <nav
@@ -298,10 +311,14 @@ function MobileTabBar({
             open ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]',
           )}
         >
-          {open ? <X className="h-5 w-5" aria-hidden="true" /> : <MoreHorizontal className="h-5 w-5" aria-hidden="true" />}
+          {open ? (
+            <X className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+          )}
           More
         </button>
       )}
     </nav>
-  )
+  );
 }

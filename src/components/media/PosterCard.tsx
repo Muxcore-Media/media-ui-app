@@ -1,28 +1,28 @@
-import { useCallback, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Film, Play, Star } from 'lucide-react'
-import { prefetchPosterDetailRoute, type PosterDetailType } from '../../lib/routePreload'
-import { tmdbImageUrl } from '../../lib/tmdbImages'
-import type { Movie, SearchResult, TVShow } from '../../types'
-import { Badge } from '../ui/Badge'
+import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Film, Play, Star } from 'lucide-react';
+import { prefetchPosterDetailRoute, type PosterDetailType } from '../../lib/routePreload';
+import { tmdbImageUrl } from '../../lib/tmdbImages';
+import type { Movie, SearchResult, TVShow } from '../../types';
+import { Badge } from '../ui/Badge';
 
-type Item = Movie | TVShow
+type Item = Movie | TVShow;
 
 function isExternalType(type: PosterDetailType): type is 'discover' | 'external' {
-  return type === 'discover' || type === 'external'
+  return type === 'discover' || type === 'external';
 }
 
 function cardLabel(item: Item, type: 'movie' | 'tv'): string {
-  const kind = type === 'movie' ? 'movie' : 'TV show'
-  const year = item.year ? `, ${item.year}` : ''
-  const available = item.has_file ? ', available to watch' : ''
-  return `View ${kind}: ${item.title}${year}${available}`
+  const kind = type === 'movie' ? 'movie' : 'TV show';
+  const year = item.year ? `, ${item.year}` : '';
+  const available = item.has_file ? ', available to watch' : '';
+  return `View ${kind}: ${item.title}${year}${available}`;
 }
 
 function externalCardLabel(item: SearchResult): string {
-  const kind = item.mediaType === 'tv' ? 'TV show' : 'movie'
-  const year = item.year ? `, ${item.year}` : ''
-  return `View ${kind}: ${item.title}${year}`
+  const kind = item.mediaType === 'tv' ? 'TV show' : 'movie';
+  const year = item.year ? `, ${item.year}` : '';
+  return `View ${kind}: ${item.title}${year}`;
 }
 
 /**
@@ -36,35 +36,33 @@ export default function PosterCard({
   returnTo,
   subline,
 }: {
-  item: Item | SearchResult
-  type: PosterDetailType
-  returnTo?: string
+  item: Item | SearchResult;
+  type: PosterDetailType;
+  returnTo?: string;
   /** Optional meta under the title (e.g. "Added 3 days ago" on home recently-added rows). */
-  subline?: string
+  subline?: string;
 }) {
-  const [imgError, setImgError] = useState(false)
-  const external = isExternalType(type)
-  const libraryItem = external ? null : (item as Item)
-  const externalItem = external ? (item as SearchResult) : null
+  const [imgError, setImgError] = useState(false);
+  const external = isExternalType(type);
+  const libraryItem = external ? null : (item as Item);
+  const externalItem = external ? (item as SearchResult) : null;
   const to = external
     ? `/discover/${externalItem!.mediaType}/${externalItem!.id}${
         returnTo ? `?return=${encodeURIComponent(returnTo)}` : ''
       }`
     : type === 'movie'
       ? `/movies/${libraryItem!.id}`
-      : `/tv/${libraryItem!.id}`
-  const posterUrl = external
-    ? tmdbImageUrl(externalItem!.poster, 'w342')
-    : libraryItem!.poster_url
-  const voteAverage = external ? externalItem!.voteAvg : libraryItem!.vote_average
-  const hasFile = external ? false : libraryItem!.has_file
-  const title = external ? externalItem!.title : libraryItem!.title
-  const year = external ? externalItem!.year : libraryItem!.year
-  const hasPoster = Boolean(posterUrl) && !imgError
-  const label = external ? externalCardLabel(externalItem!) : cardLabel(libraryItem!, type)
+      : `/tv/${libraryItem!.id}`;
+  const posterUrl = external ? tmdbImageUrl(externalItem!.poster, 'w342') : libraryItem!.poster_url;
+  const voteAverage = external ? externalItem!.voteAvg : libraryItem!.vote_average;
+  const hasFile = external ? false : libraryItem!.has_file;
+  const title = external ? externalItem!.title : libraryItem!.title;
+  const year = external ? externalItem!.year : libraryItem!.year;
+  const hasPoster = Boolean(posterUrl) && !imgError;
+  const label = external ? externalCardLabel(externalItem!) : cardLabel(libraryItem!, type);
   const prefetchDetail = useCallback(() => {
-    prefetchPosterDetailRoute(type)
-  }, [type])
+    prefetchPosterDetailRoute(type);
+  }, [type]);
 
   return (
     <Link
@@ -122,5 +120,5 @@ export default function PosterCard({
         </p>
       </div>
     </Link>
-  )
+  );
 }

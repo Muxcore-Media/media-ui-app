@@ -1,71 +1,71 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Film } from 'lucide-react'
-import { api } from '../api/client'
-import MediaCard from '../components/MediaCard'
-import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid'
-import { Shelf, ShelfItem } from '../components/media/Shelf'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { isWatchable } from '../lib/acquisition'
-import { getPreferences } from '../lib/userdata'
-import type { Movie } from '../types'
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Film } from 'lucide-react';
+import { api } from '../api/client';
+import MediaCard from '../components/MediaCard';
+import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
+import { Shelf, ShelfItem } from '../components/media/Shelf';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { isWatchable } from '../lib/acquisition';
+import { getPreferences } from '../lib/userdata';
+import type { Movie } from '../types';
 
-type SortKey = 'title' | 'year' | 'rating'
+type SortKey = 'title' | 'year' | 'rating';
 
 export default function Movies() {
-  const pageSize = getPreferences().display.libraryPageSize
-  const [items, setItems] = useState<Movie[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [genre, setGenre] = useState('')
-  const [sort, setSort] = useState<SortKey>('title')
+  const pageSize = getPreferences().display.libraryPageSize;
+  const [items, setItems] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [genre, setGenre] = useState('');
+  const [sort, setSort] = useState<SortKey>('title');
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const list = await api.listMovies(1, pageSize)
+        const list = await api.listMovies(1, pageSize);
         if (!cancelled) {
-          setItems(list.items)
-          setError(null)
+          setItems(list.items);
+          setError(null);
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load movies')
-          setItems([])
+          setError(err instanceof Error ? err.message : 'Failed to load movies');
+          setItems([]);
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [pageSize])
+      cancelled = true;
+    };
+  }, [pageSize]);
 
-  const watchable = useMemo(() => items.filter(isWatchable), [items])
-  const inProgressCount = items.length - watchable.length
+  const watchable = useMemo(() => items.filter(isWatchable), [items]);
+  const inProgressCount = items.length - watchable.length;
 
   const genres = useMemo(() => {
-    const set = new Set<string>()
-    for (const m of watchable) for (const g of m.genres) set.add(g)
-    return [...set].sort()
-  }, [watchable])
+    const set = new Set<string>();
+    for (const m of watchable) for (const g of m.genres) set.add(g);
+    return [...set].sort();
+  }, [watchable]);
 
   const filtered = useMemo(() => {
     let rows = watchable.filter((m) => {
-      if (genre && !m.genres.includes(genre)) return false
-      return true
-    })
+      if (genre && !m.genres.includes(genre)) return false;
+      return true;
+    });
     rows = [...rows].sort((a, b) => {
-      if (sort === 'year') return (b.year || 0) - (a.year || 0)
-      if (sort === 'rating') return (b.vote_average || 0) - (a.vote_average || 0)
-      return a.title.localeCompare(b.title)
-    })
-    return rows
-  }, [watchable, genre, sort])
+      if (sort === 'year') return (b.year || 0) - (a.year || 0);
+      if (sort === 'rating') return (b.vote_average || 0) - (a.vote_average || 0);
+      return a.title.localeCompare(b.title);
+    });
+    return rows;
+  }, [watchable, genre, sort]);
 
   const recommended = useMemo(
     () =>
@@ -74,7 +74,7 @@ export default function Movies() {
         .sort((a, b) => b.vote_average - a.vote_average)
         .slice(0, 16),
     [watchable],
-  )
+  );
 
   return (
     <div className="space-y-8" data-testid="movies-page">
@@ -141,7 +141,10 @@ export default function Movies() {
           </label>
         </div>
 
-        <h2 id="movies-library-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2
+          id="movies-library-heading"
+          className="text-lg font-semibold text-[var(--text-primary)]"
+        >
           Library ({filtered.length})
         </h2>
         {loading ? (
@@ -160,7 +163,10 @@ export default function Movies() {
             }
             action={
               !genre ? (
-                <Link to="/search" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+                <Link
+                  to="/search"
+                  className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                >
                   Search titles
                 </Link>
               ) : undefined
@@ -176,5 +182,5 @@ export default function Movies() {
         )}
       </section>
     </div>
-  )
+  );
 }

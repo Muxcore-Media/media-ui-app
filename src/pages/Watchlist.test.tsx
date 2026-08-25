@@ -1,12 +1,12 @@
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import Watchlist from './Watchlist'
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import Watchlist from './Watchlist';
 
-const watchlist = vi.fn()
+const watchlist = vi.fn();
 
 vi.mock('../api/client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/client')>()
+  const actual = await importOriginal<typeof import('../api/client')>();
   return {
     ...actual,
     api: {
@@ -14,12 +14,12 @@ vi.mock('../api/client', async (importOriginal) => {
       watchlist: (...args: unknown[]) => watchlist(...args),
       requestTitle: vi.fn(async () => ({ status: 'pending' })),
     },
-  }
-})
+  };
+});
 
 describe('Watchlist page', () => {
   beforeEach(() => {
-    watchlist.mockReset()
+    watchlist.mockReset();
     watchlist.mockResolvedValue([
       {
         id: 550,
@@ -30,60 +30,60 @@ describe('Watchlist page', () => {
         voteAvg: 0,
         mediaType: 'movie' as const,
       },
-    ])
-  })
+    ]);
+  });
 
   it('renders synced watchlist titles', async () => {
     render(
       <MemoryRouter>
         <Watchlist />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('watchlist-page')).toBeInTheDocument()
-    expect(await screen.findByText('Fight Club')).toBeInTheDocument()
-  })
+    );
+    expect(await screen.findByTestId('watchlist-page')).toBeInTheDocument();
+    expect(await screen.findByText('Fight Club')).toBeInTheDocument();
+  });
 
   it('shows empty state when watchlist has no items', async () => {
-    watchlist.mockResolvedValueOnce([])
+    watchlist.mockResolvedValueOnce([]);
 
     render(
       <MemoryRouter>
         <Watchlist />
       </MemoryRouter>,
-    )
+    );
 
-    expect(await screen.findByText('No watchlist items')).toBeInTheDocument()
-  })
+    expect(await screen.findByText('No watchlist items')).toBeInTheDocument();
+  });
 
   it('surfaces API errors', async () => {
-    watchlist.mockRejectedValueOnce(new Error('watchlist unavailable'))
+    watchlist.mockRejectedValueOnce(new Error('watchlist unavailable'));
 
     render(
       <MemoryRouter>
         <Watchlist />
       </MemoryRouter>,
-    )
+    );
 
-    expect(await screen.findByText('watchlist unavailable')).toBeInTheDocument()
-  })
-})
+    expect(await screen.findByText('watchlist unavailable')).toBeInTheDocument();
+  });
+});
 
 describe('Watchlist accessibility', () => {
   beforeEach(() => {
-    watchlist.mockReset()
-    watchlist.mockResolvedValue([])
-  })
+    watchlist.mockReset();
+    watchlist.mockResolvedValue([]);
+  });
 
   it('has a page h1, labeled section, and loading status', async () => {
     render(
       <MemoryRouter>
         <Watchlist />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Watchlist' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'Synced titles' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading watchlist' })).toBeInTheDocument()
-    await screen.findByTestId('watchlist-empty')
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'Watchlist' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Synced titles' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading watchlist' })).toBeInTheDocument();
+    await screen.findByTestId('watchlist-empty');
+  });
+});

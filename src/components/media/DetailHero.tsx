@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Film } from 'lucide-react'
+import type { ReactNode } from 'react';
+import { Film } from 'lucide-react';
 
 /**
  * Full-bleed backdrop header for movie/show detail pages (AGENTS.md §4.4): poster
@@ -14,19 +14,24 @@ export function DetailHero({
   overview,
   actions,
 }: {
-  backdropUrl?: string
-  posterUrl?: string
-  title: string
-  tagline?: string
-  meta?: ReactNode
-  overview?: string
-  actions?: ReactNode
+  backdropUrl?: string;
+  posterUrl?: string;
+  title: string;
+  tagline?: string;
+  meta?: ReactNode;
+  overview?: string;
+  actions?: ReactNode;
 }) {
   return (
     <section className="relative -mx-4 -mt-6 overflow-hidden rounded-b-[var(--radius-lg)] sm:-mx-6 lg:-mx-10">
       <div className="relative h-[38vh] min-h-[240px] w-full">
         {backdropUrl ? (
-          <img src={backdropUrl} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
+          <img
+            src={backdropUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover object-top"
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg-elevated-2)] to-[var(--bg-base)]" />
         )}
@@ -49,12 +54,18 @@ export function DetailHero({
           <h1 className="line-clamp-2 text-2xl font-extrabold tracking-tight text-[var(--text-primary)] drop-shadow sm:text-4xl">
             {title}
           </h1>
-          {meta && <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">{meta}</div>}
+          {meta && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
+              {meta}
+            </div>
+          )}
           {tagline && <p className="italic text-[var(--accent-color)]">{tagline}</p>}
-          {overview && <p className="max-w-3xl leading-relaxed text-[var(--text-secondary)]">{overview}</p>}
+          {overview && (
+            <p className="max-w-3xl leading-relaxed text-[var(--text-secondary)]">{overview}</p>
+          )}
           {actions && <div className="flex flex-wrap gap-3 pt-1">{actions}</div>}
         </div>
       </div>
     </section>
-  )
+  );
 }

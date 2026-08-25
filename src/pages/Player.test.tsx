@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import Player from './Player'
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import Player from './Player';
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -22,8 +22,8 @@ beforeEach(() => {
           }),
       }),
     ),
-  )
-})
+  );
+});
 
 function renderPlayer(search: string) {
   return render(
@@ -32,40 +32,42 @@ function renderPlayer(search: string) {
         <Route path="/player" element={<Player />} />
       </Routes>
     </MemoryRouter>,
-  )
+  );
 }
 
 describe('Player shell empty states', () => {
   it('shows empty stream shell when src query is missing', () => {
-    renderPlayer('')
-    expect(screen.getByText(/isn't available to play/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies')
-  })
+    renderPlayer('');
+    expect(screen.getByText(/isn't available to play/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies');
+  });
 
   it('mounts immersive video element when stream src is provided', async () => {
-    renderPlayer('?src=%2Fstream%2Fmovies%2Fm1&title=Fight%20Club&back=%2Fmovies%2Fm1')
-    expect(screen.getByRole('heading', { name: 'Fight Club' })).toBeInTheDocument()
-    expect(screen.queryByText(/isn't available to play/i)).not.toBeInTheDocument()
+    renderPlayer('?src=%2Fstream%2Fmovies%2Fm1&title=Fight%20Club&back=%2Fmovies%2Fm1');
+    expect(screen.getByRole('heading', { name: 'Fight Club' })).toBeInTheDocument();
+    expect(screen.queryByText(/isn't available to play/i)).not.toBeInTheDocument();
     await waitFor(() => {
-      const video = document.querySelector('video')
-      expect(video).not.toBeNull()
-      expect(video).toHaveAttribute('src', '/stream/movies/m1')
-    })
-    expect(screen.getByTestId('video-player')).toHaveClass('fixed')
-  })
-})
+      const video = document.querySelector('video');
+      expect(video).not.toBeNull();
+      expect(video).toHaveAttribute('src', '/stream/movies/m1');
+    });
+    expect(screen.getByTestId('video-player')).toHaveClass('fixed');
+  });
+});
 
 describe('Player accessibility', () => {
   it('exposes a main landmark and page h1 when playback is available', async () => {
-    renderPlayer('?src=%2Fstream%2Fmovies%2Fm1&title=Fight%20Club&back=%2Fmovies%2Fm1')
-    expect(await screen.findByRole('main', { name: 'Fight Club player' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: 'Fight Club' })).toBeInTheDocument()
-  })
+    renderPlayer('?src=%2Fstream%2Fmovies%2Fm1&title=Fight%20Club&back=%2Fmovies%2Fm1');
+    expect(await screen.findByRole('main', { name: 'Fight Club player' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Fight Club' })).toBeInTheDocument();
+  });
 
   it('exposes an error heading and alert when src is missing', () => {
-    renderPlayer('')
-    expect(screen.getByRole('heading', { level: 1, name: 'Playback unavailable' })).toBeInTheDocument()
-    expect(screen.getByRole('alert')).toHaveTextContent(/isn't available to play/i)
-    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies')
-  })
-})
+    renderPlayer('');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Playback unavailable' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(/isn't available to play/i);
+    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies');
+  });
+});

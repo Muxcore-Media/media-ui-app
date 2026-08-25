@@ -1,113 +1,114 @@
-import { type FormEvent, useEffect, useId, useState } from 'react'
-import { CalendarClock, Clapperboard, Radio } from 'lucide-react'
-import { api } from '../api/client'
-import { Badge } from '../components/ui/Badge'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { EmptyState } from '../components/ui/EmptyState'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { ShelfSkeleton } from '../components/ui/Skeleton'
+import { type FormEvent, useEffect, useId, useState } from 'react';
+import { CalendarClock, Clapperboard, Radio } from 'lucide-react';
+import { api } from '../api/client';
+import { Badge } from '../components/ui/Badge';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { ShelfSkeleton } from '../components/ui/Skeleton';
 
 type Channel = {
-  id: string
-  name: string
-  number: string
-  url?: string
-  category?: string
-  now_playing?: { title: string; start: string; end: string }
-}
+  id: string;
+  name: string;
+  number: string;
+  url?: string;
+  category?: string;
+  now_playing?: { title: string; start: string; end: string };
+};
 
 type Recording = {
-  id: string
-  channel_id: string
-  title: string
-  start: string
-  end: string
-  status: string
-  path?: string
-}
+  id: string;
+  channel_id: string;
+  title: string;
+  start: string;
+  end: string;
+  status: string;
+  path?: string;
+};
 
 type Timer = {
-  id: string
-  channel_id: string
-  title: string
-  start: string
-  end: string
-  series?: boolean
-}
+  id: string;
+  channel_id: string;
+  title: string;
+  start: string;
+  end: string;
+  series?: boolean;
+};
 
-type Tab = 'guide' | 'recordings' | 'timers'
+type Tab = 'guide' | 'recordings' | 'timers';
 
 const TAB_LABEL: Record<Tab, string> = {
   guide: 'Guide',
   recordings: 'Recordings',
   timers: 'Timers',
-}
+};
 
 const TAB_ICON: Record<Tab, typeof Radio> = {
   guide: Radio,
   recordings: Clapperboard,
   timers: CalendarClock,
-}
+};
 
 export default function LiveTV() {
-  const tabsId = useId()
-  const [tab, setTab] = useState<Tab>('guide')
-  const [channels, setChannels] = useState<Channel[]>([])
-  const [recordings, setRecordings] = useState<Recording[]>([])
-  const [timers, setTimers] = useState<Timer[]>([])
-  const [active, setActive] = useState<Channel | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [timerMsg, setTimerMsg] = useState<string | null>(null)
-  const [timerOk, setTimerOk] = useState(false)
+  const tabsId = useId();
+  const [tab, setTab] = useState<Tab>('guide');
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [timers, setTimers] = useState<Timer[]>([]);
+  const [active, setActive] = useState<Channel | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [timerMsg, setTimerMsg] = useState<string | null>(null);
+  const [timerOk, setTimerOk] = useState(false);
 
   async function refresh() {
-    const data = await api.listLiveTV()
-    setChannels(data.channels)
-    setRecordings(data.recordings || [])
-    setTimers(data.timers || [])
-    setActive((cur) => cur || data.channels[0] || null)
+    const data = await api.listLiveTV();
+    setChannels(data.channels);
+    setRecordings(data.recordings || []);
+    setTimers(data.timers || []);
+    setActive((cur) => cur || data.channels[0] || null);
   }
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        await refresh()
+        await refresh();
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load Live TV')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load Live TV');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   async function onSchedule(e: FormEvent) {
-    e.preventDefault()
-    const fd = new FormData(e.target as HTMLFormElement)
+    e.preventDefault();
+    const fd = new FormData(e.target as HTMLFormElement);
     try {
       await api.createLiveTVTimer({
         channel_id: String(fd.get('channel_id') || ''),
         title: String(fd.get('title') || ''),
         series: fd.get('series') === '1',
-      })
-      setTimerOk(true)
-      setTimerMsg('Timer scheduled.')
-      await refresh()
-      ;(e.target as HTMLFormElement).reset()
+      });
+      setTimerOk(true);
+      setTimerMsg('Timer scheduled.');
+      await refresh();
+      (e.target as HTMLFormElement).reset();
     } catch (err) {
-      setTimerOk(false)
-      setTimerMsg(err instanceof Error ? err.message : 'Failed to schedule')
+      setTimerOk(false);
+      setTimerMsg(err instanceof Error ? err.message : 'Failed to schedule');
     }
   }
 
-  const guidePanelId = `${tabsId}-guide`
-  const recordingsPanelId = `${tabsId}-recordings`
-  const timersPanelId = `${tabsId}-timers`
-  const panelId = tab === 'guide' ? guidePanelId : tab === 'recordings' ? recordingsPanelId : timersPanelId
+  const guidePanelId = `${tabsId}-guide`;
+  const recordingsPanelId = `${tabsId}-recordings`;
+  const timersPanelId = `${tabsId}-timers`;
+  const panelId =
+    tab === 'guide' ? guidePanelId : tab === 'recordings' ? recordingsPanelId : timersPanelId;
 
   return (
     <div className="space-y-4" data-testid="livetv-page">
@@ -120,9 +121,9 @@ export default function LiveTV() {
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Live TV sections">
         {(['guide', 'recordings', 'timers'] as Tab[]).map((t) => {
-          const Icon = TAB_ICON[t]
-          const tabId = `${tabsId}-${t}`
-          const selected = tab === t
+          const Icon = TAB_ICON[t];
+          const tabId = `${tabsId}-${t}`;
+          const selected = tab === t;
           return (
             <button
               key={t}
@@ -130,7 +131,13 @@ export default function LiveTV() {
               type="button"
               role="tab"
               aria-selected={selected}
-              aria-controls={t === 'guide' ? guidePanelId : t === 'recordings' ? recordingsPanelId : timersPanelId}
+              aria-controls={
+                t === 'guide'
+                  ? guidePanelId
+                  : t === 'recordings'
+                    ? recordingsPanelId
+                    : timersPanelId
+              }
               onClick={() => setTab(t)}
               className={`flex items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-1.5 text-sm font-medium transition ${
                 selected
@@ -141,7 +148,7 @@ export default function LiveTV() {
               <Icon className="h-4 w-4" aria-hidden="true" />
               {TAB_LABEL[t]}
             </button>
-          )
+          );
         })}
       </div>
 
@@ -154,11 +161,7 @@ export default function LiveTV() {
       {error ? <ErrorBanner message={error} /> : null}
 
       {!loading && !error && (
-        <div
-          id={panelId}
-          role="tabpanel"
-          aria-labelledby={`${tabsId}-${tab}`}
-        >
+        <div id={panelId} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`}>
           {tab === 'guide' && channels.length === 0 && (
             <EmptyState
               icon={Radio}
@@ -190,7 +193,9 @@ export default function LiveTV() {
                         {ch.name}
                       </div>
                       {ch.now_playing && (
-                        <div className="truncate text-xs text-[var(--text-tertiary)]">{ch.now_playing.title}</div>
+                        <div className="truncate text-xs text-[var(--text-tertiary)]">
+                          {ch.now_playing.title}
+                        </div>
                       )}
                     </button>
                   </li>
@@ -211,14 +216,18 @@ export default function LiveTV() {
                         />
                       ) : (
                         <div className="px-6 text-center text-sm text-[var(--text-secondary)]">
-                          <p className="mb-2 text-lg font-semibold text-[var(--text-primary)]">{active.name}</p>
+                          <p className="mb-2 text-lg font-semibold text-[var(--text-primary)]">
+                            {active.name}
+                          </p>
                           <p>This channel isn&apos;t available right now. Try another channel.</p>
                         </div>
                       )}
                     </div>
                     {active.now_playing && (
                       <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm">
-                        <div className="font-medium text-[var(--text-primary)]">{active.now_playing.title}</div>
+                        <div className="font-medium text-[var(--text-primary)]">
+                          {active.now_playing.title}
+                        </div>
                         <div className="mt-1 text-xs text-[var(--text-tertiary)]">
                           {active.now_playing.start} → {active.now_playing.end}
                         </div>
@@ -252,7 +261,9 @@ export default function LiveTV() {
                 <li key={r.id} className="px-4 py-3 text-sm">
                   <div className="flex items-center gap-2 font-medium text-[var(--text-primary)]">
                     {r.title}
-                    <Badge tone={r.status === 'completed' ? 'success' : 'neutral'}>{r.status}</Badge>
+                    <Badge tone={r.status === 'completed' ? 'success' : 'neutral'}>
+                      {r.status}
+                    </Badge>
                   </div>
                   <div className="text-xs text-[var(--text-tertiary)]">
                     {r.start} → {r.end}
@@ -325,10 +336,14 @@ export default function LiveTV() {
                   {timers.map((t) => (
                     <li key={t.id} className="px-4 py-3 text-sm">
                       <div className="font-medium text-[var(--text-primary)]">
-                        {t.title} {t.series ? <span className="text-xs text-[var(--text-tertiary)]">(series)</span> : null}
+                        {t.title}{' '}
+                        {t.series ? (
+                          <span className="text-xs text-[var(--text-tertiary)]">(series)</span>
+                        ) : null}
                       </div>
                       <div className="text-xs text-[var(--text-tertiary)]">
-                        {channels.find((c) => c.id === t.channel_id)?.name || 'Scheduled recording'} · {t.start} → {t.end}
+                        {channels.find((c) => c.id === t.channel_id)?.name || 'Scheduled recording'}{' '}
+                        · {t.start} → {t.end}
                       </div>
                     </li>
                   ))}
@@ -339,5 +354,5 @@ export default function LiveTV() {
         </div>
       )}
     </div>
-  )
+  );
 }

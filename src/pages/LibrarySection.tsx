@@ -1,22 +1,22 @@
-import { useEffect, useId, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Clock, Library } from 'lucide-react'
-import { Badge } from '../components/ui/Badge'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { ShelfSkeleton } from '../components/ui/Skeleton'
-import type { LibraryListResponse, LibraryRow } from '../types'
+import { useEffect, useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Clock, Library } from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { ShelfSkeleton } from '../components/ui/Skeleton';
+import type { LibraryListResponse, LibraryRow } from '../types';
 
 type Props = {
-  title: string
-  description: string
-  load: () => Promise<LibraryListResponse>
-  primaryLabel: (row: LibraryRow) => string
-  secondaryLabel?: (row: LibraryRow) => string
-  emptyReadyMessage: string
-  rowHref?: (row: LibraryRow) => string
-}
+  title: string;
+  description: string;
+  load: () => Promise<LibraryListResponse>;
+  primaryLabel: (row: LibraryRow) => string;
+  secondaryLabel?: (row: LibraryRow) => string;
+  emptyReadyMessage: string;
+  rowHref?: (row: LibraryRow) => string;
+};
 
 export default function LibrarySection({
   title,
@@ -27,40 +27,40 @@ export default function LibrarySection({
   emptyReadyMessage,
   rowHref,
 }: Props) {
-  const listHeadingId = useId()
-  const [items, setItems] = useState<LibraryRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [available, setAvailable] = useState(true)
-  const [comingSoon, setComingSoon] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const listHeadingId = useId();
+  const [items, setItems] = useState<LibraryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [available, setAvailable] = useState(true);
+  const [comingSoon, setComingSoon] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
+    let cancelled = false;
+    (async () => {
       try {
-        const list = await load()
-        if (cancelled) return
-        setItems(list.items)
-        setAvailable(list.available !== false)
-        setComingSoon(Boolean(list.coming_soon) || list.available === false)
-        setMessage(list.message || null)
-        setError(null)
+        const list = await load();
+        if (cancelled) return;
+        setItems(list.items);
+        setAvailable(list.available !== false);
+        setComingSoon(Boolean(list.coming_soon) || list.available === false);
+        setMessage(list.message || null);
+        setError(null);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load library')
-          setItems([])
-          setAvailable(false)
-          setComingSoon(true)
+          setError(err instanceof Error ? err.message : 'Failed to load library');
+          setItems([]);
+          setAvailable(false);
+          setComingSoon(true);
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [load])
+      cancelled = true;
+    };
+  }, [load]);
 
   return (
     <div className="space-y-6" data-testid={`${title.toLowerCase()}-page`}>
@@ -85,8 +85,7 @@ export default function LibrarySection({
           <Clock className="h-7 w-7 text-[var(--text-tertiary)]" aria-hidden="true" />
           <p className="font-semibold text-[var(--text-primary)]">Coming soon</p>
           <p className="max-w-sm text-sm text-[var(--text-secondary)]">
-            {message ||
-              `${title} isn't available yet. Check back soon.`}
+            {message || `${title} isn't available yet. Check back soon.`}
           </p>
         </div>
       ) : items.length === 0 ? (
@@ -101,29 +100,43 @@ export default function LibrarySection({
             data-testid="library-list"
             aria-label={`${title} items`}
           >
-          {items.map((row) => {
-            const href = rowHref?.(row)
-            return (
-              <li key={row.id} className="flex items-start justify-between gap-4 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]">
-                <div className="min-w-0">
-                  {href ? (
-                    <Link to={href} className="truncate font-medium text-[var(--accent-color)] hover:underline">
-                      {primaryLabel(row)}
-                    </Link>
-                  ) : (
-                    <p className="truncate font-medium text-[var(--text-primary)]">{primaryLabel(row)}</p>
-                  )}
-                  {secondaryLabel ? (
-                    <p className="truncate text-xs text-[var(--text-tertiary)]">{secondaryLabel(row)}</p>
+            {items.map((row) => {
+              const href = rowHref?.(row);
+              return (
+                <li
+                  key={row.id}
+                  className="flex items-start justify-between gap-4 px-4 py-3 transition hover:bg-[var(--bg-elevated-2)]"
+                >
+                  <div className="min-w-0">
+                    {href ? (
+                      <Link
+                        to={href}
+                        className="truncate font-medium text-[var(--accent-color)] hover:underline"
+                      >
+                        {primaryLabel(row)}
+                      </Link>
+                    ) : (
+                      <p className="truncate font-medium text-[var(--text-primary)]">
+                        {primaryLabel(row)}
+                      </p>
+                    )}
+                    {secondaryLabel ? (
+                      <p className="truncate text-xs text-[var(--text-tertiary)]">
+                        {secondaryLabel(row)}
+                      </p>
+                    ) : null}
+                  </div>
+                  {row.year ? (
+                    <Badge tone="neutral" className="shrink-0">
+                      {row.year}
+                    </Badge>
                   ) : null}
-                </div>
-                {row.year ? <Badge tone="neutral" className="shrink-0">{row.year}</Badge> : null}
-              </li>
-            )
-          })}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
     </div>
-  )
+  );
 }

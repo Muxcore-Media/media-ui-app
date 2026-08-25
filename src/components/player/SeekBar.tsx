@@ -1,25 +1,25 @@
-import { useRef, useState } from 'react'
-import { formatTime } from '../../lib/player/format'
-import type { PlaybackChapter, PlaybackSegment } from '../../api/client'
-import type { TrickplayFrame } from './hooks/useTrickplay'
+import { useRef, useState } from 'react';
+import { formatTime } from '../../lib/player/format';
+import type { PlaybackChapter, PlaybackSegment } from '../../api/client';
+import type { TrickplayFrame } from './hooks/useTrickplay';
 
 type Props = {
-  currentSec: number
-  durationSec: number
-  bufferedAheadSec: number
-  segments: PlaybackSegment[]
-  chapters?: PlaybackChapter[]
-  onSeek: (absoluteSeconds: number) => void
-  trickplayFrameAt?: (seconds: number) => TrickplayFrame | null
-  trickplayEnabled: boolean
-}
+  currentSec: number;
+  durationSec: number;
+  bufferedAheadSec: number;
+  segments: PlaybackSegment[];
+  chapters?: PlaybackChapter[];
+  onSeek: (absoluteSeconds: number) => void;
+  trickplayFrameAt?: (seconds: number) => TrickplayFrame | null;
+  trickplayEnabled: boolean;
+};
 
 const SEGMENT_COLOR: Record<string, string> = {
   intro: 'bg-sky-400/70',
   outro: 'bg-amber-400/70',
   credits: 'bg-amber-400/70',
   recap: 'bg-violet-400/70',
-}
+};
 
 export default function SeekBar({
   currentSec,
@@ -31,28 +31,28 @@ export default function SeekBar({
   trickplayFrameAt,
   trickplayEnabled,
 }: Props) {
-  const barRef = useRef<HTMLDivElement>(null)
-  const [hover, setHover] = useState<{ x: number; sec: number } | null>(null)
+  const barRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<{ x: number; sec: number } | null>(null);
 
-  const duration = durationSec || 0
-  const bufferedEndSec = Math.min(duration, currentSec + bufferedAheadSec)
-  const pct = (v: number) => (duration > 0 ? Math.min(100, Math.max(0, (v / duration) * 100)) : 0)
+  const duration = durationSec || 0;
+  const bufferedEndSec = Math.min(duration, currentSec + bufferedAheadSec);
+  const pct = (v: number) => (duration > 0 ? Math.min(100, Math.max(0, (v / duration) * 100)) : 0);
 
   function timeFromClientX(clientX: number): number {
-    const rect = barRef.current?.getBoundingClientRect()
-    if (!rect || rect.width === 0) return 0
-    const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
-    return fraction * duration
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return 0;
+    const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    return fraction * duration;
   }
 
   function handleHover(clientX: number) {
-    const rect = barRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const sec = timeFromClientX(clientX)
-    setHover({ x: Math.min(rect.width - 1, Math.max(0, clientX - rect.left)), sec })
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const sec = timeFromClientX(clientX);
+    setHover({ x: Math.min(rect.width - 1, Math.max(0, clientX - rect.left)), sec });
   }
 
-  const frame = hover && trickplayEnabled ? trickplayFrameAt?.(hover.sec) ?? null : null
+  const frame = hover && trickplayEnabled ? (trickplayFrameAt?.(hover.sec) ?? null) : null;
 
   return (
     <div className="relative w-full select-none pb-1">
@@ -78,8 +78,8 @@ export default function SeekBar({
             {(() => {
               const ch = chapters.find(
                 (c) => hover.sec >= c.start_seconds && hover.sec < c.end_seconds,
-              )
-              return ch ? ` · ${ch.title}` : ''
+              );
+              return ch ? ` · ${ch.title}` : '';
             })()}
           </span>
         </div>
@@ -139,5 +139,5 @@ export default function SeekBar({
         />
       </div>
     </div>
-  )
+  );
 }

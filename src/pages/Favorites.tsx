@@ -1,11 +1,11 @@
-import { Link } from 'react-router-dom'
-import { Heart } from 'lucide-react'
-import MediaCard from '../components/MediaCard'
-import { PosterGrid } from '../components/media/PosterGrid'
-import { EmptyState } from '../components/ui/EmptyState'
-import { listFavorites, type FavoriteEntry } from '../lib/userdata'
-import { useMemo, useState } from 'react'
-import type { Movie, TVShow } from '../types'
+import { Link } from 'react-router-dom';
+import { Heart } from 'lucide-react';
+import MediaCard from '../components/MediaCard';
+import { PosterGrid } from '../components/media/PosterGrid';
+import { EmptyState } from '../components/ui/EmptyState';
+import { listFavorites, type FavoriteEntry } from '../lib/userdata';
+import { useMemo, useState } from 'react';
+import type { Movie, TVShow } from '../types';
 
 function asCardItem(f: FavoriteEntry): Movie | TVShow {
   return {
@@ -20,21 +20,23 @@ function asCardItem(f: FavoriteEntry): Movie | TVShow {
     has_file: false,
     stream_url: '',
     created_at: '',
-  }
+  };
 }
 
 export default function Favorites() {
-  const [tick, setTick] = useState(0)
+  const [tick, setTick] = useState(0);
   const items = useMemo(() => {
-    void tick
-    return listFavorites()
-  }, [tick])
+    void tick;
+    return listFavorites();
+  }, [tick]);
 
   return (
     <div className="space-y-6" data-testid="favorites-page">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Favorites</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            Favorites
+          </h1>
           <p className="text-sm text-[var(--text-secondary)]">
             Movies and shows you&apos;ve saved to watch later.
           </p>
@@ -50,7 +52,10 @@ export default function Favorites() {
       </header>
 
       <section className="space-y-4" aria-labelledby="favorites-items-heading">
-        <h2 id="favorites-items-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2
+          id="favorites-items-heading"
+          className="text-lg font-semibold text-[var(--text-primary)]"
+        >
           Saved titles ({items.length})
         </h2>
         {items.length === 0 ? (
@@ -59,7 +64,10 @@ export default function Favorites() {
             title="No favorites yet"
             message="Use the star on a movie or TV detail page to save titles here."
             action={
-              <Link to="/movies" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+              <Link
+                to="/movies"
+                className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              >
                 Browse movies
               </Link>
             }
@@ -74,5 +82,5 @@ export default function Favorites() {
         )}
       </section>
     </div>
-  )
+  );
 }

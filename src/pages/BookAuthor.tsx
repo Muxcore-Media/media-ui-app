@@ -1,53 +1,53 @@
-import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
-import { api } from '../api/client'
-import Spinner from '../components/Spinner'
-import { Badge } from '../components/ui/Badge'
+import { Link, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { api } from '../api/client';
+import Spinner from '../components/Spinner';
+import { Badge } from '../components/ui/Badge';
 
-type BookFile = { id: string; title: string; path: string; stream_url?: string }
+type BookFile = { id: string; title: string; path: string; stream_url?: string };
 type Book = {
-  id: string
-  title: string
-  year?: number
-  isbn?: string
-  files?: BookFile[]
-}
+  id: string;
+  title: string;
+  year?: number;
+  isbn?: string;
+  files?: BookFile[];
+};
 type AuthorDetail = {
-  author: { id: string; name: string; path?: string }
-  books: Book[]
-}
+  author: { id: string; name: string; path?: string };
+  books: Book[];
+};
 
 export default function BookAuthor() {
-  const { id = '' } = useParams()
-  const [detail, setDetail] = useState<AuthorDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { id = '' } = useParams();
+  const [detail, setDetail] = useState<AuthorDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
       try {
-        const d = await api.getBookAuthor(id)
-        if (!cancelled) setDetail(d)
+        const d = await api.getBookAuthor(id);
+        if (!cancelled) setDetail(d);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load author')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load author');
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [id])
+      cancelled = true;
+    };
+  }, [id]);
 
   if (loading) {
     return (
       <div className="flex justify-center py-16">
         <Spinner />
       </div>
-    )
+    );
   }
   if (!detail) {
     return (
@@ -57,19 +57,24 @@ export default function BookAuthor() {
           Back to books
         </Link>
       </div>
-    )
+    );
   }
 
-  const { author, books } = detail
+  const { author, books } = detail;
 
   return (
     <div className="space-y-8" data-testid="book-author-page">
       <div>
-        <Link to="/books" className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline">
+        <Link
+          to="/books"
+          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+        >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Books
         </Link>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--text-primary)]">{author.name}</h1>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+          {author.name}
+        </h1>
         <p className="text-sm text-[var(--text-secondary)]">
           {books.length} book{books.length === 1 ? '' : 's'}
         </p>
@@ -84,8 +89,12 @@ export default function BookAuthor() {
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <div>
                   <span className="font-medium text-[var(--text-primary)]">{b.title}</span>
-                  {b.year ? <span className="text-sm text-[var(--text-tertiary)]"> · {b.year}</span> : null}
-                  {b.isbn ? <span className="text-xs text-[var(--text-tertiary)]"> · ISBN {b.isbn}</span> : null}
+                  {b.year ? (
+                    <span className="text-sm text-[var(--text-tertiary)]"> · {b.year}</span>
+                  ) : null}
+                  {b.isbn ? (
+                    <span className="text-xs text-[var(--text-tertiary)]"> · ISBN {b.isbn}</span>
+                  ) : null}
                 </div>
               </div>
               {(b.files || []).length === 0 ? (
@@ -117,5 +126,5 @@ export default function BookAuthor() {
         </ul>
       )}
     </div>
-  )
+  );
 }

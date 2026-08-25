@@ -1,9 +1,9 @@
-import { useCallback } from 'react'
-import { api } from '../api/client'
-import LibrarySection from './LibrarySection'
+import { useCallback } from 'react';
+import { api } from '../api/client';
+import LibrarySection from './LibrarySection';
 
 export default function Comics() {
-  const load = useCallback(() => api.listComics(), [])
+  const load = useCallback(() => api.listComics(), []);
   return (
     <LibrarySection
       title="Comics"
@@ -13,5 +13,5 @@ export default function Comics() {
       secondaryLabel={(row) => String(row.publisher ?? '')}
       emptyReadyMessage="No comics in your library yet."
     />
-  )
+  );
 }

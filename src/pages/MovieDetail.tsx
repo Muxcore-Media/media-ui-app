@@ -1,58 +1,58 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react'
-import { api } from '../api/client'
-import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis'
-import { DetailHero } from '../components/media/DetailHero'
-import { DetailHeroSkeleton } from '../components/ui/Skeleton'
-import { Badge } from '../components/ui/Badge'
-import { Button } from '../components/ui/Button'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata'
-import { buildMoviePlayerHref } from '../lib/playHref'
-import type { Movie } from '../types'
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react';
+import { api } from '../api/client';
+import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
+import { DetailHero } from '../components/media/DetailHero';
+import { DetailHeroSkeleton } from '../components/ui/Skeleton';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata';
+import { buildMoviePlayerHref } from '../lib/playHref';
+import type { Movie } from '../types';
 
 export default function MovieDetail() {
-  const { id = '' } = useParams()
-  const [movie, setMovie] = useState<Movie | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [jellyfinURL, setJellyfinURL] = useState<string | null>(null)
-  const [fav, setFav] = useState(false)
-  const [watched, setWatched] = useState(false)
-  const [queued, setQueued] = useState(false)
-  const probe = usePlaybackAnalysis(movie?.has_file ? movie.stream_url : undefined)
+  const { id = '' } = useParams();
+  const [movie, setMovie] = useState<Movie | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [jellyfinURL, setJellyfinURL] = useState<string | null>(null);
+  const [fav, setFav] = useState(false);
+  const [watched, setWatched] = useState(false);
+  const [queued, setQueued] = useState(false);
+  const probe = usePlaybackAnalysis(movie?.has_file ? movie.stream_url : undefined);
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
-      setJellyfinURL(null)
-      setQueued(false)
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      setJellyfinURL(null);
+      setQueued(false);
       try {
-        const item = await api.getMovie(id)
+        const item = await api.getMovie(id);
         if (!cancelled) {
-          setMovie(item)
-          setFav(isFavorite(item.id))
-          setWatched(Boolean(getProgress(item.id)?.watched))
+          setMovie(item);
+          setFav(isFavorite(item.id));
+          setWatched(Boolean(getProgress(item.id)?.watched));
         }
-        const jf = await api.jellyfinPlayURL(id)
-        if (!cancelled) setJellyfinURL(jf)
+        const jf = await api.jellyfinPlayURL(id);
+        if (!cancelled) setJellyfinURL(jf);
       } catch (err) {
         if (!cancelled) {
-          setMovie(null)
-          setError(err instanceof Error ? err.message : 'Failed to load movie')
+          setMovie(null);
+          setError(err instanceof Error ? err.message : 'Failed to load movie');
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [id])
+      cancelled = true;
+    };
+  }, [id]);
 
   if (loading) {
     return (
@@ -60,22 +60,24 @@ export default function MovieDetail() {
         <LoadingStatus label="Loading movie" />
         <DetailHeroSkeleton />
       </>
-    )
+    );
   }
 
   if (!movie) {
     return (
       <div className="space-y-3" data-testid="movie-detail-page">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Movie not found</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+          Movie not found
+        </h1>
         <ErrorBanner message={error || 'Movie not found.'} />
         <Link to="/movies" className="text-[var(--accent-color)] hover:underline">
           Back to movies
         </Link>
       </div>
-    )
+    );
   }
 
-  const playTo = movie.has_file && movie.stream_url ? buildMoviePlayerHref(movie) : null
+  const playTo = movie.has_file && movie.stream_url ? buildMoviePlayerHref(movie) : null;
 
   return (
     <div className="space-y-8" data-testid="movie-detail-page">
@@ -88,7 +90,9 @@ export default function MovieDetail() {
         meta={
           <>
             {movie.has_file && <Badge tone="accent">Available</Badge>}
-            {probe.analysis?.info_line ? <Badge tone="neutral">{probe.analysis.info_line}</Badge> : null}
+            {probe.analysis?.info_line ? (
+              <Badge tone="neutral">{probe.analysis.info_line}</Badge>
+            ) : null}
             {watched && <Badge tone="neutral">Watched</Badge>}
             {movie.vote_average > 0 && (
               <Badge tone="neutral">
@@ -97,7 +101,11 @@ export default function MovieDetail() {
               </Badge>
             )}
             <span>{movie.year || '—'}</span>
-            {movie.runtime ? <span>{Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m</span> : null}
+            {movie.runtime ? (
+              <span>
+                {Math.floor(movie.runtime / 60)}h {movie.runtime % 60}m
+              </span>
+            ) : null}
             {movie.genres.length > 0 && <span>{movie.genres.slice(0, 3).join(' · ')}</span>}
           </>
         }
@@ -113,7 +121,9 @@ export default function MovieDetail() {
                 Play
               </Link>
             ) : (
-              <p className="flex items-center text-sm text-[var(--text-tertiary)]">Not available to stream yet.</p>
+              <p className="flex items-center text-sm text-[var(--text-tertiary)]">
+                Not available to stream yet.
+              </p>
             )}
             <Button
               variant="secondary"
@@ -126,15 +136,17 @@ export default function MovieDetail() {
                   href: playTo || `/movies/${movie.id}`,
                   stream_url: movie.stream_url,
                   poster_url: movie.poster_url,
-                })
-                setQueued(true)
+                });
+                setQueued(true);
               }}
             >
               {queued ? 'Queued' : 'Add to queue'}
             </Button>
             <Button
               variant={fav ? 'primary' : 'secondary'}
-              icon={<Star className={fav ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden="true" />}
+              icon={
+                <Star className={fav ? 'h-4 w-4 fill-current' : 'h-4 w-4'} aria-hidden="true" />
+              }
               onClick={() => {
                 const on = toggleFavorite({
                   id: movie.id,
@@ -143,8 +155,8 @@ export default function MovieDetail() {
                   poster_url: movie.poster_url,
                   href: `/movies/${movie.id}`,
                   year: movie.year,
-                })
-                setFav(on)
+                });
+                setFav(on);
               }}
             >
               {fav ? 'Favorited' : 'Favorite'}
@@ -153,7 +165,7 @@ export default function MovieDetail() {
               variant="secondary"
               icon={<Check className="h-4 w-4" aria-hidden="true" />}
               onClick={() => {
-                const next = !watched
+                const next = !watched;
                 upsertProgress({
                   id: movie.id,
                   kind: 'movie',
@@ -164,8 +176,8 @@ export default function MovieDetail() {
                   positionSec: next ? 0 : getProgress(movie.id)?.positionSec || 0,
                   durationSec: (movie.runtime || 0) * 60,
                   watched: next,
-                })
-                setWatched(next)
+                });
+                setWatched(next);
               }}
             >
               {watched ? 'Mark unwatched' : 'Mark watched'}
@@ -192,12 +204,15 @@ export default function MovieDetail() {
           </h2>
           <p className="text-sm text-[var(--text-secondary)]">
             Part of{' '}
-            <Link to="/collections" className="font-medium text-[var(--accent-color)] hover:underline">
+            <Link
+              to="/collections"
+              className="font-medium text-[var(--accent-color)] hover:underline"
+            >
               {movie.collection_name}
             </Link>
           </p>
         </section>
       ) : null}
     </div>
-  )
+  );
 }

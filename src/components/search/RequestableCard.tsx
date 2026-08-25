@@ -1,42 +1,46 @@
-import { Link } from 'react-router-dom'
-import { Badge } from '../ui/Badge'
-import { tmdbImageUrl } from '../../lib/tmdbImages'
-import type { SearchResult } from '../../types'
+import { Link } from 'react-router-dom';
+import { Badge } from '../ui/Badge';
+import { tmdbImageUrl } from '../../lib/tmdbImages';
+import type { SearchResult } from '../../types';
 
 function mediaLabel(mediaType: SearchResult['mediaType']): string {
   switch (mediaType) {
     case 'tv':
-      return 'TV'
+      return 'TV';
     case 'music':
-      return 'Artist'
+      return 'Artist';
     case 'music_album':
-      return 'Album'
+      return 'Album';
     case 'music_track':
-      return 'Track'
+      return 'Track';
     default:
-      return 'Movie'
+      return 'Movie';
   }
 }
 
 function posterForItem(item: SearchResult): string {
-  if (item.mediaType === 'music' || item.mediaType === 'music_album' || item.mediaType === 'music_track') {
-    const p = (item.poster || '').trim()
-    if (p.startsWith('http') || p.startsWith('/')) return p
-    return ''
+  if (
+    item.mediaType === 'music' ||
+    item.mediaType === 'music_album' ||
+    item.mediaType === 'music_track'
+  ) {
+    const p = (item.poster || '').trim();
+    if (p.startsWith('http') || p.startsWith('/')) return p;
+    return '';
   }
-  return tmdbImageUrl(item.poster, 'w342')
+  return tmdbImageUrl(item.poster, 'w342');
 }
 
 function resultTestId(item: SearchResult): string {
   switch (item.mediaType) {
     case 'music':
-      return item.musicbrainzId || item.title
+      return item.musicbrainzId || item.title;
     case 'music_album':
-      return item.releaseGroupId || item.title
+      return item.releaseGroupId || item.title;
     case 'music_track':
-      return item.recordingId || item.title
+      return item.recordingId || item.title;
     default:
-      return String(item.id)
+      return String(item.id);
   }
 }
 
@@ -46,23 +50,30 @@ export default function RequestableCard({
   onRequest,
   returnTo,
 }: {
-  item: SearchResult
-  requested?: string
-  onRequest: (item: SearchResult) => void
-  returnTo?: string
+  item: SearchResult;
+  requested?: string;
+  onRequest: (item: SearchResult) => void;
+  returnTo?: string;
 }) {
-  const poster = posterForItem(item)
+  const poster = posterForItem(item);
   const isMusicKind =
-    item.mediaType === 'music' || item.mediaType === 'music_album' || item.mediaType === 'music_track'
+    item.mediaType === 'music' ||
+    item.mediaType === 'music_album' ||
+    item.mediaType === 'music_track';
   const discoverHref = isMusicKind
     ? null
-    : `/discover/${item.mediaType}/${item.id}${returnTo ? `?return=${encodeURIComponent(returnTo)}` : ''}`
+    : `/discover/${item.mediaType}/${item.id}${returnTo ? `?return=${encodeURIComponent(returnTo)}` : ''}`;
 
   const body = (
     <>
       <div className="h-32 w-24 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--bg-elevated-2)] sm:h-36 sm:w-28">
         {poster ? (
-          <img src={poster} alt="" className="motion-safe-scale h-full w-full object-cover" loading="lazy" />
+          <img
+            src={poster}
+            alt=""
+            className="motion-safe-scale h-full w-full object-cover"
+            loading="lazy"
+          />
         ) : (
           <div className="flex h-full items-center justify-center px-2 text-center text-xs text-[var(--text-tertiary)]">
             No poster
@@ -72,7 +83,9 @@ export default function RequestableCard({
       <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="neutral">{mediaLabel(item.mediaType)}</Badge>
-          {item.year ? <span className="text-xs text-[var(--text-tertiary)]">{item.year}</span> : null}
+          {item.year ? (
+            <span className="text-xs text-[var(--text-tertiary)]">{item.year}</span>
+          ) : null}
         </div>
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] group-hover:text-[var(--accent-color)]">
           {item.title}
@@ -81,14 +94,16 @@ export default function RequestableCard({
           <p className="text-xs text-[var(--text-tertiary)]">from {item.albumTitle}</p>
         ) : null}
         {item.overview ? (
-          <p className="line-clamp-3 text-xs leading-relaxed text-[var(--text-secondary)]">{item.overview}</p>
+          <p className="line-clamp-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+            {item.overview}
+          </p>
         ) : null}
         {item.voteAvg > 0 ? (
           <p className="text-xs text-[var(--text-tertiary)]">Rating {item.voteAvg.toFixed(1)}</p>
         ) : null}
       </div>
     </>
-  )
+  );
 
   return (
     <article
@@ -115,9 +130,11 @@ export default function RequestableCard({
           {requested ? 'Requested' : 'Request'}
         </button>
         {requested ? (
-          <span className="text-center text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{requested}</span>
+          <span className="text-center text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
+            {requested}
+          </span>
         ) : null}
       </div>
     </article>
-  )
+  );
 }

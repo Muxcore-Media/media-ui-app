@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import Collections from './Collections'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import Collections from './Collections';
 
-const listMovies = vi.fn()
-const listCollections = vi.fn()
+const listMovies = vi.fn();
+const listCollections = vi.fn();
 
 vi.mock('../api/client', async () => {
-  const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
+  const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
@@ -15,13 +15,13 @@ vi.mock('../api/client', async () => {
       listCollections: (...args: unknown[]) => listCollections(...args),
       getCollection: vi.fn(),
     },
-  }
-})
+  };
+});
 
 describe('Collections page', () => {
   beforeEach(() => {
-    listMovies.mockReset()
-    listCollections.mockReset()
+    listMovies.mockReset();
+    listCollections.mockReset();
     listMovies.mockResolvedValue({
       items: [
         {
@@ -52,43 +52,43 @@ describe('Collections page', () => {
         },
       ],
       total: 2,
-    })
+    });
     listCollections.mockResolvedValue({
       items: [{ id: '10', name: 'MCU', movie_count: 3 }],
-    })
-  })
+    });
+  });
 
   it('renders server collections and genre groups', async () => {
     render(
       <MemoryRouter>
         <Collections />
       </MemoryRouter>,
-    )
-    expect(await screen.findByTestId('collections-page')).toBeInTheDocument()
-    expect(await screen.findByText('MCU')).toBeInTheDocument()
-    expect(screen.getByText('Action')).toBeInTheDocument()
-  })
-})
+    );
+    expect(await screen.findByTestId('collections-page')).toBeInTheDocument();
+    expect(await screen.findByText('MCU')).toBeInTheDocument();
+    expect(screen.getByText('Action')).toBeInTheDocument();
+  });
+});
 
 describe('Collections accessibility', () => {
   beforeEach(() => {
-    listMovies.mockReset()
-    listCollections.mockReset()
-    listMovies.mockResolvedValue({ items: [], total: 0 })
-    listCollections.mockResolvedValue({ items: [] })
-  })
+    listMovies.mockReset();
+    listCollections.mockReset();
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listCollections.mockResolvedValue({ items: [] });
+  });
 
   it('has a page h1 and announces loading on initial render', () => {
-    listMovies.mockImplementation(() => new Promise(() => {}))
-    listCollections.mockImplementation(() => new Promise(() => {}))
+    listMovies.mockImplementation(() => new Promise(() => {}));
+    listCollections.mockImplementation(() => new Promise(() => {}));
 
     render(
       <MemoryRouter>
         <Collections />
       </MemoryRouter>,
-    )
+    );
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Collections' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading collections' })).toBeInTheDocument()
-  })
-})
+    expect(screen.getByRole('heading', { level: 1, name: 'Collections' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading collections' })).toBeInTheDocument();
+  });
+});

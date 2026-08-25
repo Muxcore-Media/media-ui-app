@@ -1,69 +1,69 @@
 /** Server-authoritative userdata: BFF/userdata-local is source of truth; localStorage is cache/offline. */
 
-import { buildEpisodePlayerHref } from './playHref'
+import { buildEpisodePlayerHref } from './playHref';
 
-export type MediaKind = 'movie' | 'tv' | 'episode' | 'music' | 'book' | 'other'
+export type MediaKind = 'movie' | 'tv' | 'episode' | 'music' | 'book' | 'other';
 
 export type ProgressEntry = {
-  id: string
-  kind: MediaKind
-  title: string
-  poster_url?: string
-  href: string
-  stream_url?: string
-  positionSec: number
-  durationSec: number
-  updatedAt: string
-  watched?: boolean
-}
+  id: string;
+  kind: MediaKind;
+  title: string;
+  poster_url?: string;
+  href: string;
+  stream_url?: string;
+  positionSec: number;
+  durationSec: number;
+  updatedAt: string;
+  watched?: boolean;
+};
 
 export type FavoriteEntry = {
-  id: string
-  kind: MediaKind
-  title: string
-  poster_url?: string
-  href: string
-  year?: number
-}
+  id: string;
+  kind: MediaKind;
+  title: string;
+  poster_url?: string;
+  href: string;
+  year?: number;
+};
 
 export type UserPreferences = {
   display: {
-    theme: 'dark' | 'light' | 'system'
-    libraryPageSize: number
-    showWatchedIndicators: boolean
-  }
+    theme: 'dark' | 'light' | 'system';
+    libraryPageSize: number;
+    showWatchedIndicators: boolean;
+  };
   home: {
-    showContinueWatching: boolean
-    showFavorites: boolean
-    showRecentRequests: boolean
-    showNextUp: boolean
-    showRecentlyAdded: boolean
-  }
+    showContinueWatching: boolean;
+    showFavorites: boolean;
+    showRecentRequests: boolean;
+    showNextUp: boolean;
+    showRecentlyAdded: boolean;
+  };
   playback: {
-    autoplayNext: boolean
-    rememberPosition: boolean
-    skipIntroSec: number
-  }
+    autoplayNext: boolean;
+    rememberPosition: boolean;
+    skipIntroSec: number;
+  };
   subtitles: {
-    enabled: boolean
-    language: string
-    textSize: 'sm' | 'md' | 'lg'
+    enabled: boolean;
+    language: string;
+    textSize: 'sm' | 'md' | 'lg';
     /** 0-100 background opacity behind subtitle text (custom renderer). */
-    backgroundOpacity: number
-    edgeStyle: 'none' | 'drop-shadow' | 'outline'
-    verticalPosition: 'bottom' | 'top'
-  }
+    backgroundOpacity: number;
+    edgeStyle: 'none' | 'drop-shadow' | 'outline';
+    verticalPosition: 'bottom' | 'top';
+  };
   controls: {
-    enableKeyboardShortcuts: boolean
-  }
+    enableKeyboardShortcuts: boolean;
+  };
   player: {
     /** Manual quality/version cap id from QUALITY_OPTIONS; 'auto' = original/source. */
-    preferredQuality: string
-    theaterMode: boolean
+    preferredQuality: string;
+    theaterMode: boolean;
     /** Aspect-ratio/zoom mode for the video element. */
-    aspectMode: 'contain' | 'cover' | 'fill'
-  }
-}
+    aspectMode: 'contain' | 'cover' | 'fill';
+  };
+};
 
 const KEYS = {
   progress: 'muxcore.userdata.progress.v1',
@@ -72,20 +72,20 @@ const KEYS = {
   playlists: 'muxcore.userdata.playlists.v1',
   queue: 'muxcore.userdata.queue.v1',
   meta: 'muxcore.userdata.meta.v1',
-} as const
+} as const;
 
-export type Playlist = { id: string; name: string; itemIds: string[] }
+export type Playlist = { id: string; name: string; itemIds: string[] };
 
 export type QueueItem = {
-  id: string
-  kind: MediaKind
-  title: string
-  href: string
-  stream_url?: string
-  poster_url?: string
-}
+  id: string;
+  kind: MediaKind;
+  title: string;
+  href: string;
+  stream_url?: string;
+  poster_url?: string;
+};
 
-type Meta = { serverAuthoritative: boolean; lastPullAt?: string }
+type Meta = { serverAuthoritative: boolean; lastPullAt?: string };
 
 const defaultPrefs = (): UserPreferences => ({
   display: {
@@ -121,154 +121,159 @@ const defaultPrefs = (): UserPreferences => ({
     theaterMode: false,
     aspectMode: 'contain',
   },
-})
+});
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return fallback
-    return JSON.parse(raw) as T
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
   } catch {
-    return fallback
+    return fallback;
   }
 }
 
 function writeJSON(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value))
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function getMeta(): Meta {
-  return readJSON<Meta>(KEYS.meta, { serverAuthoritative: false })
+  return readJSON<Meta>(KEYS.meta, { serverAuthoritative: false });
 }
 
 function setMeta(patch: Partial<Meta>): void {
-  writeJSON(KEYS.meta, { ...getMeta(), ...patch })
+  writeJSON(KEYS.meta, { ...getMeta(), ...patch });
 }
 
 /** True after a successful pull from BFF — home/next-up should prefer this cache. */
 export function isServerAuthoritative(): boolean {
-  return getMeta().serverAuthoritative
+  return getMeta().serverAuthoritative;
 }
 
 export function getUserdataSyncStatus(): { authoritative: boolean; lastPullAt?: string } {
-  const meta = getMeta()
-  return { authoritative: meta.serverAuthoritative, lastPullAt: meta.lastPullAt }
+  const meta = getMeta();
+  return { authoritative: meta.serverAuthoritative, lastPullAt: meta.lastPullAt };
 }
 
 export function listProgress(): ProgressEntry[] {
-  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {})
-  return Object.values(map).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
+  return Object.values(map).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export function getProgress(id: string): ProgressEntry | undefined {
-  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {})
-  return map[id]
+  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
+  return map[id];
 }
 
 export function upsertProgress(
   entry: Omit<ProgressEntry, 'updatedAt'> & { updatedAt?: string; watched?: boolean },
 ): ProgressEntry {
-  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {})
+  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
   const next: ProgressEntry = {
     ...entry,
     updatedAt: entry.updatedAt || new Date().toISOString(),
-  }
+  };
   if (entry.watched === undefined) {
-    const ratio = next.durationSec > 0 ? next.positionSec / next.durationSec : 0
+    const ratio = next.durationSec > 0 ? next.positionSec / next.durationSec : 0;
     if (ratio >= 0.92) {
-      next.watched = true
-      next.positionSec = 0
+      next.watched = true;
+      next.positionSec = 0;
     }
   } else {
-    next.watched = entry.watched
-    if (entry.watched) next.positionSec = 0
+    next.watched = entry.watched;
+    if (entry.watched) next.positionSec = 0;
   }
-  map[next.id] = next
-  writeJSON(KEYS.progress, map)
-  void pushUserdataToServer()
-  return next
+  map[next.id] = next;
+  writeJSON(KEYS.progress, map);
+  void pushUserdataToServer();
+  return next;
 }
 
 export function markWatched(id: string, watched: boolean): void {
-  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {})
-  const cur = map[id]
-  if (!cur) return
+  const map = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
+  const cur = map[id];
+  if (!cur) return;
   map[id] = {
     ...cur,
     watched,
     positionSec: watched ? 0 : cur.positionSec,
     updatedAt: new Date().toISOString(),
-  }
-  writeJSON(KEYS.progress, map)
-  void pushUserdataToServer()
+  };
+  writeJSON(KEYS.progress, map);
+  void pushUserdataToServer();
 }
 
 export function continueWatching(limit = 24): ProgressEntry[] {
   return listProgress()
-    .filter((p) => !p.watched && p.positionSec > 5 && (p.durationSec === 0 || p.positionSec / p.durationSec < 0.92))
-    .slice(0, limit)
+    .filter(
+      (p) =>
+        !p.watched &&
+        p.positionSec > 5 &&
+        (p.durationSec === 0 || p.positionSec / p.durationSec < 0.92),
+    )
+    .slice(0, limit);
 }
 
 /** Extract `/tv/:showId` from a progress href/back link. */
 export function showIdFromHref(href: string | undefined): string | null {
-  if (!href) return null
-  const m = href.match(/(?:^|\/)tv\/([^/?#]+)/)
-  return m?.[1] ? decodeURIComponent(m[1]) : null
+  if (!href) return null;
+  const m = href.match(/(?:^|\/)tv\/([^/?#]+)/);
+  return m?.[1] ? decodeURIComponent(m[1]) : null;
 }
 
 export type NextUpEntry = {
-  id: string
-  kind: 'movie' | 'episode'
-  title: string
-  poster_url?: string
-  href: string
-  stream_url?: string
-  subtitle?: string
-  showId?: string
-}
+  id: string;
+  kind: 'movie' | 'episode';
+  title: string;
+  poster_url?: string;
+  href: string;
+  stream_url?: string;
+  subtitle?: string;
+  showId?: string;
+};
 
 type EpisodeLike = {
-  id: string
-  season_number: number
-  episode_number: number
-  title?: string
-  has_file?: boolean
-  stream_url?: string
-}
+  id: string;
+  season_number: number;
+  episode_number: number;
+  title?: string;
+  has_file?: boolean;
+  stream_url?: string;
+};
 
 type ShowLike = {
-  id: string
-  title: string
-  poster_url?: string
-  seasons?: Array<{ season_number: number; episodes?: EpisodeLike[] }>
-}
+  id: string;
+  title: string;
+  poster_url?: string;
+  seasons?: Array<{ season_number: number; episodes?: EpisodeLike[] }>;
+};
 
 export function flattenEpisodes(show: ShowLike): EpisodeLike[] {
-  const out: EpisodeLike[] = []
+  const out: EpisodeLike[] = [];
   for (const season of show.seasons || []) {
     for (const ep of season.episodes || []) {
-      out.push(ep)
+      out.push(ep);
     }
   }
   return out.sort((a, b) =>
     a.season_number !== b.season_number
       ? a.season_number - b.season_number
       : a.episode_number - b.episode_number,
-  )
+  );
 }
 
 export function nextEpisodeAfter(show: ShowLike, episodeId: string): EpisodeLike | null {
-  const eps = flattenEpisodes(show)
-  const idx = eps.findIndex((e) => e.id === episodeId)
-  if (idx < 0) return null
+  const eps = flattenEpisodes(show);
+  const idx = eps.findIndex((e) => e.id === episodeId);
+  if (idx < 0) return null;
   for (let i = idx + 1; i < eps.length; i++) {
-    if (eps[i].has_file) return eps[i]
+    if (eps[i].has_file) return eps[i];
   }
-  return null
+  return null;
 }
 
 function episodePlayHref(show: ShowLike, ep: EpisodeLike): string {
-  if (!ep.has_file || !ep.stream_url) return `/tv/${show.id}`
+  if (!ep.has_file || !ep.stream_url) return `/tv/${show.id}`;
   return (
     buildEpisodePlayerHref(show, {
       id: ep.id,
@@ -278,7 +283,7 @@ function episodePlayHref(show: ShowLike, ep: EpisodeLike): string {
       has_file: ep.has_file,
       stream_url: ep.stream_url,
     }) || `/tv/${show.id}`
-  )
+  );
 }
 
 /**
@@ -290,46 +295,45 @@ export async function resolveNextUp(
   fetchShow: (showId: string) => Promise<ShowLike>,
   limit = 12,
 ): Promise<NextUpEntry[]> {
-  const progress = listProgress()
-  const continueIds = new Set(continueWatching(100).map((p) => p.id))
-  const out: NextUpEntry[] = []
-  const seen = new Set<string>()
-  const showCache = new Map<string, ShowLike | null>()
+  const progress = listProgress();
+  const continueIds = new Set(continueWatching(100).map((p) => p.id));
+  const out: NextUpEntry[] = [];
+  const seen = new Set<string>();
+  const showCache = new Map<string, ShowLike | null>();
 
   const loadShow = async (showId: string): Promise<ShowLike | null> => {
-    if (showCache.has(showId)) return showCache.get(showId) ?? null
+    if (showCache.has(showId)) return showCache.get(showId) ?? null;
     try {
-      const show = await fetchShow(showId)
-      showCache.set(showId, show)
-      return show
+      const show = await fetchShow(showId);
+      showCache.set(showId, show);
+      return show;
     } catch {
-      showCache.set(showId, null)
-      return null
+      showCache.set(showId, null);
+      return null;
     }
-  }
+  };
 
   for (const p of progress) {
-    if (out.length >= limit) break
-    if (p.kind !== 'episode' && p.kind !== 'tv') continue
-    const watched =
-      p.watched || (p.durationSec > 0 && p.positionSec / p.durationSec >= 0.92)
-    if (!watched) continue
-    const showId = showIdFromHref(p.href)
-    if (!showId) continue
-    const show = await loadShow(showId)
-    if (!show) continue
-    let next: EpisodeLike | null = null
+    if (out.length >= limit) break;
+    if (p.kind !== 'episode' && p.kind !== 'tv') continue;
+    const watched = p.watched || (p.durationSec > 0 && p.positionSec / p.durationSec >= 0.92);
+    if (!watched) continue;
+    const showId = showIdFromHref(p.href);
+    if (!showId) continue;
+    const show = await loadShow(showId);
+    if (!show) continue;
+    let next: EpisodeLike | null = null;
     if (p.kind === 'episode') {
-      next = nextEpisodeAfter(show, p.id)
+      next = nextEpisodeAfter(show, p.id);
     } else {
-      const eps = flattenEpisodes(show)
+      const eps = flattenEpisodes(show);
       next =
-        eps.find((e) => e.has_file && !progress.some((x) => x.id === e.id && x.watched)) || null
+        eps.find((e) => e.has_file && !progress.some((x) => x.id === e.id && x.watched)) || null;
     }
-    if (!next || seen.has(next.id)) continue
-    if (continueIds.has(next.id)) continue
-    seen.add(next.id)
-    const epTitle = `${show.title} S${String(next.season_number).padStart(2, '0')}E${String(next.episode_number).padStart(2, '0')}`
+    if (!next || seen.has(next.id)) continue;
+    if (continueIds.has(next.id)) continue;
+    seen.add(next.id);
+    const epTitle = `${show.title} S${String(next.season_number).padStart(2, '0')}E${String(next.episode_number).padStart(2, '0')}`;
     out.push({
       id: next.id,
       kind: 'episode',
@@ -339,52 +343,52 @@ export async function resolveNextUp(
       stream_url: next.stream_url,
       subtitle: 'Next up',
       showId: show.id,
-    })
+    });
   }
 
-  return out.slice(0, limit)
+  return out.slice(0, limit);
 }
 
 /** Recently finished titles (watched) — feed for next-up resolution. */
 export function recentlyWatched(limit = 24): ProgressEntry[] {
   return listProgress()
     .filter((p) => p.watched)
-    .slice(0, limit)
+    .slice(0, limit);
 }
 
 /** Extract `/tv/:showId` from a progress href when present. */
 export function tvShowIdFromHref(href: string): string | null {
-  const m = href.match(/\/tv\/([^/?#]+)/)
-  return m?.[1] || null
+  const m = href.match(/\/tv\/([^/?#]+)/);
+  return m?.[1] || null;
 }
 
 export function listFavorites(): FavoriteEntry[] {
-  const map = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {})
-  return Object.values(map).sort((a, b) => a.title.localeCompare(b.title))
+  const map = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
+  return Object.values(map).sort((a, b) => a.title.localeCompare(b.title));
 }
 
 export function isFavorite(id: string): boolean {
-  const map = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {})
-  return Boolean(map[id])
+  const map = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
+  return Boolean(map[id]);
 }
 
 export function toggleFavorite(entry: FavoriteEntry): boolean {
-  const map = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {})
+  const map = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
   if (map[entry.id]) {
-    delete map[entry.id]
-    writeJSON(KEYS.favorites, map)
-    void pushUserdataToServer()
-    return false
+    delete map[entry.id];
+    writeJSON(KEYS.favorites, map);
+    void pushUserdataToServer();
+    return false;
   }
-  map[entry.id] = entry
-  writeJSON(KEYS.favorites, map)
-  void pushUserdataToServer()
-  return true
+  map[entry.id] = entry;
+  writeJSON(KEYS.favorites, map);
+  void pushUserdataToServer();
+  return true;
 }
 
 export function getPreferences(): UserPreferences {
-  const stored = readJSON<Partial<UserPreferences>>(KEYS.prefs, {})
-  const base = defaultPrefs()
+  const stored = readJSON<Partial<UserPreferences>>(KEYS.prefs, {});
+  const base = defaultPrefs();
   return {
     display: { ...base.display, ...stored.display },
     home: { ...base.home, ...stored.home },
@@ -392,11 +396,11 @@ export function getPreferences(): UserPreferences {
     subtitles: { ...base.subtitles, ...stored.subtitles },
     controls: { ...base.controls, ...stored.controls },
     player: { ...base.player, ...stored.player },
-  }
+  };
 }
 
 export function updatePreferences(patch: Partial<UserPreferences>): UserPreferences {
-  const cur = getPreferences()
+  const cur = getPreferences();
   const next: UserPreferences = {
     display: { ...cur.display, ...patch.display },
     home: { ...cur.home, ...patch.home },
@@ -404,128 +408,128 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
     subtitles: { ...cur.subtitles, ...patch.subtitles },
     controls: { ...cur.controls, ...patch.controls },
     player: { ...cur.player, ...patch.player },
-  }
-  writeJSON(KEYS.prefs, next)
-  void pushUserdataToServer()
-  return next
+  };
+  writeJSON(KEYS.prefs, next);
+  void pushUserdataToServer();
+  return next;
 }
 
 export function listPlaylists(): Playlist[] {
-  return readJSON<Playlist[]>(KEYS.playlists, [])
+  return readJSON<Playlist[]>(KEYS.playlists, []);
 }
 
 export function savePlaylists(list: Playlist[]): void {
-  writeJSON(KEYS.playlists, list)
-  void pushUserdataToServer()
+  writeJSON(KEYS.playlists, list);
+  void pushUserdataToServer();
 }
 
 export function listQueue(): QueueItem[] {
-  return readJSON<QueueItem[]>(KEYS.queue, [])
+  return readJSON<QueueItem[]>(KEYS.queue, []);
 }
 
 export function saveQueue(list: QueueItem[]): void {
-  writeJSON(KEYS.queue, list)
-  void pushUserdataToServer()
+  writeJSON(KEYS.queue, list);
+  void pushUserdataToServer();
 }
 
 export function enqueue(item: QueueItem): void {
-  const cur = listQueue().filter((q) => q.id !== item.id)
-  saveQueue([...cur, item])
+  const cur = listQueue().filter((q) => q.id !== item.id);
+  saveQueue([...cur, item]);
 }
 
 export function dequeue(id: string): void {
-  saveQueue(listQueue().filter((q) => q.id !== id))
+  saveQueue(listQueue().filter((q) => q.id !== id));
 }
 
 export function clearQueue(): void {
-  saveQueue([])
+  saveQueue([]);
 }
 
 type ServerBlob = {
-  progress?: Record<string, ProgressEntry>
-  favorites?: Record<string, FavoriteEntry>
-  prefs?: UserPreferences
-  playlists?: Playlist[]
-  queue?: QueueItem[]
-}
+  progress?: Record<string, ProgressEntry>;
+  favorites?: Record<string, FavoriteEntry>;
+  prefs?: UserPreferences;
+  playlists?: Playlist[];
+  queue?: QueueItem[];
+};
 
 function mergeProgressMaps(
   local: Record<string, ProgressEntry>,
   server: Record<string, ProgressEntry>,
 ): Record<string, ProgressEntry> {
-  const out: Record<string, ProgressEntry> = { ...local }
+  const out: Record<string, ProgressEntry> = { ...local };
   for (const [id, entry] of Object.entries(server)) {
-    const cur = out[id]
+    const cur = out[id];
     if (!cur || (entry.updatedAt || '') >= (cur.updatedAt || '')) {
-      out[id] = entry
+      out[id] = entry;
     }
   }
-  return out
+  return out;
 }
 
 /** Pull server userdata into localStorage cache. Server wins on progress conflicts. */
 export async function pullUserdataFromServer(): Promise<boolean> {
   try {
-    const res = await fetch('/api/userdata', { headers: { Accept: 'application/json' } })
+    const res = await fetch('/api/userdata', { headers: { Accept: 'application/json' } });
     if (!res.ok) {
-      setMeta({ serverAuthoritative: false })
-      return false
+      setMeta({ serverAuthoritative: false });
+      return false;
     }
-    const blob = (await res.json()) as ServerBlob
+    const blob = (await res.json()) as ServerBlob;
     if (blob.progress && typeof blob.progress === 'object') {
-      const local = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {})
-      writeJSON(KEYS.progress, mergeProgressMaps(local, blob.progress))
+      const local = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
+      writeJSON(KEYS.progress, mergeProgressMaps(local, blob.progress));
     }
     if (blob.favorites && typeof blob.favorites === 'object') {
-      writeJSON(KEYS.favorites, blob.favorites)
+      writeJSON(KEYS.favorites, blob.favorites);
     }
     if (blob.prefs && typeof blob.prefs === 'object') {
-      writeJSON(KEYS.prefs, blob.prefs)
-      applyTheme((blob.prefs as UserPreferences).display?.theme || 'dark')
+      writeJSON(KEYS.prefs, blob.prefs);
+      applyTheme((blob.prefs as UserPreferences).display?.theme || 'dark');
     }
     if (Array.isArray(blob.playlists)) {
-      writeJSON(KEYS.playlists, blob.playlists)
+      writeJSON(KEYS.playlists, blob.playlists);
     }
     if (Array.isArray(blob.queue)) {
-      writeJSON(KEYS.queue, blob.queue)
+      writeJSON(KEYS.queue, blob.queue);
     }
-    setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() })
-    return true
+    setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() });
+    return true;
   } catch {
-    setMeta({ serverAuthoritative: false })
-    return false
+    setMeta({ serverAuthoritative: false });
+    return false;
   }
 }
 
 export async function pushUserdataToServer(): Promise<void> {
   try {
-    const progress = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {})
-    const favorites = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {})
-    const prefs = getPreferences()
-    const playlists = listPlaylists()
-    const queue = listQueue()
+    const progress = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
+    const favorites = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
+    const prefs = getPreferences();
+    const playlists = listPlaylists();
+    const queue = listQueue();
     const res = await fetch('/api/userdata', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ progress, favorites, prefs, playlists, queue }),
-    })
-    if (!res.ok) return
-    const merged = (await res.json()) as ServerBlob
+    });
+    if (!res.ok) return;
+    const merged = (await res.json()) as ServerBlob;
     // Apply server merge result so local cache matches SoT.
-    if (merged.progress) writeJSON(KEYS.progress, merged.progress)
-    if (merged.favorites) writeJSON(KEYS.favorites, merged.favorites)
-    if (merged.prefs) writeJSON(KEYS.prefs, merged.prefs)
-    if (Array.isArray(merged.playlists)) writeJSON(KEYS.playlists, merged.playlists)
-    if (Array.isArray(merged.queue)) writeJSON(KEYS.queue, merged.queue)
-    setMeta({ serverAuthoritative: true })
+    if (merged.progress) writeJSON(KEYS.progress, merged.progress);
+    if (merged.favorites) writeJSON(KEYS.favorites, merged.favorites);
+    if (merged.prefs) writeJSON(KEYS.prefs, merged.prefs);
+    if (Array.isArray(merged.playlists)) writeJSON(KEYS.playlists, merged.playlists);
+    if (Array.isArray(merged.queue)) writeJSON(KEYS.queue, merged.queue);
+    setMeta({ serverAuthoritative: true });
   } catch {
     /* offline — localStorage remains the working cache until reconnect */
   }
 }
 
 export function applyTheme(theme: UserPreferences['display']['theme']): void {
-  const root = document.documentElement
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-  const dark = theme === 'dark' || (theme === 'system' && prefersDark)
-  root.dataset.theme = dark ? 'dark' : 'light'
+  const root = document.documentElement;
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const dark = theme === 'dark' || (theme === 'system' && prefersDark);
+  root.dataset.theme = dark ? 'dark' : 'light';
 }

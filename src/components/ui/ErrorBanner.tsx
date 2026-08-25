@@ -1,7 +1,7 @@
 type Props = {
-  message: string
-  testId?: string
-}
+  message: string;
+  testId?: string;
+};
 
 /** Standard inline error for route-level fetch failures (AGENTS.md §12). */
 export function ErrorBanner({ message, testId = 'page-error' }: Props) {
@@ -13,5 +13,5 @@ export function ErrorBanner({ message, testId = 'page-error' }: Props) {
     >
       {message}
     </p>
-  )
+  );
 }

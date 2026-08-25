@@ -1,40 +1,40 @@
-import { Bookmark } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { api, searchResultKey } from '../api/client'
-import RequestableCard from '../components/search/RequestableCard'
-import { PosterGridSkeleton } from '../components/media/PosterGrid'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { EmptyState } from '../components/ui/EmptyState'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import type { SearchResult } from '../types'
+import { Bookmark } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { api, searchResultKey } from '../api/client';
+import RequestableCard from '../components/search/RequestableCard';
+import { PosterGridSkeleton } from '../components/media/PosterGrid';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import type { SearchResult } from '../types';
 
 export default function Watchlist() {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [items, setItems] = useState<SearchResult[]>([])
-  const [requested, setRequested] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<SearchResult[]>([]);
+  const [requested, setRequested] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     void (async () => {
       try {
-        const rows = await api.watchlist()
-        if (cancelled) return
-        setItems(rows)
+        const rows = await api.watchlist();
+        if (cancelled) return;
+        setItems(rows);
       } catch (err) {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Failed to load watchlist')
-        setItems([])
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Failed to load watchlist');
+        setItems([]);
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setLoading(false);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   async function request(item: SearchResult) {
     const res = await api.requestTitle({
@@ -44,8 +44,8 @@ export default function Watchlist() {
       overview: item.overview,
       poster: item.poster,
       mediaType: item.mediaType,
-    })
-    setRequested((prev) => ({ ...prev, [searchResultKey(item)]: res.status || 'requested' }))
+    });
+    setRequested((prev) => ({ ...prev, [searchResultKey(item)]: res.status || 'requested' }));
   }
 
   return (
@@ -53,14 +53,18 @@ export default function Watchlist() {
       <header className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Watchlist</h1>
         <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
-          Titles synced from your external lists (Trakt, Plex, Jellyfin, and other list-sync sources).
+          Titles synced from your external lists (Trakt, Plex, Jellyfin, and other list-sync
+          sources).
         </p>
       </header>
 
       {error ? <ErrorBanner message={error} /> : null}
 
       <section className="space-y-4" aria-labelledby="watchlist-items-heading">
-        <h2 id="watchlist-items-heading" className="text-lg font-semibold text-[var(--text-primary)]">
+        <h2
+          id="watchlist-items-heading"
+          className="text-lg font-semibold text-[var(--text-primary)]"
+        >
           Synced titles
         </h2>
         {loading ? (
@@ -90,5 +94,5 @@ export default function Watchlist() {
         )}
       </section>
     </div>
-  )
+  );
 }

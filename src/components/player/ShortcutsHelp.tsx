@@ -1,9 +1,9 @@
-import { X } from 'lucide-react'
-import { KEYBOARD_SHORTCUTS } from './hooks/useKeyboardShortcuts'
+import { X } from 'lucide-react';
+import { KEYBOARD_SHORTCUTS } from './hooks/useKeyboardShortcuts';
 
 type Props = {
-  onClose: () => void
-}
+  onClose: () => void;
+};
 
 /** On-screen keyboard shortcut reference, toggled with "?". */
 export default function ShortcutsHelp({ onClose }: Props) {
@@ -40,5 +40,5 @@ export default function ShortcutsHelp({ onClose }: Props) {
         </ul>
       </div>
     </div>
-  )
+  );
 }

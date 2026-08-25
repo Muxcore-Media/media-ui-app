@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Search as SearchIcon } from 'lucide-react'
-import { api, searchResultKey } from '../api/client'
-import MediaCard from '../components/MediaCard'
-import RequestableCard from '../components/search/RequestableCard'
-import { PosterGridSkeleton } from '../components/media/PosterGrid'
-import { Badge } from '../components/ui/Badge'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ErrorBanner } from '../components/ui/ErrorBanner'
-import { LoadingStatus } from '../components/ui/LoadingStatus'
-import { useCapabilities } from '../lib/capabilities'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Search as SearchIcon } from 'lucide-react';
+import { api, searchResultKey } from '../api/client';
+import MediaCard from '../components/MediaCard';
+import RequestableCard from '../components/search/RequestableCard';
+import { PosterGridSkeleton } from '../components/media/PosterGrid';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { useCapabilities } from '../lib/capabilities';
 import {
   groupLibraryHits,
   parseSearchScope,
@@ -17,74 +17,76 @@ import {
   runUnifiedSearch,
   searchScopesForCaps,
   type SearchScope,
-} from '../lib/unified-search'
-import type { Movie, SearchResult, TVShow } from '../types'
+} from '../lib/unified-search';
+import type { Movie, SearchResult, TVShow } from '../types';
 
 export default function Search() {
-  const { caps } = useCapabilities()
-  const navigate = useNavigate()
-  const [params, setParams] = useSearchParams()
-  const q = params.get('q')?.trim() || ''
-  const scope = parseSearchScope(params.get('scope'))
+  const { caps } = useCapabilities();
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const q = params.get('q')?.trim() || '';
+  const scope = parseSearchScope(params.get('scope'));
 
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [library, setLibrary] = useState<Awaited<ReturnType<typeof runUnifiedSearch>>['library']>([])
-  const [remote, setRemote] = useState<SearchResult[]>([])
-  const [requested, setRequested] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [library, setLibrary] = useState<Awaited<ReturnType<typeof runUnifiedSearch>>['library']>(
+    [],
+  );
+  const [remote, setRemote] = useState<SearchResult[]>([]);
+  const [requested, setRequested] = useState<Record<string, string>>({});
 
-  const scopeOptions = useMemo(() => searchScopesForCaps(caps), [caps])
-  const canSearch = q.length >= 2
+  const scopeOptions = useMemo(() => searchScopesForCaps(caps), [caps]);
+  const canSearch = q.length >= 2;
 
   const setScope = useCallback(
     (next: SearchScope) => {
-      const p = new URLSearchParams(params)
-      if (next === 'all') p.delete('scope')
-      else p.set('scope', next)
-      setParams(p, { replace: true })
+      const p = new URLSearchParams(params);
+      if (next === 'all') p.delete('scope');
+      else p.set('scope', next);
+      setParams(p, { replace: true });
     },
     [params, setParams],
-  )
+  );
 
   useEffect(() => {
     if (!canSearch) {
-      setLibrary([])
-      setRemote([])
-      setError(null)
-      return
+      setLibrary([]);
+      setRemote([]);
+      setError(null);
+      return;
     }
-    let cancelled = false
-    setLoading(true)
-    setError(null)
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     void runUnifiedSearch(caps, q, scope)
       .then((res) => {
-        if (cancelled) return
-        setLibrary(res.library)
-        setRemote(res.remote)
+        if (cancelled) return;
+        setLibrary(res.library);
+        setRemote(res.remote);
       })
       .catch((err) => {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Search failed')
-        setLibrary([])
-        setRemote([])
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Search failed');
+        setLibrary([]);
+        setRemote([]);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        if (!cancelled) setLoading(false);
+      });
     return () => {
-      cancelled = true
-    }
-  }, [caps, q, scope, canSearch])
+      cancelled = true;
+    };
+  }, [caps, q, scope, canSearch]);
 
-  const remoteOnly = useMemo(() => remoteNotInLibrary(library, remote), [library, remote])
-  const grouped = useMemo(() => groupLibraryHits(library), [library])
+  const remoteOnly = useMemo(() => remoteNotInLibrary(library, remote), [library, remote]);
+  const grouped = useMemo(() => groupLibraryHits(library), [library]);
   const returnTo = useMemo(() => {
-    const p = new URLSearchParams()
-    if (q) p.set('q', q)
-    if (scope !== 'all') p.set('scope', scope)
-    const qs = p.toString()
-    return qs ? `/search?${qs}` : '/search'
-  }, [q, scope])
+    const p = new URLSearchParams();
+    if (q) p.set('q', q);
+    if (scope !== 'all') p.set('scope', scope);
+    const qs = p.toString();
+    return qs ? `/search?${qs}` : '/search';
+  }, [q, scope]);
 
   async function request(result: SearchResult) {
     const res = await api.requestTitle({
@@ -99,8 +101,8 @@ export default function Search() {
       overview: result.overview,
       poster: result.poster,
       mediaType: result.mediaType,
-    })
-    setRequested((prev) => ({ ...prev, [searchResultKey(result)]: res.status || 'requested' }))
+    });
+    setRequested((prev) => ({ ...prev, [searchResultKey(result)]: res.status || 'requested' }));
   }
 
   return (
@@ -143,10 +145,16 @@ export default function Search() {
 
       {!loading && grouped.movies.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Movies ({grouped.movies.length})</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            Movies ({grouped.movies.length})
+          </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {grouped.movies.map((hit) => (
-              <MediaCard key={`movie-${(hit as { item: Movie }).item.id}`} item={(hit as { item: Movie }).item} type="movie" />
+              <MediaCard
+                key={`movie-${(hit as { item: Movie }).item.id}`}
+                item={(hit as { item: Movie }).item}
+                type="movie"
+              />
             ))}
           </div>
         </section>
@@ -154,10 +162,16 @@ export default function Search() {
 
       {!loading && grouped.shows.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">TV Shows ({grouped.shows.length})</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            TV Shows ({grouped.shows.length})
+          </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {grouped.shows.map((hit) => (
-              <MediaCard key={`tv-${(hit as { item: TVShow }).item.id}`} item={(hit as { item: TVShow }).item} type="tv" />
+              <MediaCard
+                key={`tv-${(hit as { item: TVShow }).item.id}`}
+                item={(hit as { item: TVShow }).item}
+                type="tv"
+              />
             ))}
           </div>
         </section>
@@ -165,7 +179,9 @@ export default function Search() {
 
       {!loading && grouped.other.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Other libraries ({grouped.other.length})</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            Other libraries ({grouped.other.length})
+          </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {grouped.other.map((hit) => (
               <Link
@@ -191,7 +207,9 @@ export default function Search() {
                   </Badge>
                 </div>
                 <div className="space-y-0.5 pt-2">
-                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)]">{hit.title}</h3>
+                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)]">
+                    {hit.title}
+                  </h3>
                 </div>
               </Link>
             ))}
@@ -227,22 +245,31 @@ export default function Search() {
 
       {canSearch && (
         <p className="text-xs text-[var(--text-tertiary)]">
-          Showing results for <span className="text-[var(--text-secondary)]">&ldquo;{q}&rdquo;</span>
+          Showing results for{' '}
+          <span className="text-[var(--text-secondary)]">&ldquo;{q}&rdquo;</span>
           {scope !== 'all' ? (
             <>
               {' '}
               in{' '}
-              <button type="button" className="text-[var(--accent-color)] hover:underline" onClick={() => setScope('all')}>
+              <button
+                type="button"
+                className="text-[var(--accent-color)] hover:underline"
+                onClick={() => setScope('all')}
+              >
                 {scopeOptions.find((o) => o.id === scope)?.label ?? scope}
               </button>
             </>
           ) : null}
           .{' '}
-          <button type="button" className="text-[var(--accent-color)] hover:underline" onClick={() => navigate('/')}>
+          <button
+            type="button"
+            className="text-[var(--accent-color)] hover:underline"
+            onClick={() => navigate('/')}
+          >
             Back home
           </button>
         </p>
       )}
     </div>
-  )
+  );
 }

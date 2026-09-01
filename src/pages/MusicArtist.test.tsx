@@ -58,7 +58,7 @@ describe('MusicArtist page', () => {
     expect(screen.getByText('Daft Punk')).toBeInTheDocument();
     expect(screen.getByText('Discovery')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Play One More Time/i }));
-    expect(await screen.findByText(/one more time/i)).toBeInTheDocument();
+    expect(await screen.findByText(/one more time/i, { selector: 'pre' })).toBeInTheDocument();
     expect(getTrackLyrics).toHaveBeenCalledWith('tr1');
   });
 });

@@ -10,6 +10,8 @@ export type PlayerHrefParams = {
   showId?: string;
   season?: number;
   episode?: number;
+  /** Skip the resume prompt and start at 0 (detail-page "Play from beginning"). */
+  restart?: boolean;
 };
 
 export function buildPlayerHref(params: PlayerHrefParams): string {
@@ -23,7 +25,25 @@ export function buildPlayerHref(params: PlayerHrefParams): string {
   if (params.showId) q.set('showId', params.showId);
   if (params.season != null) q.set('season', String(params.season));
   if (params.episode != null) q.set('episode', String(params.episode));
+  if (params.restart) q.set('restart', '1');
   return `/player?${q.toString()}`;
+}
+
+export function buildMoviePlayerHrefFromBeginning(movie: {
+  id: string;
+  title: string;
+  stream_url: string;
+  poster_url?: string;
+}): string {
+  return buildPlayerHref({
+    src: movie.stream_url,
+    title: movie.title,
+    id: movie.id,
+    kind: 'movie',
+    poster: movie.poster_url,
+    back: `/movies/${movie.id}`,
+    restart: true,
+  });
 }
 
 export function buildMoviePlayerHref(movie: {
@@ -52,6 +72,7 @@ export function buildEpisodePlayerHref(
     has_file?: boolean;
     stream_url?: string;
   },
+  opts?: { restart?: boolean },
 ): string | null {
   if (!ep.has_file || !ep.stream_url) return null;
   const code = `S${String(ep.season_number).padStart(2, '0')}E${String(ep.episode_number).padStart(2, '0')}`;
@@ -66,6 +87,7 @@ export function buildEpisodePlayerHref(
     showId: show.id,
     season: ep.season_number,
     episode: ep.episode_number,
+    restart: opts?.restart,
   });
 }
 

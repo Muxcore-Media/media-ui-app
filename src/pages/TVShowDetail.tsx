@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
+import CastSection from '../components/media/CastSection';
+import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
 import { DetailHero } from '../components/media/DetailHero';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -11,10 +13,10 @@ import { IconButton } from '../components/ui/IconButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
-import { enqueue, isFavorite, toggleFavorite } from '../lib/userdata';
+import { enqueue, isFavorite, listProgress, resolveShowPlayTargets, showIdFromHref, toggleFavorite } from '../lib/userdata';
 import { buildEpisodePlayerHref } from '../lib/playHref';
 import { FixedWindowList } from '../components/ui/FixedWindowList';
-import type { Episode, TVShow } from '../types';
+import type { DiscoverDetail, Episode, TVShow } from '../types';
 
 const EPISODE_ROW_HEIGHT = 72;
 
@@ -35,6 +37,7 @@ export default function TVShowDetail() {
   const [error, setError] = useState<string | null>(null);
   const [jellyfinURL, setJellyfinURL] = useState<string | null>(null);
   const [fav, setFav] = useState(false);
+  const [discover, setDiscover] = useState<DiscoverDetail | null>(null);
   const probe = usePlaybackAnalysis(firstPlayableStreamUrl(show));
 
   useEffect(() => {
@@ -64,6 +67,42 @@ export default function TVShowDetail() {
       cancelled = true;
     };
   }, [id]);
+
+  const playTargets = useMemo(
+    () => (show ? resolveShowPlayTargets(show) : { resume: null, fromBeginning: null }),
+    [show],
+  );
+  const showHasProgress = useMemo(
+    () =>
+      show
+        ? listProgress().some(
+            (p) =>
+              showIdFromHref(p.href) === show.id &&
+              p.kind === 'episode' &&
+              (p.watched || p.positionSec > 5),
+          )
+        : false,
+    [show],
+  );
+
+  useEffect(() => {
+    if (!show?.tmdb_id) {
+      setDiscover(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const detail = await api.getDiscoverDetail('tv', show.tmdb_id!);
+        if (!cancelled) setDiscover(detail);
+      } catch {
+        if (!cancelled) setDiscover(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [show?.tmdb_id]);
 
   if (loading) {
     return (
@@ -114,6 +153,25 @@ export default function TVShowDetail() {
         }
         actions={
           <>
+            {playTargets.resume ? (
+              <Link
+                to={playTargets.resume}
+                aria-label={`Play ${show.title}`}
+                className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 text-sm font-semibold text-[var(--text-on-accent)] transition hover:bg-[var(--accent-hover)]"
+              >
+                <Play className="h-4 w-4 fill-current" aria-hidden="true" />
+                Play
+              </Link>
+            ) : null}
+            {playTargets.fromBeginning && showHasProgress ? (
+              <Link
+                to={playTargets.fromBeginning}
+                aria-label={`Play ${show.title} from beginning`}
+                className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent-color)]"
+              >
+                Play from beginning
+              </Link>
+            ) : null}
             <Button
               variant={fav ? 'primary' : 'secondary'}
               icon={
@@ -182,6 +240,12 @@ export default function TVShowDetail() {
           message="Episode listings will appear here once metadata is available for this series."
         />
       )}
+
+      {discover?.cast?.length ? (
+        <CastSection cast={discover.cast} headingId="tv-cast-heading" />
+      ) : null}
+
+      <MoreLikeThisShelf kind="tv" genres={show.genres} excludeId={show.id} />
     </div>
   );
 }

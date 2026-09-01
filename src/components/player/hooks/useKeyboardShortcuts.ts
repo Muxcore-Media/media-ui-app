@@ -29,6 +29,8 @@ export const KEYBOARD_SHORTCUTS: { keys: string; description: string }[] = [
   { keys: 'F', description: 'Fullscreen' },
   { keys: 'T', description: 'Theater mode' },
   { keys: 'P', description: 'Picture-in-picture' },
+  { keys: 'Cast', description: 'Chromecast (coming soon)' },
+  { keys: 'AirPlay', description: 'AirPlay (coming soon)' },
   { keys: 'C', description: 'Toggle subtitles' },
   { keys: 'I', description: 'Skip intro / outro / credits' },
   { keys: 'E', description: 'Episodes' },

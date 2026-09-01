@@ -74,7 +74,8 @@ describe('TVShowDetail page', () => {
     expect(await screen.findByTestId('tv-detail-page')).toBeInTheDocument();
     expect(screen.getByText('Breaking Bad')).toBeInTheDocument();
     expect(screen.getByText(/Pilot/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /play/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Play Breaking Bad/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Play Pilot/i })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText('1080p · H264')).toBeInTheDocument();
     });

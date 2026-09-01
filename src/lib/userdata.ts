@@ -262,6 +262,42 @@ export function flattenEpisodes(show: ShowLike): EpisodeLike[] {
   );
 }
 
+export type ShowPlayTargets = {
+  resume: string | null;
+  fromBeginning: string | null;
+};
+
+/** Hero play targets for a TV show detail page (next-up or first playable, plus S01E01). */
+export function resolveShowPlayTargets(show: ShowLike): ShowPlayTargets {
+  const playable = flattenEpisodes(show).filter((ep) => ep.has_file && ep.stream_url);
+  if (playable.length === 0) return { resume: null, fromBeginning: null };
+
+  const first = playable[0];
+  const fromBeginning = episodePlayHref(show, first, true);
+  const defaultPlay = episodePlayHref(show, first, false);
+  const showProgress = listProgress().filter((p) => showIdFromHref(p.href) === show.id);
+
+  const inProgress = showProgress.find(
+    (p) => p.kind === 'episode' && !p.watched && p.positionSec > 5,
+  );
+  if (inProgress) {
+    const ep = playable.find((e) => e.id === inProgress.id);
+    if (ep) return { resume: episodePlayHref(show, ep), fromBeginning };
+  }
+
+  const watched = showProgress
+    .filter((p) => p.kind === 'episode' && p.watched)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  if (watched.length > 0) {
+    const next = nextEpisodeAfter(show, watched[0].id);
+    if (next?.has_file && next.stream_url) {
+      return { resume: episodePlayHref(show, next), fromBeginning };
+    }
+  }
+
+  return { resume: defaultPlay, fromBeginning };
+}
+
 export function nextEpisodeAfter(show: ShowLike, episodeId: string): EpisodeLike | null {
   const eps = flattenEpisodes(show);
   const idx = eps.findIndex((e) => e.id === episodeId);
@@ -272,7 +308,7 @@ export function nextEpisodeAfter(show: ShowLike, episodeId: string): EpisodeLike
   return null;
 }
 
-function episodePlayHref(show: ShowLike, ep: EpisodeLike): string {
+function episodePlayHref(show: ShowLike, ep: EpisodeLike, restart = false): string {
   if (!ep.has_file || !ep.stream_url) return `/tv/${show.id}`;
   return (
     buildEpisodePlayerHref(show, {
@@ -282,7 +318,7 @@ function episodePlayHref(show: ShowLike, ep: EpisodeLike): string {
       title: ep.title,
       has_file: ep.has_file,
       stream_url: ep.stream_url,
-    }) || `/tv/${show.id}`
+    }, { restart }) || `/tv/${show.id}`
   );
 }
 

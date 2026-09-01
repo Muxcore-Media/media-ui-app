@@ -12,6 +12,22 @@ beforeAll(() => {
     },
   });
 
+  Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+    configurable: true,
+    writable: true,
+    value: function play() {
+      return Promise.resolve();
+    },
+  });
+
+  Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+    configurable: true,
+    writable: true,
+    value: function pause() {
+      /* no-op for unit tests */
+    },
+  });
+
   if (typeof URL.createObjectURL !== 'function') {
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
@@ -30,4 +46,6 @@ beforeAll(() => {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
+  sessionStorage.clear();
 });

@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useEffect, useId, useState } from 'react';
 import { ArrowLeft, Pause, Play } from 'lucide-react';
 import { api } from '../api/client';
+import AudioPlayerBar from '../components/media/AudioPlayerBar';
 import Spinner from '../components/Spinner';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
@@ -165,12 +166,11 @@ export default function MusicArtist() {
                   return (
                     <div className="space-y-2">
                       {src ? (
-                        <audio
-                          className="w-full"
-                          controls
-                          autoPlay
+                        <AudioPlayerBar
                           src={src}
-                          aria-label={`Now playing ${track.title}`}
+                          title={track.title}
+                          playing
+                          onPlayingChange={(on) => setPlaying(on ? track.id : null)}
                         />
                       ) : (
                         <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">

@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
+import CastSection from '../components/media/CastSection';
+import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
 import { DetailHero } from '../components/media/DetailHero';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -10,8 +12,8 @@ import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata';
-import { buildMoviePlayerHref } from '../lib/playHref';
-import type { Movie } from '../types';
+import { buildMoviePlayerHref, buildMoviePlayerHrefFromBeginning } from '../lib/playHref';
+import type { DiscoverDetail, Movie } from '../types';
 
 export default function MovieDetail() {
   const { id = '' } = useParams();
@@ -22,6 +24,7 @@ export default function MovieDetail() {
   const [fav, setFav] = useState(false);
   const [watched, setWatched] = useState(false);
   const [queued, setQueued] = useState(false);
+  const [discover, setDiscover] = useState<DiscoverDetail | null>(null);
   const probe = usePlaybackAnalysis(movie?.has_file ? movie.stream_url : undefined);
 
   useEffect(() => {
@@ -54,6 +57,25 @@ export default function MovieDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (!movie?.tmdb_id) {
+      setDiscover(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const detail = await api.getDiscoverDetail('movie', movie.tmdb_id!);
+        if (!cancelled) setDiscover(detail);
+      } catch {
+        if (!cancelled) setDiscover(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [movie?.tmdb_id]);
+
   if (loading) {
     return (
       <>
@@ -78,6 +100,10 @@ export default function MovieDetail() {
   }
 
   const playTo = movie.has_file && movie.stream_url ? buildMoviePlayerHref(movie) : null;
+  const playFromBeginning =
+    movie.has_file && movie.stream_url && getProgress(movie.id)?.positionSec
+      ? buildMoviePlayerHrefFromBeginning(movie)
+      : null;
 
   return (
     <div className="space-y-8" data-testid="movie-detail-page">
@@ -125,6 +151,15 @@ export default function MovieDetail() {
                 Not available to stream yet.
               </p>
             )}
+            {playFromBeginning ? (
+              <Link
+                to={playFromBeginning}
+                aria-label={`Play ${movie.title} from beginning`}
+                className="inline-flex h-11 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-5 text-sm font-semibold text-[var(--text-primary)] transition hover:border-[var(--accent-color)]"
+              >
+                Play from beginning
+              </Link>
+            ) : null}
             <Button
               variant="secondary"
               icon={<ListPlus className="h-4 w-4" aria-hidden="true" />}
@@ -213,6 +248,16 @@ export default function MovieDetail() {
           </p>
         </section>
       ) : null}
+
+      {discover?.cast?.length ? (
+        <CastSection cast={discover.cast} headingId="movie-cast-heading" />
+      ) : null}
+
+      <MoreLikeThisShelf
+        kind="movie"
+        genres={movie.genres}
+        excludeId={movie.id}
+      />
     </div>
   );
 }

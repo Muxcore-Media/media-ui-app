@@ -20,8 +20,8 @@ The polluted dump [`Muxcore-Media/media-ui`](https://github.com/Muxcore-Media/me
 - Favorites, mark watched, playback resume (browser userdata)
 - User settings: display / home / playback / subtitles / controls
 - Music / books / comics / audiobooks library lists (via mediauiprox)
-- Live TV + Quick Connect route placeholders
-- Playback via `/player` (keyboard shortcuts, resume, skip-intro preference)
+- Live TV + Quick Connect
+- Playback via `/player` (keyboard shortcuts, resume, skip-intro preference, PiP; Chromecast/AirPlay UI stubs)
 - Auth via auth-local (login redirect + session cookie on the BFF)
 - **Logout** header link → `/logout`
 
@@ -54,10 +54,11 @@ Point Vite proxies (see `vite.config.ts`) or run against `_mvp` mediauiprox.
 ```bash
 npm ci
 npm run typecheck
+npm test
 npm run build   # → dist-app/
 ```
 
-CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`npm ci` + typecheck + build).
+CI: [`.forgejo/workflows/ci.yml`](.forgejo/workflows/ci.yml) (`npm ci` + typecheck + test + build).
 
 ## MVP wiring
 

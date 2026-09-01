@@ -14,6 +14,7 @@ export default function Player() {
   const showId = params.get('showId') || undefined;
   const season = params.get('season');
   const episode = params.get('episode');
+  const startOver = params.get('restart') === '1';
 
   useEffect(() => {
     const prevHtml = document.documentElement.style.overflow;
@@ -37,6 +38,7 @@ export default function Player() {
       showId={showId}
       seasonNumber={season ? Number(season) : undefined}
       episodeNumber={episode ? Number(episode) : undefined}
+      startOver={startOver}
     />
   );
 }

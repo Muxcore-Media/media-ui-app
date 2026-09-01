@@ -1,7 +1,10 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Search as SearchIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/cn';
+
+const DEBOUNCE_MS = 250;
+const MIN_CHARS = 2;
 
 export default function HeaderSearch({ className }: { className?: string }) {
   const navigate = useNavigate();
@@ -10,15 +13,22 @@ export default function HeaderSearch({ className }: { className?: string }) {
   const urlQ = new URLSearchParams(location.search).get('q') || '';
 
   const [q, setQ] = useState(onSearchPage ? urlQ : '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (onSearchPage) setQ(urlQ);
   }, [onSearchPage, urlQ]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   function goSearch(next?: string) {
     const trimmed = (next ?? q).trim();
     const params = new URLSearchParams(onSearchPage ? location.search : '');
-    if (trimmed.length >= 2) params.set('q', trimmed);
+    if (trimmed.length >= MIN_CHARS) params.set('q', trimmed);
     else params.delete('q');
     const qs = params.toString();
     navigate(qs ? `/search?${qs}` : '/search');
@@ -26,7 +36,19 @@ export default function HeaderSearch({ className }: { className?: string }) {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     goSearch();
+  }
+
+  function onInputChange(value: string) {
+    setQ(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const trimmed = value.trim();
+      if (trimmed.length >= MIN_CHARS || (onSearchPage && trimmed.length === 0)) {
+        goSearch(trimmed);
+      }
+    }, DEBOUNCE_MS);
   }
 
   return (
@@ -42,7 +64,7 @@ export default function HeaderSearch({ className }: { className?: string }) {
       />
       <input
         value={q}
-        onChange={(e) => setQ(e.target.value)}
+        onChange={(e) => onInputChange(e.target.value)}
         placeholder="Search library…"
         aria-label="Search"
         data-testid="header-search-input"

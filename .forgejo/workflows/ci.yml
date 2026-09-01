@@ -22,6 +22,7 @@ jobs:
           echo "$HOME/.local/node/bin" >> "$GITHUB_PATH"
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test
       - run: npm run build
       - name: Assert dist-app
         run: test -f dist-app/index.html

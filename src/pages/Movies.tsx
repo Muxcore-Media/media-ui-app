@@ -1,40 +1,46 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Film } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
 import { Shelf, ShelfItem } from '../components/media/Shelf';
+import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { isWatchable } from '../lib/acquisition';
+import { useLibraryFilters } from '../lib/useLibraryFilters';
 import { getPreferences } from '../lib/userdata';
 import type { Movie } from '../types';
 
-type SortKey = 'title' | 'year' | 'rating';
-
 export default function Movies() {
   const pageSize = getPreferences().display.libraryPageSize;
+  const { genre, sort, setGenre, setSort } = useLibraryFilters();
   const [items, setItems] = useState<Movie[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [genre, setGenre] = useState('');
-  const [sort, setSort] = useState<SortKey>('title');
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLoading(true);
+      setPage(1);
       try {
         const list = await api.listMovies(1, pageSize);
         if (!cancelled) {
           setItems(list.items);
+          setTotal(list.total);
           setError(null);
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load movies');
           setItems([]);
+          setTotal(0);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -44,6 +50,22 @@ export default function Movies() {
       cancelled = true;
     };
   }, [pageSize]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || items.length >= total) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const list = await api.listMovies(nextPage, pageSize);
+      setItems((prev) => [...prev, ...list.items]);
+      setTotal(list.total);
+      setPage(nextPage);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more movies');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, items.length, total, page, pageSize]);
 
   const watchable = useMemo(() => items.filter(isWatchable), [items]);
   const inProgressCount = items.length - watchable.length;
@@ -75,6 +97,8 @@ export default function Movies() {
         .slice(0, 16),
     [watchable],
   );
+
+  const hasMore = items.length < total;
 
   return (
     <div className="space-y-8" data-testid="movies-page">
@@ -131,7 +155,7 @@ export default function Movies() {
             <select
               id="movies-sort"
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              onChange={(e) => setSort(e.target.value as typeof sort)}
               className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm"
             >
               <option value="title">Title</option>
@@ -145,7 +169,8 @@ export default function Movies() {
           id="movies-library-heading"
           className="text-lg font-semibold text-[var(--text-primary)]"
         >
-          Library ({filtered.length})
+          Library ({filtered.length}
+          {total > items.length ? ` of ${total}` : ''})
         </h2>
         {loading ? (
           <>
@@ -174,11 +199,20 @@ export default function Movies() {
             testId="movies-empty"
           />
         ) : (
-          <PosterGrid>
-            {filtered.map((item) => (
-              <MediaCard key={item.id} item={item} type="movie" />
-            ))}
-          </PosterGrid>
+          <>
+            <PosterGrid>
+              {filtered.map((item) => (
+                <MediaCard key={item.id} item={item} type="movie" />
+              ))}
+            </PosterGrid>
+            {hasMore ? (
+              <div className="flex justify-center pt-2">
+                <Button variant="secondary" onClick={() => void loadMore()} disabled={loadingMore}>
+                  {loadingMore ? 'Loading…' : 'Load more'}
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </section>
     </div>

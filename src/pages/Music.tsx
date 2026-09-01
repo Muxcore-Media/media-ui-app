@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Music2, Pause, Play } from 'lucide-react';
 import { api } from '../api/client';
+import AudioPlayerBar from '../components/media/AudioPlayerBar';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
@@ -244,12 +245,11 @@ export default function Music() {
                     (() => {
                       const t = filteredTracks.find((x) => x.id === playing);
                       return t?.stream_url ? (
-                        <audio
-                          className="w-full"
-                          controls
-                          autoPlay
+                        <AudioPlayerBar
                           src={t.stream_url}
-                          aria-label={`Now playing ${t.title}`}
+                          title={`${t.title} · ${t.artistName}`}
+                          playing={playing === t.id}
+                          onPlayingChange={(on) => setPlaying(on ? t.id : null)}
                         />
                       ) : null;
                     })()}

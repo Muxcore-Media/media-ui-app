@@ -65,6 +65,8 @@ type Props = {
   seasonNumber?: number;
   episodeNumber?: number;
   subtitleTracks?: CaptionTrack[];
+  /** When true, skip the resume prompt and start at 0. */
+  startOver?: boolean;
 };
 
 export default function VideoPlayer({
@@ -78,6 +80,7 @@ export default function VideoPlayer({
   seasonNumber,
   episodeNumber,
   subtitleTracks = [],
+  startOver = false,
 }: Props) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -196,7 +199,7 @@ export default function VideoPlayer({
   // Resume-vs-start-over prompt: once per title, the first time metadata is ready.
   useEffect(() => {
     if (!src || resumeCheckedSrcRef.current === src) return;
-    if (!mediaId || !prefs.playback.rememberPosition) {
+    if (startOver || !mediaId || !prefs.playback.rememberPosition) {
       resumeCheckedSrcRef.current = src;
       return;
     }
@@ -208,7 +211,7 @@ export default function VideoPlayer({
       setResumeDialogOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src, mediaId, videoEl.duration]);
+  }, [src, mediaId, videoEl.duration, startOver]);
 
   useEffect(() => {
     autoSubtitleAppliedRef.current = false;

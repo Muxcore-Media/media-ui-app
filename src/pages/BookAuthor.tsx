@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import Spinner from '../components/Spinner';
 import { Badge } from '../components/ui/Badge';
@@ -18,11 +18,19 @@ type AuthorDetail = {
   books: Book[];
 };
 
+function bookViewerKind(file: BookFile): 'pdf' | 'epub' | 'other' {
+  const hint = `${file.title} ${file.stream_url || ''}`.toLowerCase();
+  if (hint.includes('.pdf') || hint.includes('pdf')) return 'pdf';
+  if (hint.includes('.epub') || hint.includes('epub')) return 'epub';
+  return 'other';
+}
+
 export default function BookAuthor() {
   const { id = '' } = useParams();
   const [detail, setDetail] = useState<AuthorDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openFileId, setOpenFileId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +69,9 @@ export default function BookAuthor() {
   }
 
   const { author, books } = detail;
+  const openFile = books
+    .flatMap((b) => b.files || [])
+    .find((f) => f.id === openFileId && f.stream_url);
 
   return (
     <div className="space-y-8" data-testid="book-author-page">
@@ -79,6 +90,57 @@ export default function BookAuthor() {
           {books.length} book{books.length === 1 ? '' : 's'}
         </p>
       </div>
+
+      {openFile?.stream_url ? (
+        <section
+          className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+          aria-label={`Reading ${openFile.title}`}
+          data-testid="book-inline-reader"
+        >
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2">
+            <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+              {openFile.title}
+            </p>
+            <button
+              type="button"
+              className="text-xs font-semibold text-[var(--accent-color)] hover:underline"
+              onClick={() => setOpenFileId(null)}
+            >
+              Close reader
+            </button>
+          </div>
+          {bookViewerKind(openFile) === 'pdf' ? (
+            <iframe
+              title={openFile.title}
+              src={openFile.stream_url}
+              className="h-[min(70vh,720px)] w-full bg-[var(--bg-base)]"
+            />
+          ) : bookViewerKind(openFile) === 'epub' ? (
+            <object
+              title={openFile.title}
+              data={openFile.stream_url}
+              type="application/epub+zip"
+              className="h-[min(70vh,720px)] w-full bg-[var(--bg-base)]"
+            >
+              <p className="p-4 text-sm text-[var(--text-secondary)]">
+                Your browser cannot render EPUB inline.{' '}
+                <a
+                  href={openFile.stream_url}
+                  className="font-medium text-[var(--accent-color)] hover:underline"
+                >
+                  Open the file
+                </a>
+              </p>
+            </object>
+          ) : (
+            <iframe
+              title={openFile.title}
+              src={openFile.stream_url}
+              className="h-[min(70vh,720px)] w-full bg-[var(--bg-base)]"
+            />
+          )}
+        </section>
+      ) : null}
 
       {books.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No books for this author yet.</p>
@@ -103,16 +165,14 @@ export default function BookAuthor() {
                 <div className="flex flex-wrap gap-2">
                   {(b.files || []).map((f) =>
                     f.stream_url ? (
-                      <a
+                      <button
                         key={f.id}
-                        href={f.stream_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-color)] transition hover:border-[var(--accent-color)]"
+                        type="button"
+                        onClick={() => setOpenFileId(f.id)}
+                        className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-color)] transition hover:border-[var(--accent-color)]"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                        Open {f.title || 'file'}
-                      </a>
+                        Read {f.title || 'file'}
+                      </button>
                     ) : (
                       <Badge key={f.id} tone="neutral">
                         Not available yet

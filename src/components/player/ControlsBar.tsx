@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import {
+  Airplay,
+  Cast,
   ChevronsLeft,
   ChevronsRight,
   MonitorPlay,
@@ -258,6 +260,26 @@ export default function ControlsBar(props: Props) {
                 <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
+            <button
+              type="button"
+              aria-label="Cast to Chromecast (coming soon)"
+              aria-disabled="true"
+              disabled
+              title="Chromecast support coming soon"
+              className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-50 sm:flex"
+            >
+              <Cast className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="AirPlay (coming soon)"
+              aria-disabled="true"
+              disabled
+              title="AirPlay support coming soon"
+              className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-50 sm:flex"
+            >
+              <Airplay className="h-4 w-4" aria-hidden="true" />
+            </button>
             <button
               type="button"
               aria-label={props.fullscreen ? 'Exit fullscreen' : 'Fullscreen'}

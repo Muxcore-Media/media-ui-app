@@ -22,7 +22,7 @@ describe('Upcoming page', () => {
     listTVShows.mockReset();
     getTVShow.mockReset();
     const air = new Date();
-    air.setDate(air.getDate() - 1);
+    air.setDate(air.getDate() + 1);
     const airDate = air.toISOString().slice(0, 10);
     listTVShows.mockResolvedValue({
       items: [

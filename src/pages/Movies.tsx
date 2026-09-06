@@ -12,6 +12,7 @@ import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { isWatchable } from '../lib/acquisition';
 import { useLibraryFilters } from '../lib/useLibraryFilters';
 import { getPreferences } from '../lib/userdata';
+import { applyParentalFilter } from '../lib/parental';
 import type { Movie } from '../types';
 
 export default function Movies() {
@@ -77,7 +78,7 @@ export default function Movies() {
   }, [watchable]);
 
   const filtered = useMemo(() => {
-    let rows = watchable.filter((m) => {
+    let rows = applyParentalFilter(watchable).filter((m) => {
       if (genre && !m.genres.includes(genre)) return false;
       return true;
     });
@@ -91,7 +92,7 @@ export default function Movies() {
 
   const recommended = useMemo(
     () =>
-      [...watchable]
+      applyParentalFilter([...watchable])
         .filter((m) => m.vote_average > 0)
         .sort((a, b) => b.vote_average - a.vote_average)
         .slice(0, 16),

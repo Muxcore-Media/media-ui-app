@@ -26,6 +26,25 @@ export type FavoriteEntry = {
   year?: number;
 };
 
+/** Parental-control prefs written by admin-ui and synced via the BFF userdata blob. */
+export type ParentalPrefs = {
+  /** Whether kids mode is active for this profile. */
+  kidsMode: boolean;
+  /**
+   * Maximum allowed content rating.  Empty string means unrestricted.
+   * Recognised values (case-insensitive): G, PG, PG-13, R, NC-17,
+   * TV-Y, TV-Y7, TV-G, TV-PG, TV-14, TV-MA.
+   */
+  maxRating: string;
+  /**
+   * SHA-256 hex digest of the 4-digit PIN.  Empty string means no PIN is set.
+   * Admin-ui writes this field; media-ui-app only reads and verifies it.
+   */
+  pinHash: string;
+  /** Whether a PIN is required to leave kids mode or unlock a restricted title. */
+  pinEnabled: boolean;
+};
+
 export type UserPreferences = {
   display: {
     theme: 'dark' | 'light' | 'system';
@@ -63,6 +82,8 @@ export type UserPreferences = {
     /** Aspect-ratio/zoom mode for the video element. */
     aspectMode: 'contain' | 'cover' | 'fill';
   };
+  /** Parental-control settings written by admin-ui and synced read-only here. */
+  parental: ParentalPrefs;
 };
 
 const KEYS = {
@@ -120,6 +141,12 @@ const defaultPrefs = (): UserPreferences => ({
     preferredQuality: 'auto',
     theaterMode: false,
     aspectMode: 'contain',
+  },
+  parental: {
+    kidsMode: false,
+    maxRating: '',
+    pinHash: '',
+    pinEnabled: false,
   },
 });
 
@@ -432,7 +459,13 @@ export function getPreferences(): UserPreferences {
     subtitles: { ...base.subtitles, ...stored.subtitles },
     controls: { ...base.controls, ...stored.controls },
     player: { ...base.player, ...stored.player },
+    parental: { ...base.parental, ...stored.parental },
   };
+}
+
+/** Read only the parental section from cached prefs (safe to call at render time). */
+export function getParentalPrefs(): ParentalPrefs {
+  return getPreferences().parental;
 }
 
 export function updatePreferences(patch: Partial<UserPreferences>): UserPreferences {
@@ -444,6 +477,7 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
     subtitles: { ...cur.subtitles, ...patch.subtitles },
     controls: { ...cur.controls, ...patch.controls },
     player: { ...cur.player, ...patch.player },
+    parental: { ...cur.parental, ...patch.parental },
   };
   writeJSON(KEYS.prefs, next);
   void pushUserdataToServer();

@@ -27,13 +27,14 @@ import {
 import { buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
 import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
-import { isWatchable, mergeInProgressEntries } from '../lib/acquisition';
+import { mergeInProgressEntries } from '../lib/acquisition';
 import {
   applyParentalFilter,
   applyUserdataParentalFilter,
   expandLibraryRatingsForUserdata,
 } from '../lib/parental';
 import { useBecauseYouWatched } from '../hooks/useBecauseYouWatched';
+import { useRecentlyAdded } from '../hooks/useRecentlyAdded';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -109,19 +110,16 @@ export default function Home() {
   );
 
   const becauseYouWatched = useBecauseYouWatched(becauseExcludeIds);
-  const recentlyAdded = useMemo(() => {
-    type Row = { kind: 'movie' | 'tv'; item: Movie | TVShow; createdAt: string };
-    const rows: Row[] = [];
-    for (const m of applyParentalFilter(allMovies)) {
-      if (!isWatchable(m) || !m.created_at) continue;
-      rows.push({ kind: 'movie', item: m, createdAt: m.created_at });
-    }
-    for (const s of applyParentalFilter(allShows)) {
-      if (!isWatchable(s) || !s.created_at) continue;
-      rows.push({ kind: 'tv', item: s, createdAt: s.created_at });
-    }
-    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 16);
-  }, [allMovies, allShows]);
+
+  // Dedupe Recently Added against every other home rail so the same title does
+  // not appear twice: exclude CW + Next Up IDs (already in becauseExcludeIds)
+  // plus anything surfaced by Because You Watched.
+  const recentlyAddedExcludeIds = useMemo(
+    () => new Set([...becauseExcludeIds, ...becauseYouWatched.items.map((i) => i.id)]),
+    [becauseExcludeIds, becauseYouWatched.items],
+  );
+
+  const recentlyAdded = useRecentlyAdded(allMovies, allShows, recentlyAddedExcludeIds);
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);

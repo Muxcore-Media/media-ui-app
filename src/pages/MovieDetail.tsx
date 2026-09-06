@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
 import CastSection from '../components/media/CastSection';
 import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
+import RelatedShelf from '../components/media/RelatedShelf';
 import { DetailHero } from '../components/media/DetailHero';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -299,6 +300,8 @@ export default function MovieDetail() {
         genres={movie.genres}
         excludeId={movie.id}
       />
+
+      <RelatedShelf kind="movie" tmdbId={movie.tmdb_id} />
     </div>
   );
 }

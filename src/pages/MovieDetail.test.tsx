@@ -6,6 +6,7 @@ import MovieDetail from './MovieDetail';
 const getMovie = vi.fn();
 const jellyfinPlayURL = vi.fn();
 const fetchPlaybackAnalysis = vi.fn();
+const getRelated = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -15,6 +16,7 @@ vi.mock('../api/client', async () => {
     api: {
       getMovie: (...args: unknown[]) => getMovie(...args),
       jellyfinPlayURL: (...args: unknown[]) => jellyfinPlayURL(...args),
+      getRelated: (...args: unknown[]) => getRelated(...args),
     },
   };
 });
@@ -24,7 +26,9 @@ describe('MovieDetail page', () => {
     getMovie.mockReset();
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
+    getRelated.mockResolvedValue({ items: [], available: false });
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/movies/m-550',
       enabled: true,
@@ -117,7 +121,9 @@ describe('MovieDetail accessibility', () => {
     getMovie.mockReset();
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
+    getRelated.mockResolvedValue({ items: [], available: false });
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/movies/m-550',
       enabled: true,
@@ -183,5 +189,99 @@ describe('MovieDetail accessibility', () => {
       await screen.findByRole('heading', { level: 1, name: 'Movie not found' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Not found');
+  });
+});
+
+describe('MovieDetail – RelatedShelf integration', () => {
+  const baseMovie = {
+    id: 'm-550',
+    title: 'Fight Club',
+    year: 1999,
+    overview: 'An insomniac office worker...',
+    runtime: 139,
+    vote_average: 8.4,
+    genres: ['Drama'],
+    poster_url: '',
+    has_file: true,
+    stream_url: '/stream/movies/m-550',
+    created_at: '',
+    tmdb_id: 550,
+  };
+
+  beforeEach(() => {
+    getMovie.mockReset();
+    jellyfinPlayURL.mockReset();
+    fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
+    jellyfinPlayURL.mockResolvedValue(null);
+    fetchPlaybackAnalysis.mockResolvedValue({ src: '', enabled: false });
+    getMovie.mockResolvedValue(baseMovie);
+  });
+
+  it('renders the Related Titles shelf when graph returns items', async () => {
+    getRelated.mockResolvedValue({
+      items: [
+        {
+          id: 807,
+          title: 'Se7en',
+          year: 1995,
+          overview: 'A thriller.',
+          poster: '/se7en.jpg',
+          voteAvg: 8.6,
+          mediaType: 'movie',
+          relation: 'related_to',
+        },
+      ],
+      available: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('movie-detail-page');
+    const shelf = await screen.findByTestId('related-shelf');
+    expect(shelf).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Se7en/i })).toBeInTheDocument();
+    expect(getRelated).toHaveBeenCalledWith('tmdb:movie:550');
+  });
+
+  it('does not render the Related Titles shelf when graph is unavailable', async () => {
+    getRelated.mockResolvedValue({ items: [], available: false });
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('movie-detail-page');
+    await waitFor(() => expect(getRelated).toHaveBeenCalled());
+    expect(screen.queryByTestId('related-shelf')).not.toBeInTheDocument();
+  });
+
+  it('does not break the detail page when getRelated rejects', async () => {
+    getRelated.mockRejectedValue(new Error('graph offline'));
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const page = await screen.findByTestId('movie-detail-page');
+    expect(page).toBeInTheDocument();
+    // The main title still renders — page is not broken by graph error.
+    expect(screen.getByText('Fight Club')).toBeInTheDocument();
+    await waitFor(() => expect(getRelated).toHaveBeenCalled());
+    expect(screen.queryByTestId('related-shelf')).not.toBeInTheDocument();
   });
 });

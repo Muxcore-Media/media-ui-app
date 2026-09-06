@@ -9,7 +9,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
-import { tmdbImageUrl, youtubeEmbedUrl } from '../lib/tmdbImages';
+import { tmdbImageUrl } from '../lib/tmdbImages';
+import TrailerSection from '../components/media/TrailerSection';
 import { isWantToWatch, toggleWantToWatch } from '../lib/userdata';
 import type { DiscoverDetail } from '../types';
 
@@ -193,30 +194,11 @@ export default function DiscoverDetail() {
         </section>
       )}
 
-      {detail.trailer?.youtubeKey && (
-        <section className="space-y-3" aria-labelledby="discover-trailer-heading">
-          <h2
-            id="discover-trailer-heading"
-            className="text-lg font-semibold text-[var(--text-primary)]"
-          >
-            Trailer
-          </h2>
-          <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--player-bg)] shadow-xl">
-            <div className="relative aspect-video w-full">
-              <iframe
-                title={detail.trailer.name || `${detail.title} trailer`}
-                src={youtubeEmbedUrl(detail.trailer.youtubeKey)}
-                className="absolute inset-0 h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          </div>
-          {detail.trailer.name ? (
-            <p className="text-sm text-[var(--text-secondary)]">{detail.trailer.name}</p>
-          ) : null}
-        </section>
-      )}
+      <TrailerSection
+        trailer={detail.trailer}
+        titleLabel={detail.title}
+        headingId="discover-trailer-heading"
+      />
 
       {detail.cast?.length ? (
         <CastSection

@@ -8,6 +8,7 @@ const listMovies = vi.fn();
 const listTVShows = vi.fn();
 const listRequests = vi.fn();
 const getTVShow = vi.fn();
+const getMovie = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -18,6 +19,7 @@ vi.mock('../api/client', async () => {
       listTVShows: (...args: unknown[]) => listTVShows(...args),
       listRequests: (...args: unknown[]) => listRequests(...args),
       getTVShow: (...args: unknown[]) => getTVShow(...args),
+      getMovie: (...args: unknown[]) => getMovie(...args),
     },
   };
 });
@@ -40,6 +42,7 @@ describe('Home page', () => {
     listTVShows.mockReset();
     listRequests.mockReset();
     getTVShow.mockReset();
+    getMovie.mockReset();
     listRequests.mockResolvedValue([]);
     listTVShows.mockResolvedValue({
       items: [
@@ -233,6 +236,7 @@ describe('Continue Watching rail', () => {
     listTVShows.mockReset();
     listRequests.mockReset();
     getTVShow.mockReset();
+    getMovie.mockReset();
     listRequests.mockResolvedValue([]);
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
@@ -353,6 +357,7 @@ describe('Up Next rail', () => {
     listTVShows.mockReset();
     listRequests.mockReset();
     getTVShow.mockReset();
+    getMovie.mockReset();
     listRequests.mockResolvedValue([]);
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
@@ -429,5 +434,201 @@ describe('Up Next rail', () => {
 
     expect(await screen.findByTestId('home-continue')).toBeInTheDocument();
     expect(await screen.findByTestId('home-next-up')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Parental filter on home userdata rails (umbrella#84)
+// ---------------------------------------------------------------------------
+
+const R_LIBRARY_MOVIE = {
+  id: 'movie-42',
+  title: 'Inception',
+  year: 2010,
+  overview: '',
+  runtime: 148,
+  vote_average: 8.8,
+  genres: ['Sci-Fi'],
+  poster_url: '/poster.jpg',
+  has_file: true,
+  stream_url: '/stream/movies/movie-42',
+  created_at: '2026-08-21T00:00:00.000Z',
+  content_rating: 'R',
+};
+
+const PG_LIBRARY_MOVIE = {
+  ...R_LIBRARY_MOVIE,
+  id: 'movie-pg',
+  title: 'Finding Nemo',
+  stream_url: '/stream/movies/movie-pg',
+  content_rating: 'PG',
+};
+
+function enableKidsPgCeiling() {
+  userdata.updatePreferences({
+    parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false },
+  });
+}
+
+describe('Home parental rails', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    getMovie.mockRejectedValue(new Error('not found'));
+    getTVShow.mockRejectedValue(new Error('not found'));
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('hides a restricted Continue Watching title after joining library content_rating', async () => {
+    enableKidsPgCeiling();
+    listMovies.mockResolvedValue({ items: [R_LIBRARY_MOVIE, PG_LIBRARY_MOVIE], total: 2 });
+    vi.mocked(userdata.continueWatching).mockReturnValue([
+      MOVIE_PROGRESS,
+      { ...MOVIE_PROGRESS, id: 'movie-pg', title: 'Finding Nemo', href: '/movies/movie-pg', stream_url: '/stream/movies/movie-pg' },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    expect(shelf).toHaveTextContent('Finding Nemo');
+    expect(shelf).not.toHaveTextContent('Inception');
+  });
+
+  it('forwards joined content_rating on the resume player href', async () => {
+    enableKidsPgCeiling();
+    listMovies.mockResolvedValue({ items: [PG_LIBRARY_MOVIE], total: 1 });
+    vi.mocked(userdata.continueWatching).mockReturnValue([
+      {
+        ...MOVIE_PROGRESS,
+        id: 'movie-pg',
+        title: 'Finding Nemo',
+        href: '/movies/movie-pg',
+        stream_url: '/stream/movies/movie-pg',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    const href = within(shelf).getAllByRole('link')[0].getAttribute('href') ?? '';
+    expect(href).toContain('/player');
+    expect(href).toContain('content_rating=PG');
+  });
+
+  it('keeps an unrated Continue Watching title (soft-fail open)', async () => {
+    enableKidsPgCeiling();
+    vi.mocked(userdata.continueWatching).mockReturnValue([MOVIE_PROGRESS]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    expect(shelf).toHaveTextContent('Inception');
+    const href = within(shelf).getAllByRole('link')[0].getAttribute('href') ?? '';
+    expect(href).toContain('/player');
+    expect(href).not.toContain('content_rating');
+  });
+
+  it('fetches a missing library movie so the join can hide a restricted resume row', async () => {
+    enableKidsPgCeiling();
+    getMovie.mockResolvedValue(R_LIBRARY_MOVIE);
+    vi.mocked(userdata.continueWatching).mockReturnValue([MOVIE_PROGRESS]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(getMovie).toHaveBeenCalledWith('movie-42');
+    expect(screen.queryByTestId('home-continue')).not.toBeInTheDocument();
+  });
+
+  it('hides a restricted Favorites rail title', async () => {
+    enableKidsPgCeiling();
+    listMovies.mockResolvedValue({ items: [R_LIBRARY_MOVIE], total: 1 });
+    vi.mocked(userdata.listFavorites).mockReturnValue([
+      {
+        id: 'movie-42',
+        kind: 'movie',
+        title: 'Inception',
+        href: '/movies/movie-42',
+        poster_url: '/poster.jpg',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByText('Inception')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Favorites' })).not.toBeInTheDocument();
+  });
+
+  it('hides a restricted Next Up title and stamps content_rating on the player href', async () => {
+    enableKidsPgCeiling();
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([
+      {
+        ...NEXT_UP_ENTRY,
+        content_rating: 'TV-MA',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-next-up')).not.toBeInTheDocument();
+  });
+
+  it('keeps an allowed Next Up episode and forwards content_rating on its player link', async () => {
+    enableKidsPgCeiling();
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([
+      {
+        ...NEXT_UP_ENTRY,
+        title: 'Kids Show S01E02',
+        content_rating: 'TV-Y',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-next-up');
+    expect(shelf).toHaveTextContent('Kids Show');
+    const href = within(shelf).getAllByRole('link')[0].getAttribute('href') ?? '';
+    expect(href).toContain('/player');
+    expect(href).toContain('content_rating=TV-Y');
   });
 });

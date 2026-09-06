@@ -8,7 +8,7 @@
  */
 
 import type { Movie, TVShow } from '../types';
-import { getParentalPrefs, type ParentalPrefs } from './userdata';
+import { getParentalPrefs, showIdFromHref, type ParentalPrefs } from './userdata';
 
 // ---------------------------------------------------------------------------
 // Rating hierarchy
@@ -120,6 +120,130 @@ export function applyParentalFilter<T extends RatableItem>(items: T[]): T[] {
   } catch {
     return items;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Userdata rail join (progress / favorites / next-up → library ratings)
+// ---------------------------------------------------------------------------
+
+/** Progress, favorite, or next-up row that can be joined to a library rating. */
+export type UserdataRatingKey = {
+  id: string;
+  kind?: string;
+  href?: string;
+  showId?: string;
+  content_rating?: string;
+};
+
+export type LibraryRatingIndex = Map<string, string | undefined>;
+
+function movieRatingKey(id: string): string {
+  return `movie:${id}`;
+}
+
+function showRatingKey(id: string): string {
+  return `show:${id}`;
+}
+
+/**
+ * Library lookup key for a userdata row.
+ * Movies key by item id; episodes/shows key by parent show id.
+ */
+export function ratingLookupKey(entry: UserdataRatingKey): string | null {
+  const kind = entry.kind;
+  if (kind === 'episode' || kind === 'tv') {
+    const showId = entry.showId || showIdFromHref(entry.href);
+    return showId ? showRatingKey(showId) : null;
+  }
+  if (kind === 'movie' || !kind) {
+    return entry.id ? movieRatingKey(entry.id) : null;
+  }
+  return null;
+}
+
+/** Index movie/show `content_rating` values for userdata-rail joins. */
+export function indexLibraryRatings(
+  movies: Array<{ id: string; content_rating?: string }>,
+  shows: Array<{ id: string; content_rating?: string }>,
+): LibraryRatingIndex {
+  const map: LibraryRatingIndex = new Map();
+  for (const movie of movies) map.set(movieRatingKey(movie.id), movie.content_rating);
+  for (const show of shows) map.set(showRatingKey(show.id), show.content_rating);
+  return map;
+}
+
+/**
+ * Prefer a rating already stashed on the userdata row; otherwise join
+ * through the library index. Missing/unknown stays undefined (fail-open).
+ */
+export function resolveUserdataContentRating(
+  entry: UserdataRatingKey,
+  index: LibraryRatingIndex,
+): string | undefined {
+  if (entry.content_rating) return entry.content_rating;
+  const key = ratingLookupKey(entry);
+  if (!key) return undefined;
+  return index.get(key);
+}
+
+/** Copy joined library ratings onto userdata rows (does not drop any rows). */
+export function annotateUserdataWithRatings<T extends UserdataRatingKey>(
+  entries: T[],
+  index: LibraryRatingIndex,
+): Array<T & { content_rating?: string }> {
+  return entries.map((entry) => {
+    const content_rating = resolveUserdataContentRating(entry, index);
+    return content_rating ? { ...entry, content_rating } : { ...entry };
+  });
+}
+
+/**
+ * Filter userdata rails by parental prefs after joining library ratings.
+ * Unknown/missing ratings remain (soft-fail open). Soft-fails open if prefs
+ * cannot be read.
+ */
+export function filterUserdataByParental<T extends UserdataRatingKey>(
+  entries: T[],
+  index: LibraryRatingIndex,
+  prefs?: Pick<ParentalPrefs, 'kidsMode' | 'maxRating'>,
+): Array<T & { content_rating?: string }> {
+  const annotated = annotateUserdataWithRatings(entries, index);
+  try {
+    const parental = prefs ?? getParentalPrefs();
+    return filterByParentalControls(annotated, parental);
+  } catch {
+    return annotated;
+  }
+}
+
+/** Convenience: build an index from library lists and filter userdata rows. */
+export function applyUserdataParentalFilter<T extends UserdataRatingKey>(
+  entries: T[],
+  movies: Array<{ id: string; content_rating?: string }>,
+  shows: Array<{ id: string; content_rating?: string }>,
+): Array<T & { content_rating?: string }> {
+  try {
+    return filterUserdataByParental(entries, indexLibraryRatings(movies, shows));
+  } catch {
+    return entries;
+  }
+}
+
+/** Movie/show ids that still need a library fetch so the join can see a rating. */
+export function missingLibraryFetches(
+  entries: UserdataRatingKey[],
+  index: LibraryRatingIndex,
+): { movies: string[]; shows: string[] } {
+  const movies = new Set<string>();
+  const shows = new Set<string>();
+  for (const entry of entries) {
+    if (entry.content_rating) continue;
+    const key = ratingLookupKey(entry);
+    if (!key || index.has(key)) continue;
+    if (key.startsWith('movie:')) movies.add(key.slice('movie:'.length));
+    else if (key.startsWith('show:')) shows.add(key.slice('show:'.length));
+  }
+  return { movies: [...movies], shows: [...shows] };
 }
 
 // ---------------------------------------------------------------------------

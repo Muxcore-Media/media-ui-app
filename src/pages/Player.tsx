@@ -80,6 +80,7 @@ export default function Player() {
       seasonNumber={season ? Number(season) : undefined}
       episodeNumber={episode ? Number(episode) : undefined}
       startOver={startOver}
+      contentRating={contentRating}
     />
   );
 }

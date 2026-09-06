@@ -4,12 +4,18 @@ import {
   ratingExceedsMax,
   filterByParentalControls,
   applyParentalFilter,
+  applyUserdataParentalFilter,
+  filterUserdataByParental,
+  indexLibraryRatings,
+  missingLibraryFetches,
+  ratingLookupKey,
+  resolveUserdataContentRating,
   hashPin,
   verifyPin,
   getParentalState,
   normalizeRating,
 } from './parental';
-import { getPreferences, updatePreferences } from './userdata';
+import { updatePreferences } from './userdata';
 
 // ---------------------------------------------------------------------------
 // Rating normalization
@@ -241,5 +247,116 @@ describe('getParentalState', () => {
   it('reports anyRestriction as true when only maxRating is set', () => {
     updatePreferences({ parental: { kidsMode: false, maxRating: 'PG-13', pinHash: '', pinEnabled: false } });
     expect(getParentalState().anyRestriction).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Userdata rail join (progress / favorites / next-up)
+// ---------------------------------------------------------------------------
+
+describe('ratingLookupKey', () => {
+  it('keys movies by item id', () => {
+    expect(ratingLookupKey({ id: 'm1', kind: 'movie' })).toBe('movie:m1');
+  });
+
+  it('keys episodes and shows by parent show id', () => {
+    expect(ratingLookupKey({ id: 'ep1', kind: 'episode', href: '/tv/show-9' })).toBe('show:show-9');
+    expect(ratingLookupKey({ id: 'show-9', kind: 'tv', showId: 'show-9' })).toBe('show:show-9');
+  });
+
+  it('returns null for kinds that have no library movie/show rating', () => {
+    expect(ratingLookupKey({ id: 'track-1', kind: 'music' })).toBeNull();
+  });
+});
+
+describe('resolveUserdataContentRating', () => {
+  const index = indexLibraryRatings(
+    [{ id: 'm1', content_rating: 'R' }],
+    [{ id: 'show-1', content_rating: 'TV-MA' }],
+  );
+
+  it('prefers a rating already stashed on the userdata row', () => {
+    expect(
+      resolveUserdataContentRating({ id: 'm1', kind: 'movie', content_rating: 'PG-13' }, index),
+    ).toBe('PG-13');
+  });
+
+  it('joins movies and episodes to library ratings', () => {
+    expect(resolveUserdataContentRating({ id: 'm1', kind: 'movie' }, index)).toBe('R');
+    expect(
+      resolveUserdataContentRating({ id: 'ep-2', kind: 'episode', href: '/tv/show-1' }, index),
+    ).toBe('TV-MA');
+  });
+
+  it('returns undefined when the library has no matching rating (fail-open)', () => {
+    expect(resolveUserdataContentRating({ id: 'missing', kind: 'movie' }, index)).toBeUndefined();
+  });
+});
+
+describe('filterUserdataByParental', () => {
+  const movies = [
+    { id: 'pg-movie', content_rating: 'PG' },
+    { id: 'r-movie', content_rating: 'R' },
+  ];
+  const shows = [{ id: 'ma-show', content_rating: 'TV-MA' }];
+  const index = indexLibraryRatings(movies, shows);
+
+  const rows = [
+    { id: 'pg-movie', kind: 'movie', title: 'Nemo' },
+    { id: 'r-movie', kind: 'movie', title: 'Fight Club' },
+    { id: 'ep-1', kind: 'episode', title: 'S01E01', href: '/tv/ma-show' },
+    { id: 'unknown', kind: 'movie', title: 'Unrated' },
+  ];
+
+  it('drops restricted titles and keeps allowed + unknown ratings', () => {
+    const visible = filterUserdataByParental(rows, index, { kidsMode: true, maxRating: 'PG' });
+    expect(visible.map((r) => r.id)).toEqual(['pg-movie', 'unknown']);
+    expect(visible[0]?.content_rating).toBe('PG');
+  });
+
+  it('keeps every row when no restriction is configured', () => {
+    const visible = filterUserdataByParental(rows, index, { kidsMode: false, maxRating: '' });
+    expect(visible).toHaveLength(4);
+  });
+});
+
+describe('applyUserdataParentalFilter', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('joins favorites to library ratings using stored prefs', () => {
+    updatePreferences({
+      parental: { kidsMode: false, maxRating: 'PG-13', pinHash: '', pinEnabled: false },
+    });
+    const visible = applyUserdataParentalFilter(
+      [
+        { id: 'ok', kind: 'movie', title: 'Ok' },
+        { id: 'nope', kind: 'movie', title: 'Nope' },
+      ],
+      [
+        { id: 'ok', content_rating: 'PG' },
+        { id: 'nope', content_rating: 'R' },
+      ],
+      [],
+    );
+    expect(visible.map((r) => r.id)).toEqual(['ok']);
+  });
+});
+
+describe('missingLibraryFetches', () => {
+  it('lists movie/show ids that are not yet in the index', () => {
+    const index = indexLibraryRatings([{ id: 'known', content_rating: 'PG' }], []);
+    const missing = missingLibraryFetches(
+      [
+        { id: 'known', kind: 'movie' },
+        { id: 'need-movie', kind: 'movie' },
+        { id: 'ep-1', kind: 'episode', href: '/tv/need-show' },
+        { id: 'stashed', kind: 'movie', content_rating: 'R' },
+      ],
+      index,
+    );
+    expect(missing.movies).toEqual(['need-movie']);
+    expect(missing.shows).toEqual(['need-show']);
   });
 });

@@ -109,6 +109,7 @@ export function buildProgressPlayerHref(entry: {
   stream_url?: string;
   poster_url?: string;
   href: string;
+  content_rating?: string;
 }): string | null {
   if (!entry.stream_url) return null;
   const showId = entry.href.match(/(?:^|\/)tv\/([^/?#]+)/)?.[1];
@@ -120,5 +121,19 @@ export function buildProgressPlayerHref(entry: {
     poster: entry.poster_url,
     back: entry.href,
     showId: showId ? decodeURIComponent(showId) : undefined,
+    contentRating: entry.content_rating,
   });
+}
+
+/** Attach `content_rating` to an existing player URL when the join found one. */
+export function withPlayerContentRating(href: string, contentRating?: string): string {
+  if (!contentRating || !href.includes('/player')) return href;
+  try {
+    const url = new URL(href, 'https://muxcore.local');
+    if (url.searchParams.get('content_rating')) return href;
+    url.searchParams.set('content_rating', contentRating);
+    return `${url.pathname}?${url.searchParams.toString()}`;
+  } catch {
+    return href;
+  }
 }

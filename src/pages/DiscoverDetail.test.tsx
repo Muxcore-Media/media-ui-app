@@ -19,6 +19,7 @@ vi.mock('../api/client', async () => {
 
 describe('DiscoverDetail', () => {
   beforeEach(() => {
+    localStorage.clear();
     getDiscoverDetail.mockReset();
     requestTitle.mockReset();
   });
@@ -117,10 +118,38 @@ describe('DiscoverDetail', () => {
       );
     });
   });
+
+  it('adds and removes the title on Want to Watch', async () => {
+    getDiscoverDetail.mockResolvedValueOnce({
+      id: 550,
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'soap',
+      genres: [],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 8.4,
+      mediaType: 'movie',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/discover/movie/550']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Want to Watch' }));
+    expect(screen.getByRole('button', { name: 'On Want to Watch' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'On Want to Watch' }));
+    expect(screen.getByRole('button', { name: 'Want to Watch' })).toBeInTheDocument();
+  });
 });
 
 describe('DiscoverDetail accessibility', () => {
   beforeEach(() => {
+    localStorage.clear();
     getDiscoverDetail.mockReset();
     requestTitle.mockReset();
   });

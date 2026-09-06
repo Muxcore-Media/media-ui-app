@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Bookmark } from 'lucide-react';
 import { api } from '../api/client';
 import { DetailHero } from '../components/media/DetailHero';
 import CastSection from '../components/media/CastSection';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { tmdbImageUrl, youtubeEmbedUrl } from '../lib/tmdbImages';
+import { isWantToWatch, toggleWantToWatch } from '../lib/userdata';
 import type { DiscoverDetail } from '../types';
 
 export default function DiscoverDetail() {
@@ -20,6 +23,7 @@ export default function DiscoverDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requested, setRequested] = useState<string | null>(null);
+  const [wantToWatch, setWantToWatch] = useState(false);
 
   const backHref = params.get('return') || '/search';
 
@@ -35,7 +39,10 @@ export default function DiscoverDetail() {
     void api
       .getDiscoverDetail(mediaType, tmdbId)
       .then((res) => {
-        if (!cancelled) setDetail(res);
+        if (!cancelled) {
+          setDetail(res);
+          setWantToWatch(isWantToWatch(`tmdb:${mediaType}:${tmdbId}`));
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -125,19 +132,46 @@ export default function DiscoverDetail() {
         }
         overview={detail.overview}
         actions={
-          requested ? (
-            <span role="status">
-              <Badge tone="success">{requested}</Badge>
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void requestTitle()}
-              className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+          <>
+            {requested ? (
+              <span role="status">
+                <Badge tone="success">{requested}</Badge>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void requestTitle()}
+                className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+              >
+                Request {detail.mediaType === 'tv' ? 'series' : 'movie'}
+              </button>
+            )}
+            <Button
+              variant={wantToWatch ? 'primary' : 'secondary'}
+              icon={
+                <Bookmark
+                  className={wantToWatch ? 'h-4 w-4 fill-current' : 'h-4 w-4'}
+                  aria-hidden="true"
+                />
+              }
+              onClick={() => {
+                const on = toggleWantToWatch({
+                  id: `tmdb:${detail.mediaType}:${detail.id}`,
+                  kind: detail.mediaType,
+                  title: detail.title,
+                  poster_url: tmdbImageUrl(detail.poster, 'w342'),
+                  href: `/discover/${detail.mediaType}/${detail.id}`,
+                  year: detail.year,
+                  tmdbId: detail.id,
+                  overview: detail.overview,
+                  poster: detail.poster,
+                });
+                setWantToWatch(on);
+              }}
             >
-              Request {detail.mediaType === 'tv' ? 'series' : 'movie'}
-            </button>
-          )
+              {wantToWatch ? 'On Want to Watch' : 'Want to Watch'}
+            </Button>
+          </>
         }
       />
 

@@ -109,7 +109,10 @@ export default function Home() {
     [progress, nextUp],
   );
 
-  const becauseYouWatched = useBecauseYouWatched(becauseExcludeIds);
+  const becauseYouWatched = useBecauseYouWatched(becauseExcludeIds, {
+    movies: allMovies,
+    shows: allShows,
+  });
 
   // Dedupe Recently Added against every other home rail so the same title does
   // not appear twice: exclude CW + Next Up IDs (already in becauseExcludeIds)

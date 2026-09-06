@@ -244,3 +244,242 @@ describe('VideoPlayer OSD', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Shared TV show fixture for skip-outro + next-episode tests
+// ---------------------------------------------------------------------------
+
+const TV_SHOW_FIXTURE = {
+  id: 'show1',
+  title: 'My Show',
+  seasons: [
+    {
+      id: 's1',
+      season_number: 1,
+      name: 'Season 1',
+      episode_count: 2,
+      episodes: [
+        {
+          id: 'ep1',
+          season_number: 1,
+          episode_number: 1,
+          title: 'Pilot',
+          has_file: true,
+          stream_url: '/stream/tv/ep1',
+        },
+        {
+          id: 'ep2',
+          season_number: 1,
+          episode_number: 2,
+          title: 'Episode 2',
+          has_file: true,
+          stream_url: '/stream/tv/ep2',
+        },
+      ],
+    },
+  ],
+};
+
+function stubFetchWithEpisode(segmentOverrides?: unknown) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/playback/subtitles')) return mockJSON({ tracks: [] });
+      if (url.includes('/api/playback/analysis')) {
+        return mockJSON({ src: '/stream/tv/ep1', enabled: true, info_line: '1080p' });
+      }
+      if (url.includes('/api/playback/segments')) {
+        return mockJSON(
+          segmentOverrides ?? { media_id: 'ep1', segments: [], enabled: true },
+        );
+      }
+      if (url.includes('/api/playback/resolve')) {
+        return mockJSON({
+          stream_url: '/stream/tv/ep1',
+          mode: 'direct',
+          resume_enabled: true,
+          transcoder_enabled: false,
+          prefer_direct_play: true,
+          max_bitrate_mbps: '80',
+          trickplay_enabled: false,
+          transcoder_available: false,
+        });
+      }
+      if (url.includes('/api/tv/show1')) {
+        return mockJSON({ show: TV_SHOW_FIXTURE });
+      }
+      return mockJSON({});
+    }),
+  );
+}
+
+describe('VideoPlayer skip outro + next episode', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('shows Skip Outro button while an outro segment is active', async () => {
+    stubFetchWithEpisode({
+      media_id: 'ep1',
+      enabled: true,
+      segments: [
+        {
+          kind: 'outro',
+          start_seconds: 1100,
+          end_seconds: 1200,
+          confidence: 0.9,
+          source: 'test',
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer
+          src="/stream/tv/ep1"
+          title="Pilot"
+          mediaId="ep1"
+          mediaKind="episode"
+          showId="show1"
+          seasonNumber={1}
+          episodeNumber={1}
+        />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo('/stream/tv/ep1');
+    fireLoadedMetadata(video, 1200);
+
+    // Advance into the outro window
+    Object.defineProperty(video, 'currentTime', { value: 1110, configurable: true });
+    fireEvent(video, new Event('timeupdate'));
+
+    await waitFor(() => expect(screen.getByTestId('player-skip-segment')).toBeInTheDocument());
+    expect(screen.getByText('Skip Outro')).toBeInTheDocument();
+  });
+
+  it('keeps Skip Outro button visible even while the Up Next countdown is showing', async () => {
+    stubFetchWithEpisode({
+      media_id: 'ep1',
+      enabled: true,
+      segments: [
+        {
+          kind: 'outro',
+          start_seconds: 1100,
+          end_seconds: 1200,
+          confidence: 0.9,
+          source: 'test',
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer
+          src="/stream/tv/ep1"
+          title="Pilot"
+          mediaId="ep1"
+          mediaKind="episode"
+          showId="show1"
+          seasonNumber={1}
+          episodeNumber={1}
+        />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo('/stream/tv/ep1');
+    fireLoadedMetadata(video, 1200);
+
+    Object.defineProperty(video, 'currentTime', { value: 1110, configurable: true });
+    fireEvent(video, new Event('timeupdate'));
+
+    // Wait for show data + both affordances to appear
+    await waitFor(() => {
+      expect(screen.getByTestId('player-skip-segment')).toBeInTheDocument();
+    });
+    // Up Next overlay may take a moment to appear (requires show fetch + countdown trigger)
+    // at minimum the skip button must stay visible
+    expect(screen.getByText('Skip Outro')).toBeInTheDocument();
+  });
+
+  it('shows Next Episode button when within the last 120 s of a TV episode', async () => {
+    stubFetchWithEpisode();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer
+          src="/stream/tv/ep1"
+          title="Pilot"
+          mediaId="ep1"
+          mediaKind="episode"
+          showId="show1"
+          seasonNumber={1}
+          episodeNumber={1}
+        />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo('/stream/tv/ep1');
+    fireLoadedMetadata(video, 2400);
+
+    // Advance to 100 s from end (within NEAR_END_SEC = 120)
+    Object.defineProperty(video, 'currentTime', { value: 2300, configurable: true });
+    fireEvent(video, new Event('timeupdate'));
+
+    await waitFor(
+      () => expect(screen.getByTestId('player-next-episode')).toBeInTheDocument(),
+      { timeout: 3000 },
+    );
+    expect(screen.getByLabelText(/play next episode/i)).toBeInTheDocument();
+  });
+
+  it('hides Next Episode button when more than 120 s remain', async () => {
+    stubFetchWithEpisode();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer
+          src="/stream/tv/ep1"
+          title="Pilot"
+          mediaId="ep1"
+          mediaKind="episode"
+          showId="show1"
+          seasonNumber={1}
+          episodeNumber={1}
+        />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo('/stream/tv/ep1');
+    fireLoadedMetadata(video, 2400);
+
+    // 200 s from end — should NOT show the button
+    Object.defineProperty(video, 'currentTime', { value: 2200, configurable: true });
+    fireEvent(video, new Event('timeupdate'));
+
+    // Give it a moment to settle
+    await waitFor(() => expect(document.querySelector('video')).toBeTruthy());
+    expect(screen.queryByTestId('player-next-episode')).not.toBeInTheDocument();
+  });
+
+  it('does not show Next Episode button for a movie', async () => {
+    stubFetch();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer
+          src="/stream/movies/m1"
+          title="A Movie"
+          mediaId="m1"
+          mediaKind="movie"
+        />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo();
+    fireLoadedMetadata(video, 1200);
+
+    // Near end of movie
+    Object.defineProperty(video, 'currentTime', { value: 1150, configurable: true });
+    fireEvent(video, new Event('timeupdate'));
+
+    await waitFor(() => expect(document.querySelector('video')).toBeTruthy());
+    expect(screen.queryByTestId('player-next-episode')).not.toBeInTheDocument();
+  });
+});

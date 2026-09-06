@@ -5,12 +5,15 @@ import type { PlaybackSegment } from '../../api/client';
 type Props = {
   segment: PlaybackSegment;
   onSkip: () => void;
+  /** Raise the button above the Up Next overlay when both are visible simultaneously. */
+  elevated?: boolean;
 };
 
 /** Backend-wired intro/outro/credits/recap skip button (media-intro-outro). */
-export default function SkipSegmentButton({ segment, onSkip }: Props) {
+export default function SkipSegmentButton({ segment, onSkip, elevated = false }: Props) {
+  const bottomClass = elevated ? 'bottom-40' : 'bottom-24';
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-24 flex justify-end px-4 sm:px-6">
+    <div className={`pointer-events-none absolute inset-x-0 ${bottomClass} flex justify-end px-4 sm:px-6`}>
       <button
         type="button"
         onClick={onSkip}

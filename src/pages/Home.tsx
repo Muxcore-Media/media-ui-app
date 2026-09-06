@@ -717,7 +717,7 @@ export default function Home() {
       )}
 
       {prefs.home.showMusic && !musicShelves.loading && musicShelves.available && musicShelves.albums.length > 0 && (
-        <Shelf title="Recently Added Albums" seeAllHref="/music" testId="home-music-albums">
+        <Shelf title="Albums from your artists" seeAllHref="/music" testId="home-music-albums">
           {musicShelves.albums.map((al) => (
             <ShelfItem key={`${al.artistId}-${al.id}`} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
               <AlbumTile

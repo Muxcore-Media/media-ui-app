@@ -48,6 +48,11 @@ type Props = {
   pipSupported: boolean;
   pipActive: boolean;
   onTogglePiP: () => void;
+  castSupported: boolean;
+  castConnected: boolean;
+  onToggleCast: () => void;
+  airPlaySupported: boolean;
+  onToggleAirPlay: () => void;
   fullscreen: boolean;
   onToggleFullscreen: () => void;
 
@@ -262,26 +267,49 @@ export default function ControlsBar(props: Props) {
                 <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
-            <button
-              type="button"
-              aria-label="Cast to Chromecast (coming soon)"
-              aria-disabled="true"
-              disabled
-              title="Chromecast support coming soon"
-              className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-50 sm:flex"
-            >
-              <Cast className="h-4 w-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              aria-label="AirPlay (coming soon)"
-              aria-disabled="true"
-              disabled
-              title="AirPlay support coming soon"
-              className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-50 sm:flex"
-            >
-              <Airplay className="h-4 w-4" aria-hidden="true" />
-            </button>
+            {props.castSupported ? (
+              <button
+                type="button"
+                aria-label={props.castConnected ? 'Stop casting' : 'Cast to device'}
+                aria-pressed={props.castConnected}
+                title={props.castConnected ? 'Stop casting' : 'Cast to a device'}
+                className={`hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${props.castConnected ? 'text-[var(--accent-color)]' : ''}`}
+                onClick={props.onToggleCast}
+              >
+                <Cast className="h-4 w-4" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-label="Cast (not supported in this browser)"
+                disabled
+                title="Remote casting is not supported in this browser"
+                className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-40 sm:flex"
+              >
+                <Cast className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+            {props.airPlaySupported ? (
+              <button
+                type="button"
+                aria-label="AirPlay"
+                title="Play on AirPlay device"
+                className="hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex"
+                onClick={props.onToggleAirPlay}
+              >
+                <Airplay className="h-4 w-4" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-label="AirPlay (not supported in this browser)"
+                disabled
+                title="AirPlay is not supported in this browser"
+                className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-40 sm:flex"
+              >
+                <Airplay className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
               aria-label={props.fullscreen ? 'Exit fullscreen' : 'Fullscreen'}

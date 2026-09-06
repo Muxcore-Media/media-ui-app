@@ -590,3 +590,195 @@ describe('VideoPlayer skip outro + next episode', () => {
     expect(screen.queryByTestId('player-next-episode')).not.toBeInTheDocument();
   });
 });
+
+describe('VideoPlayer subtitle search', () => {
+  function stubFetchWithSubtitleSearch(overrides: {
+    searchBody?: unknown;
+    searchOk?: boolean;
+    downloadBody?: unknown;
+    downloadOk?: boolean;
+  } = {}) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/api/subtitles/search')) {
+          return Promise.resolve({
+            ok: overrides.searchOk ?? true,
+            status: overrides.searchOk === false ? 503 : 200,
+            statusText: overrides.searchOk === false ? 'Service Unavailable' : 'OK',
+            json: () =>
+              Promise.resolve(
+                overrides.searchBody ?? {
+                  available: true,
+                  results: [
+                    {
+                      id: 'sub42',
+                      provider: 'opensubtitles',
+                      title: 'Test 2024',
+                      language: 'en',
+                      format: 'srt',
+                      release: 'BluRay',
+                    },
+                  ],
+                },
+              ),
+          });
+        }
+        if (url.includes('/api/subtitles/download')) {
+          return Promise.resolve({
+            ok: overrides.downloadOk ?? true,
+            status: overrides.downloadOk === false ? 500 : 200,
+            statusText: overrides.downloadOk === false ? 'Server Error' : 'OK',
+            json: () =>
+              Promise.resolve(
+                overrides.downloadBody ?? {
+                  track_url: '/api/subtitles/files/sub42.vtt',
+                  language: 'en',
+                  label: 'English',
+                },
+              ),
+          });
+        }
+        if (url.includes('/api/playback/subtitles')) {
+          return Promise.resolve({ ok: true, status: 200, statusText: 'OK', json: () => Promise.resolve({ tracks: [] }) });
+        }
+        if (url.includes('/api/playback/analysis')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+            json: () =>
+              Promise.resolve({ src: '/stream/movies/m1', enabled: true, info_line: '1080p' }),
+          });
+        }
+        if (url.includes('/api/playback/segments')) {
+          return Promise.resolve({ ok: true, status: 200, statusText: 'OK', json: () => Promise.resolve({ media_id: 'm1', segments: [], enabled: true }) });
+        }
+        if (url.includes('/api/playback/resolve')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+            json: () =>
+              Promise.resolve({
+                stream_url: RESOLVED_STREAM_URL,
+                mode: 'direct',
+                resume_enabled: true,
+                transcoder_enabled: false,
+                prefer_direct_play: true,
+                max_bitrate_mbps: '80',
+                trickplay_enabled: false,
+                transcoder_available: false,
+              }),
+          });
+        }
+        return Promise.resolve({ ok: true, status: 200, statusText: 'OK', json: () => Promise.resolve({}) });
+      }),
+    );
+  }
+
+  it('shows "Find online" button in the subtitles settings panel', async () => {
+    stubFetchWithSubtitleSearch();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+
+    expect(within(menu).getByTestId('subtitle-find-online-btn')).toBeInTheDocument();
+  });
+
+  it('shows search results after clicking "Find online"', async () => {
+    stubFetchWithSubtitleSearch();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByTestId('subtitle-find-online-btn'));
+
+    await waitFor(() => {
+      expect(within(menu).getByTestId('subtitle-find-results')).toBeInTheDocument();
+    });
+    expect(within(menu).getByText('Test 2024')).toBeInTheDocument();
+  });
+
+  it('auto-selects the track after a successful subtitle download', async () => {
+    stubFetchWithSubtitleSearch();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByTestId('subtitle-find-online-btn'));
+
+    await waitFor(() => {
+      expect(within(menu).getByTestId('subtitle-find-results')).toBeInTheDocument();
+    });
+
+    fireEvent.click(within(menu).getByLabelText(/Download Test 2024/i));
+
+    await waitFor(() => {
+      expect(within(menu).queryByTestId('subtitle-find-results')).not.toBeNull();
+    });
+  });
+
+  it('shows unavailable message when subtitle module is absent (503)', async () => {
+    stubFetchWithSubtitleSearch({ searchOk: false });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByTestId('subtitle-find-online-btn'));
+
+    await waitFor(() => {
+      expect(within(menu).getByTestId('subtitle-find-unavailable')).toBeInTheDocument();
+    });
+  });
+
+  it('shows empty state when no results are found', async () => {
+    stubFetchWithSubtitleSearch({ searchBody: { available: true, results: [] } });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByTestId('subtitle-find-online-btn'));
+
+    await waitFor(() => {
+      expect(within(menu).getByTestId('subtitle-find-empty')).toBeInTheDocument();
+    });
+  });
+});

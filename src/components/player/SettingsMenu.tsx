@@ -3,9 +3,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Download,
   Gauge,
   Languages,
+  Loader2,
   Maximize2,
+  Search,
   Subtitles as SubtitlesIcon,
   Sparkles,
   X,
@@ -19,6 +22,17 @@ import {
 import { formatAudioTrackLabel, formatSubtitleTrackLabel } from '../../lib/player/tracks';
 import { languageDisplayName } from '../../lib/player/format';
 import type { UserPreferences } from '../../lib/userdata';
+import type { SubtitleSearchResult } from '../../api/client';
+
+export type SubtitleSearchMenuProps = {
+  status: 'idle' | 'searching' | 'done' | 'unavailable' | 'error';
+  results: SubtitleSearchResult[];
+  error: string | null;
+  downloadingId: string | null;
+  downloadedId: string | null;
+  onSearch: () => void;
+  onDownload: (id: string, provider: string) => void;
+};
 
 type Panel =
   | 'root'
@@ -26,6 +40,7 @@ type Panel =
   | 'audio'
   | 'subtitles'
   | 'subtitle-appearance'
+  | 'subtitle-find'
   | 'speed'
   | 'aspect';
 
@@ -49,6 +64,7 @@ type Props = {
   onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void;
   aspectMode: AspectMode;
   onAspectMode: (mode: AspectMode) => void;
+  subtitleSearch?: SubtitleSearchMenuProps;
 };
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -80,6 +96,7 @@ export default function SettingsMenu(props: Props) {
     onSubtitlePrefs,
     aspectMode,
     onAspectMode,
+    subtitleSearch,
   } = props;
 
   const activeQualityLabel = qualityOptions.find((q) => q.id === quality)?.label || 'Original';
@@ -87,6 +104,11 @@ export default function SettingsMenu(props: Props) {
     textIdx === -1
       ? 'Off'
       : trackLabel(textTracks[textIdx] ?? ({ label: 'On' } as PlayerTrackInfo));
+
+  function handleBack() {
+    if (panel === 'subtitle-find') setPanel('subtitles');
+    else setPanel('root');
+  }
 
   return (
     <div
@@ -99,7 +121,7 @@ export default function SettingsMenu(props: Props) {
             type="button"
             aria-label="Back"
             className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--player-fg-muted)] hover:bg-[var(--player-chip-hover)]"
-            onClick={() => setPanel('root')}
+            onClick={handleBack}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -110,6 +132,7 @@ export default function SettingsMenu(props: Props) {
           {panel === 'audio' && 'Audio'}
           {panel === 'subtitles' && 'Subtitles'}
           {panel === 'subtitle-appearance' && 'Subtitle appearance'}
+          {panel === 'subtitle-find' && 'Find subtitles'}
           {panel === 'speed' && 'Playback speed'}
           {panel === 'aspect' && 'Aspect ratio'}
         </h2>
@@ -227,6 +250,22 @@ export default function SettingsMenu(props: Props) {
             >
               Appearance…
             </button>
+            {subtitleSearch ? (
+              <button
+                type="button"
+                data-testid="subtitle-find-online-btn"
+                className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--accent-color)] hover:bg-[var(--player-chip-hover)]"
+                onClick={() => {
+                  subtitleSearch.onSearch();
+                  setPanel('subtitle-find');
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                  Find online…
+                </span>
+              </button>
+            ) : null}
           </>
         )}
 
@@ -338,6 +377,10 @@ export default function SettingsMenu(props: Props) {
             ))}
           </ul>
         )}
+
+        {panel === 'subtitle-find' && (
+          <SubtitleFindPanel search={subtitleSearch} />
+        )}
       </div>
     </div>
   );
@@ -405,4 +448,98 @@ function OptionRow({
       </button>
     </li>
   );
+}
+
+function SubtitleFindPanel({ search }: { search: SubtitleSearchMenuProps | undefined }) {
+  if (!search) return null;
+
+  const busy = search.downloadingId !== null;
+
+  if (search.status === 'searching') {
+    return (
+      <div
+        className="flex items-center gap-2 px-3 py-5 text-sm text-[var(--player-fg-muted)]"
+        data-testid="subtitle-find-searching"
+      >
+        <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden="true" />
+        <span>Searching…</span>
+      </div>
+    );
+  }
+
+  if (search.status === 'unavailable') {
+    return (
+      <p
+        className="px-3 py-5 text-center text-xs text-[var(--player-fg-subtle)]"
+        data-testid="subtitle-find-unavailable"
+      >
+        Subtitle search is not available.
+      </p>
+    );
+  }
+
+  if (search.status === 'error') {
+    return (
+      <p
+        className="px-3 py-5 text-center text-xs text-[var(--player-fg-subtle)]"
+        data-testid="subtitle-find-error"
+      >
+        {search.error ?? 'Could not reach subtitle service.'}
+      </p>
+    );
+  }
+
+  if (search.status === 'done' && search.results.length === 0) {
+    return (
+      <p
+        className="px-3 py-5 text-center text-xs text-[var(--player-fg-subtle)]"
+        data-testid="subtitle-find-empty"
+      >
+        No results found. Try a different subtitle language in Settings.
+      </p>
+    );
+  }
+
+  if (search.status === 'done' && search.results.length > 0) {
+    return (
+      <ul className="space-y-0.5 py-1 text-sm" data-testid="subtitle-find-results">
+        {search.results.map((r) => {
+          const isDownloading = search.downloadingId === r.id;
+          const isDownloaded = search.downloadedId === r.id;
+          return (
+            <li key={`${r.provider}:${r.id}`}>
+              <button
+                type="button"
+                disabled={busy}
+                aria-label={`Download ${r.title} (${r.language.toUpperCase()})`}
+                className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[var(--player-chip-hover)] disabled:cursor-wait disabled:opacity-70"
+                onClick={() => search.onDownload(r.id, r.provider)}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[var(--player-fg)]">{r.title}</span>
+                  <span className="block text-[10px] text-[var(--player-fg-subtle)]">
+                    {r.language.toUpperCase()}
+                    {' · '}
+                    {r.format.toUpperCase()}
+                    {r.release ? ` · ${r.release}` : ''}
+                  </span>
+                </span>
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
+                  {isDownloading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--player-fg-muted)]" aria-hidden="true" />
+                  ) : isDownloaded ? (
+                    <Check className="h-4 w-4 text-[var(--accent-color)]" aria-hidden="true" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 text-[var(--player-fg-muted)]" aria-hidden="true" />
+                  )}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  return null;
 }

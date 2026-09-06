@@ -738,6 +738,64 @@ export async function fetchPlaybackAnalysis(src: string): Promise<PlaybackAnalys
   return getJSON(`/api/playback/analysis?${q}`);
 }
 
+/** A single subtitle candidate returned by media-subtitles search. */
+export type SubtitleSearchResult = {
+  id: string;
+  provider: string;
+  title: string;
+  language: string;
+  format: string;
+  release?: string;
+  downloads?: number;
+};
+
+/** Parameters for `searchSubtitles`. */
+export type SubtitleSearchParams = {
+  title: string;
+  language: string;
+  year?: number;
+  imdbId?: string;
+  mediaType?: 'movie' | 'tv';
+  season?: number;
+  episode?: number;
+};
+
+/**
+ * Search for subtitle candidates via the BFF → media-subtitles module.
+ * Returns `available: false` when the module is not installed/configured.
+ */
+export async function searchSubtitles(
+  params: SubtitleSearchParams,
+): Promise<{ results: SubtitleSearchResult[]; available: boolean }> {
+  const q = new URLSearchParams({ title: params.title, language: params.language });
+  if (params.year) q.set('year', String(params.year));
+  if (params.imdbId) q.set('imdb_id', params.imdbId);
+  if (params.mediaType) q.set('media_type', params.mediaType);
+  if (params.season != null) q.set('season', String(params.season));
+  if (params.episode != null) q.set('episode', String(params.episode));
+  return getJSON<{ results: SubtitleSearchResult[]; available: boolean }>(
+    `/api/subtitles/search?${q}`,
+  );
+}
+
+/**
+ * Download a specific subtitle by ID from media-subtitles and register it as a
+ * playable sidecar track. Returns the BFF-hosted VTT URL plus display metadata.
+ */
+export async function downloadSubtitle(
+  id: string,
+  provider: string,
+): Promise<{ track_url: string; language: string; label: string }> {
+  return getJSON<{ track_url: string; language: string; label: string }>(
+    '/api/subtitles/download',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, provider }),
+    },
+  );
+}
+
 export type TrickplayManifest = {
   url: string;
   intervalSeconds: number;

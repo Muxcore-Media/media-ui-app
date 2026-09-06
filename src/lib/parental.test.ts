@@ -17,6 +17,7 @@ import {
   normalizeRating,
 } from './parental';
 import { updatePreferences } from './userdata';
+import { setCurrentUserId } from './session';
 
 // ---------------------------------------------------------------------------
 // Rating normalization
@@ -180,7 +181,19 @@ describe('applyParentalFilter', () => {
 // PIN hashing and verification
 // ---------------------------------------------------------------------------
 
+async function adminHashParentalPin(userId: string, pin: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${userId}:${pin}`));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 describe('hashPin', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setCurrentUserId('');
+  });
+
   it('produces a 64-char hex SHA-256 digest', async () => {
     const hash = await hashPin('1234');
     expect(hash).toHaveLength(64);
@@ -194,9 +207,29 @@ describe('hashPin', () => {
   it('different PINs produce different hashes', async () => {
     expect(await hashPin('1111')).not.toBe(await hashPin('2222'));
   });
+
+  it('salts with userID + ":" + pin (admin-ui hashParentalPIN)', async () => {
+    const userId = 'user-household-1';
+    const pin = '2468';
+    expect(await hashPin(pin, userId)).toBe(await adminHashParentalPin(userId, pin));
+  });
+
+  it('same PIN with different user ids produces different hashes', async () => {
+    expect(await hashPin('1234', 'alice')).not.toBe(await hashPin('1234', 'bob'));
+  });
+
+  it('uses the cached session user id when none is passed', async () => {
+    setCurrentUserId('cached-user');
+    expect(await hashPin('9999')).toBe(await adminHashParentalPin('cached-user', '9999'));
+  });
 });
 
 describe('verifyPin', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setCurrentUserId('');
+  });
+
   it('returns true when pinHash is empty (no PIN configured)', async () => {
     expect(await verifyPin('1234', '')).toBe(true);
   });
@@ -214,6 +247,16 @@ describe('verifyPin', () => {
   it('is case-insensitive for stored hash (accepts uppercase hash)', async () => {
     const hash = (await hashPin('4321')).toUpperCase();
     expect(await verifyPin('4321', hash)).toBe(true);
+  });
+
+  it('verifies an admin-style salted hash with the current user id', async () => {
+    const userId = 'auth-local-user-9';
+    const pin = '1357';
+    const stored = await adminHashParentalPin(userId, pin);
+    setCurrentUserId(userId);
+    expect(await verifyPin(pin, stored)).toBe(true);
+    expect(await verifyPin('0000', stored)).toBe(false);
+    expect(await verifyPin(pin, stored, 'other-user')).toBe(false);
   });
 });
 

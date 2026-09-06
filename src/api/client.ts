@@ -6,6 +6,7 @@ import type {
   MediaRequest,
   Movie,
   MusicArtistDetail,
+  PersonDetail,
   RelatedItem,
   RelatedResponse,
   SearchResult,
@@ -312,6 +313,41 @@ export const api = {
       ...data,
       mediaType: data.mediaType === 'tv' ? 'tv' : 'movie',
       genres: Array.isArray(data.genres) ? data.genres : [],
+    };
+  },
+
+  /**
+   * Fetch a person's biography and combined movie+TV credits via the BFF
+   * TMDB person proxy at GET /api/discover/person/:id/credits.
+   * Returns a safe empty-credits shape on network / 4xx errors so the page
+   * can render a soft-empty state rather than a hard error banner.
+   */
+  async getPersonCredits(personId: number): Promise<PersonDetail> {
+    const data = await getJSON<Record<string, unknown>>(
+      `/api/discover/person/${personId}/credits`,
+    );
+    const rawCredits = (
+      Array.isArray(data.credits)
+        ? data.credits
+        : Array.isArray(data.cast)
+          ? (data.cast as unknown[])
+          : []
+    ) as Record<string, unknown>[];
+    const credits = rawCredits.map((c) => ({
+      tmdbId: Number(c.tmdbId ?? c.tmdb_id ?? c.id ?? 0),
+      title: String(c.title ?? c.name ?? ''),
+      year: Number(c.year ?? c.release_year ?? (c.release_date ? String(c.release_date).slice(0, 4) : 0) ?? 0),
+      mediaType: String(c.mediaType ?? c.media_type ?? 'movie') === 'tv' ? ('tv' as const) : ('movie' as const),
+      character: c.character != null ? String(c.character) : undefined,
+      poster: c.poster != null ? String(c.poster ?? c.poster_path ?? '') : undefined,
+    }));
+    return {
+      id: Number(data.id ?? personId),
+      name: String(data.name ?? ''),
+      biography: data.biography != null ? String(data.biography) : undefined,
+      birthday: data.birthday != null ? String(data.birthday) : undefined,
+      profilePath: data.profilePath != null ? String(data.profilePath) : data.profile_path != null ? String(data.profile_path) : undefined,
+      credits,
     };
   },
 

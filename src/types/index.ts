@@ -198,3 +198,26 @@ export type RelatedResponse = {
   /** False when the media-graph module is not installed / reachable. */
   available: boolean;
 };
+
+/** A single credit entry returned by the discover person credits endpoint. */
+export interface PersonCredit {
+  tmdbId: number;
+  title: string;
+  year: number;
+  mediaType: 'movie' | 'tv';
+  character?: string;
+  poster?: string;
+}
+
+/**
+ * Person detail from GET /api/discover/person/:id/credits.
+ * Includes TMDB biography/profile data plus a combined credits list.
+ */
+export interface PersonDetail {
+  id: number;
+  name: string;
+  biography?: string;
+  birthday?: string;
+  profilePath?: string;
+  credits: PersonCredit[];
+}

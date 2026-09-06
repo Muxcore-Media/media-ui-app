@@ -549,6 +549,29 @@ export const api = {
     return getJSON('/api/collections');
   },
 
+  /**
+   * Fetch related titles from the media-graph BFF (`GET /api/graph/related`).
+   * Returns an empty items array on any error so callers can soft-hide.
+   */
+  async getRelatedTitles(
+    id: string,
+    type: 'movie' | 'tv',
+    limit = 20,
+  ): Promise<{ items: Array<Movie | TVShow>; seed_title?: string }> {
+    const q = new URLSearchParams({ id, type, limit: String(limit) });
+    const data = await getJSON<{
+      items?: Record<string, unknown>[];
+      results?: Record<string, unknown>[];
+      seed_title?: string;
+      seedTitle?: string;
+    }>(`/api/graph/related?${q}`);
+    const rows = (data.items ?? data.results ?? []) as Record<string, unknown>[];
+    const items: Array<Movie | TVShow> = rows.map((row) =>
+      type === 'tv' ? normalizeTV(row) : normalizeMovie(row),
+    );
+    return { items, seed_title: data.seed_title ?? data.seedTitle };
+  },
+
   async getCollection(
     id: string,
   ): Promise<{ id: string; name: string; movies: import('../types').Movie[] }> {

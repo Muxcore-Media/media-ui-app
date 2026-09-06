@@ -33,6 +33,7 @@ import {
   applyUserdataParentalFilter,
   expandLibraryRatingsForUserdata,
 } from '../lib/parental';
+import { useBecauseYouWatched } from '../hooks/useBecauseYouWatched';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -99,15 +100,15 @@ export default function Home() {
   const [joinShows, setJoinShows] = useState<Array<{ id: string; content_rating?: string }>>([]);
   const [serverCols, setServerCols] = useState<{ id: string; name: string; movie_count: number }[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const recommended = useMemo(
-    () =>
-      applyParentalFilter([...allMovies])
-        .filter((m) => isWatchable(m) && m.vote_average > 0)
-        .sort((a, b) => b.vote_average - a.vote_average)
-        .slice(0, 16),
-    [allMovies],
+
+  // IDs already shown in Continue Watching / Next Up — passed to the because-you-watched hook
+  // so it can dedupe. Memoised to a stable Set identity.
+  const becauseExcludeIds = useMemo(
+    () => new Set([...progress.map((p) => p.id), ...nextUp.map((n) => n.id)]),
+    [progress, nextUp],
   );
 
+  const becauseYouWatched = useBecauseYouWatched(becauseExcludeIds);
   const recentlyAdded = useMemo(() => {
     type Row = { kind: 'movie' | 'tv'; item: Movie | TVShow; createdAt: string };
     const rows: Row[] = [];
@@ -124,11 +125,7 @@ export default function Home() {
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
-    const candidate =
-      filteredReady.find((m) => m.backdrop_url) ||
-      filteredReady[0] ||
-      recommended.find((m) => m.backdrop_url) ||
-      recommended[0];
+    const candidate = filteredReady.find((m) => m.backdrop_url) || filteredReady[0];
     if (!candidate) return null;
     return {
       id: candidate.id,
@@ -143,7 +140,7 @@ export default function Home() {
       playHref: candidate.has_file ? buildMoviePlayerHref(candidate) : `/movies/${candidate.id}`,
       detailHref: `/movies/${candidate.id}`,
     };
-  }, [readyMovies, recommended]);
+  }, [readyMovies]);
 
   useEffect(() => {
     if (!hero) return;
@@ -241,7 +238,7 @@ export default function Home() {
     (prefs.home.showContinueWatching && visibleProgress.length > 0) ||
     (prefs.home.showNextUp && visibleNextUp.length > 0) ||
     (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
-    recommended.length > 0 ||
+    becauseYouWatched.items.length > 0 ||
     (prefs.home.showFavorites && visibleFavorites.length > 0) ||
     (prefs.home.showWantToWatch && visibleWantToWatch.length > 0) ||
     (prefs.home.showCollections && serverCols.length > 0) ||
@@ -374,11 +371,21 @@ export default function Home() {
         </Shelf>
       )}
 
-      {!loading && recommended.length > 0 && (
-        <Shelf title="Recommended" seeAllHref="/movies">
-          {recommended.map((m) => (
-            <ShelfItem key={m.id}>
-              <MediaCard item={m} type="movie" />
+      {!becauseYouWatched.loading && becauseYouWatched.items.length > 0 && (
+        <Shelf
+          title={
+            becauseYouWatched.seedTitle
+              ? `Because you watched ${becauseYouWatched.seedTitle}`
+              : 'Because you watched'
+          }
+          testId="home-because-you-watched"
+        >
+          {becauseYouWatched.items.map((item) => (
+            <ShelfItem key={item.id}>
+              <MediaCard
+                item={item}
+                type={'seasons' in item ? 'tv' : 'movie'}
+              />
             </ShelfItem>
           ))}
         </Shelf>

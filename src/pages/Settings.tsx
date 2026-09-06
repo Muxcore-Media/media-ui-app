@@ -165,6 +165,7 @@ function HomePane() {
         showMusic: fd.get('showMusic') === 'on',
         showBooks: fd.get('showBooks') === 'on',
         showAudiobooks: fd.get('showAudiobooks') === 'on',
+        showComics: fd.get('showComics') === 'on',
       },
     });
   }
@@ -191,6 +192,7 @@ function HomePane() {
           ['showMusic', 'Music shelves (Artists & Albums)', prefs.home.showMusic],
           ['showBooks', 'Books shelf (Browse Authors)', prefs.home.showBooks],
           ['showAudiobooks', 'Audiobooks shelf', prefs.home.showAudiobooks],
+          ['showComics', 'Comics shelf', prefs.home.showComics],
         ] as const
       ).map(([name, label, checked]) => (
         <label key={name} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">

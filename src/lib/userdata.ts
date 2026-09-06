@@ -180,6 +180,8 @@ export type UserPreferences = {
     showBooks: boolean;
     /** Show the Audiobooks shelf on the home feed (umbrella#117). */
     showAudiobooks: boolean;
+    /** Show the Comics shelf on the home feed (umbrella#120). */
+    showComics: boolean;
   };
   playback: {
     autoplayNext: boolean;
@@ -266,6 +268,7 @@ const defaultPrefs = (): UserPreferences => ({
     showMusic: true,
     showBooks: true,
     showAudiobooks: true,
+    showComics: true,
   },
   parental: {
     kidsMode: false,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CalendarDays, Building2, Headphones, Home as HomeIcon, Layers, ListMusic, Music2, Play, Tag, Tv2 } from 'lucide-react';
+import { BookOpen, CalendarDays, Building2, Headphones, Home as HomeIcon, Layers, ListMusic, Music2, Play, Tag, Tv2, BookMarked } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
@@ -42,6 +42,7 @@ import { useGenreRails } from '../hooks/useGenreRails';
 import { useStudioNetworkRails } from '../hooks/useStudioNetworkRails';
 import { useMusicShelves } from '../hooks/useMusicShelves';
 import { useBooksShelves } from '../hooks/useBooksShelves';
+import { useComicsShelves } from '../hooks/useComicsShelves';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -206,6 +207,23 @@ function AudiobookTile({ title, narrator }: { title: string; narrator?: string }
   );
 }
 
+/** Compact tile for a comic series/title on the home "Comics" shelf. */
+function ComicsTile({ title, publisher }: { title: string; publisher?: string }) {
+  return (
+    <Link
+      to="/comics"
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={publisher ? `${title} — ${publisher}` : title}
+    >
+      <BookMarked className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{title}</span>
+      {publisher ? (
+        <span className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{publisher}</span>
+      ) : null}
+    </Link>
+  );
+}
+
 /** Format an ISO air-date string for display in the upcoming rail subtitle. */
 function formatUpcomingAirDate(airIso: string): string {
   const today = new Date();
@@ -334,6 +352,9 @@ export default function Home() {
 
   // Books and Audiobooks shelves — fetched independently; errors are swallowed so Home never breaks.
   const booksShelves = useBooksShelves();
+
+  // Comics shelf — fetched independently; errors are swallowed so Home never breaks.
+  const comicsShelves = useComicsShelves();
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
@@ -469,6 +490,7 @@ export default function Home() {
     (prefs.home.showMusic && musicShelves.available && (musicShelves.artists.length > 0 || musicShelves.albums.length > 0)) ||
     (prefs.home.showBooks && booksShelves.booksAvailable && booksShelves.authors.length > 0) ||
     (prefs.home.showAudiobooks && booksShelves.audiobooksAvailable && booksShelves.audiobooks.length > 0) ||
+    (prefs.home.showComics && comicsShelves.available && comicsShelves.comics.length > 0) ||
     showReadyFallback ||
     (prefs.home.showRecentRequests && inProgressCount > 0);
 
@@ -785,6 +807,19 @@ export default function Home() {
               <AudiobookTile
                 title={String(ab.title || ab.name || ab.id)}
                 narrator={ab.narrator as string | undefined}
+              />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showComics && !comicsShelves.loading && comicsShelves.available && comicsShelves.comics.length > 0 && (
+        <Shelf title="Comics" seeAllHref="/comics" testId="home-comics">
+          {comicsShelves.comics.map((c) => (
+            <ShelfItem key={c.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <ComicsTile
+                title={String(c.title || c.name || c.id)}
+                publisher={c.publisher as string | undefined}
               />
             </ShelfItem>
           ))}

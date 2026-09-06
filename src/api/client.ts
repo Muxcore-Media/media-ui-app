@@ -71,6 +71,69 @@ function posterURL(path: string, kind: 'movie' | 'tv' = 'movie'): string {
   return kind === 'tv' ? `/images/tv/${path}` : `/images/movies/${path}`;
 }
 
+/**
+ * Extract a single studio name from a raw API record.
+ * Handles plain string fields (`studio`, `studioName`) as well as array forms
+ * (`studios`, `productionCompanies`) used by Plex/Jellyfin/Emby.
+ */
+function extractStudio(raw: Record<string, unknown>): string | undefined {
+  // Plain string fields first (Plex-style)
+  for (const key of ['studio', 'studioName', 'studio_name']) {
+    const v = raw[key];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  // Array forms: Jellyfin/Emby return `Studios` as [{Name,Id}] or plain string[]
+  for (const key of ['studios', 'Studios']) {
+    const arr = raw[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      const first = arr[0];
+      if (typeof first === 'string' && first.trim()) return first.trim();
+      if (first && typeof first === 'object') {
+        const name = (first as Record<string, unknown>).Name ?? (first as Record<string, unknown>).name;
+        if (typeof name === 'string' && name.trim()) return name.trim();
+      }
+    }
+  }
+  // TMDB-style productionCompanies
+  for (const key of ['productionCompanies', 'production_companies']) {
+    const arr = raw[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      const first = arr[0];
+      if (typeof first === 'string' && first.trim()) return first.trim();
+      if (first && typeof first === 'object') {
+        const name = (first as Record<string, unknown>).name ?? (first as Record<string, unknown>).Name;
+        if (typeof name === 'string' && name.trim()) return name.trim();
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Extract a broadcast/streaming network name from a raw TV show API record.
+ * Handles Plex `network`, Jellyfin `Networks` array, and common snake_case aliases.
+ */
+function extractNetwork(raw: Record<string, unknown>): string | undefined {
+  // Plain string fields first (Plex-style)
+  for (const key of ['network', 'networkName', 'network_name', 'tvNetwork']) {
+    const v = raw[key];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  // Array forms: Jellyfin/Emby
+  for (const key of ['networks', 'Networks']) {
+    const arr = raw[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      const first = arr[0];
+      if (typeof first === 'string' && first.trim()) return first.trim();
+      if (first && typeof first === 'object') {
+        const name = (first as Record<string, unknown>).Name ?? (first as Record<string, unknown>).name;
+        if (typeof name === 'string' && name.trim()) return name.trim();
+      }
+    }
+  }
+  return undefined;
+}
+
 function normalizeMovie(raw: Record<string, unknown>): Movie {
   const id = String(raw.id ?? raw.movieId ?? '');
   const poster = String(
@@ -116,6 +179,7 @@ function normalizeMovie(raw: Record<string, unknown>): Movie {
       raw.library_type != null || raw.libraryType != null
         ? String(raw.library_type ?? raw.libraryType)
         : undefined,
+    studio: extractStudio(raw),
   };
 }
 
@@ -190,6 +254,8 @@ function normalizeTV(raw: Record<string, unknown>): TVShow {
       raw.content_rating != null || raw.contentRating != null || raw.officialRating != null
         ? String(raw.content_rating ?? raw.contentRating ?? raw.officialRating)
         : undefined,
+    network: extractNetwork(raw),
+    studio: extractStudio(raw),
   };
 }
 

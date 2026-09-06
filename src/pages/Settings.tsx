@@ -160,6 +160,8 @@ function HomePane() {
         showPlaylists: fd.get('showPlaylists') === 'on',
         showGenres: fd.get('showGenres') === 'on',
         showWantToWatch: fd.get('showWantToWatch') === 'on',
+        showStudios: fd.get('showStudios') === 'on',
+        showNetworks: fd.get('showNetworks') === 'on',
       },
     });
   }
@@ -181,6 +183,8 @@ function HomePane() {
           ['showPlaylists', 'Playlists shelf', prefs.home.showPlaylists],
           ['showGenres', 'Browse by Genre shelf', prefs.home.showGenres],
           ['showWantToWatch', 'Want to Watch shelf', prefs.home.showWantToWatch],
+          ['showStudios', 'Browse by Studio shelf', prefs.home.showStudios],
+          ['showNetworks', 'Browse by Network shelf', prefs.home.showNetworks],
         ] as const
       ).map(([name, label, checked]) => (
         <label key={name} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">

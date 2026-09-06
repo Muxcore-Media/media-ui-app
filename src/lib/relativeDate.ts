@@ -1,3 +1,18 @@
+/**
+ * Format seconds remaining as a human-readable string — e.g. "1h 40m left",
+ * "22 min left". Returns null when duration is unknown or under one minute.
+ */
+export function formatTimeRemaining(positionSec: number, durationSec: number): string | null {
+  if (durationSec <= 0) return null;
+  const remainingSec = Math.max(0, durationSec - positionSec);
+  if (remainingSec < 60) return null;
+  const totalMin = Math.round(remainingSec / 60);
+  if (totalMin < 60) return `${totalMin} min left`;
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return mins > 0 ? `${hours}h ${mins}m left` : `${hours}h left`;
+}
+
 /** Relative "Added … ago" labels for recently-imported library rows (AGENTS.md §4). */
 export function formatAddedRelative(createdAt: string, nowMs = Date.now()): string {
   const t = Date.parse(createdAt);

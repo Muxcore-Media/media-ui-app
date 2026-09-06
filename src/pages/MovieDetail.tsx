@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
@@ -11,12 +11,16 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { PinGateDialog } from '../components/parental/PinGateDialog';
+import { RestrictedOverlay } from '../components/parental/RestrictedOverlay';
 import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata';
 import { buildMoviePlayerHref, buildMoviePlayerHrefFromBeginning } from '../lib/playHref';
+import { getParentalState, isItemRestricted } from '../lib/parental';
 import type { DiscoverDetail, Movie } from '../types';
 
 export default function MovieDetail() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +29,12 @@ export default function MovieDetail() {
   const [watched, setWatched] = useState(false);
   const [queued, setQueued] = useState(false);
   const [discover, setDiscover] = useState<DiscoverDetail | null>(null);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const probe = usePlaybackAnalysis(movie?.has_file ? movie.stream_url : undefined);
+
+  const parentalState = getParentalState();
+  const restricted = !unlocked && movie ? isItemRestricted(movie, parentalState) : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +109,33 @@ export default function MovieDetail() {
         <Link to="/movies" className="text-[var(--accent-color)] hover:underline">
           Back to movies
         </Link>
+      </div>
+    );
+  }
+
+  if (restricted) {
+    return (
+      <div data-testid="movie-detail-page">
+        <RestrictedOverlay
+          contentRating={movie.content_rating}
+          maxRating={parentalState.kidsMode && !parentalState.maxRating ? 'PG' : parentalState.maxRating}
+          onUnlock={() => {
+            if (!parentalState.pinEnabled || !parentalState.pinHash) {
+              setUnlocked(true);
+            } else {
+              setPinOpen(true);
+            }
+          }}
+          onBack={() => navigate('/movies')}
+        />
+        {pinOpen && (
+          <PinGateDialog
+            pinHash={parentalState.pinHash}
+            onSuccess={() => { setPinOpen(false); setUnlocked(true); }}
+            onCancel={() => setPinOpen(false)}
+            actionLabel={`Unlock "${movie.title}"`}
+          />
+        )}
       </div>
     );
   }

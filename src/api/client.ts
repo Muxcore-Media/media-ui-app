@@ -93,6 +93,10 @@ function normalizeMovie(raw: Record<string, unknown>): Movie {
     ),
     tagline: raw.tagline != null ? String(raw.tagline) : undefined,
     status: raw.status != null ? String(raw.status) : undefined,
+    content_rating:
+      raw.content_rating != null || raw.contentRating != null || raw.officialRating != null
+        ? String(raw.content_rating ?? raw.contentRating ?? raw.officialRating)
+        : undefined,
     collection_id:
       raw.collection_id != null || raw.collectionId != null
         ? Number(raw.collection_id ?? raw.collectionId)
@@ -179,6 +183,10 @@ function normalizeTV(raw: Record<string, unknown>): TVShow {
     ),
     status: raw.status != null ? String(raw.status) : undefined,
     seasons,
+    content_rating:
+      raw.content_rating != null || raw.contentRating != null || raw.officialRating != null
+        ? String(raw.content_rating ?? raw.contentRating ?? raw.officialRating)
+        : undefined,
   };
 }
 

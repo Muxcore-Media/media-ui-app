@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
@@ -15,6 +15,9 @@ import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { enqueue, isFavorite, listProgress, resolveShowPlayTargets, showIdFromHref, toggleFavorite } from '../lib/userdata';
 import { buildEpisodePlayerHref } from '../lib/playHref';
+import { PinGateDialog } from '../components/parental/PinGateDialog';
+import { RestrictedOverlay } from '../components/parental/RestrictedOverlay';
+import { getParentalState, isItemRestricted } from '../lib/parental';
 import { FixedWindowList } from '../components/ui/FixedWindowList';
 import type { DiscoverDetail, Episode, TVShow } from '../types';
 
@@ -32,13 +35,19 @@ function firstPlayableStreamUrl(show: TVShow | null): string | undefined {
 
 export default function TVShowDetail() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const [show, setShow] = useState<TVShow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [jellyfinURL, setJellyfinURL] = useState<string | null>(null);
   const [fav, setFav] = useState(false);
   const [discover, setDiscover] = useState<DiscoverDetail | null>(null);
+  const [pinOpen, setPinOpen] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const probe = usePlaybackAnalysis(firstPlayableStreamUrl(show));
+
+  const parentalState = getParentalState();
+  const restricted = !unlocked && show ? isItemRestricted(show, parentalState) : false;
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +137,33 @@ export default function TVShowDetail() {
         <Link to="/tv" className="text-[var(--accent-color)] hover:underline">
           Back to TV
         </Link>
+      </div>
+    );
+  }
+
+  if (restricted) {
+    return (
+      <div data-testid="tv-detail-page">
+        <RestrictedOverlay
+          contentRating={show.content_rating}
+          maxRating={parentalState.kidsMode && !parentalState.maxRating ? 'PG' : parentalState.maxRating}
+          onUnlock={() => {
+            if (!parentalState.pinEnabled || !parentalState.pinHash) {
+              setUnlocked(true);
+            } else {
+              setPinOpen(true);
+            }
+          }}
+          onBack={() => navigate('/tv')}
+        />
+        {pinOpen && (
+          <PinGateDialog
+            pinHash={parentalState.pinHash}
+            onSuccess={() => { setPinOpen(false); setUnlocked(true); }}
+            onCancel={() => setPinOpen(false)}
+            actionLabel={`Unlock "${show.title}"`}
+          />
+        )}
       </div>
     );
   }

@@ -246,6 +246,39 @@ export function missingLibraryFetches(
   return { movies: [...movies], shows: [...shows] };
 }
 
+type LibraryRatingRow = { id: string; content_rating?: string };
+
+/**
+ * When parental restrictions are on, fetch library rows that userdata rails
+ * still need so `applyUserdataParentalFilter` can see a `content_rating`.
+ * No-ops when kids mode / max rating are off (soft-fail open).
+ */
+export async function expandLibraryRatingsForUserdata(
+  entries: UserdataRatingKey[],
+  movies: LibraryRatingRow[],
+  shows: LibraryRatingRow[],
+  fetchers: {
+    getMovie: (id: string) => Promise<LibraryRatingRow | null>;
+    getTVShow: (id: string) => Promise<LibraryRatingRow | null>;
+  },
+): Promise<{ movies: LibraryRatingRow[]; shows: LibraryRatingRow[] }> {
+  if (!getParentalState().anyRestriction) {
+    return { movies, shows };
+  }
+  const missing = missingLibraryFetches(entries, indexLibraryRatings(movies, shows));
+  if (missing.movies.length === 0 && missing.shows.length === 0) {
+    return { movies, shows };
+  }
+  const [extraMovies, extraShows] = await Promise.all([
+    Promise.all(missing.movies.map((id) => fetchers.getMovie(id).catch(() => null))),
+    Promise.all(missing.shows.map((id) => fetchers.getTVShow(id).catch(() => null))),
+  ]);
+  return {
+    movies: [...movies, ...extraMovies.filter((row): row is LibraryRatingRow => row != null)],
+    shows: [...shows, ...extraShows.filter((row): row is LibraryRatingRow => row != null)],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // PIN verification (Web Crypto — SHA-256)
 // ---------------------------------------------------------------------------

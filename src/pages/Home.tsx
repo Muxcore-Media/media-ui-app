@@ -27,9 +27,7 @@ import { isWatchable, mergeInProgressEntries } from '../lib/acquisition';
 import {
   applyParentalFilter,
   applyUserdataParentalFilter,
-  getParentalState,
-  indexLibraryRatings,
-  missingLibraryFetches,
+  expandLibraryRatingsForUserdata,
 } from '../lib/parental';
 import type { Movie, TVShow } from '../types';
 
@@ -133,33 +131,18 @@ export default function Home() {
         ]);
         if (cancelled) return;
 
-        let ratingMovies: Array<{ id: string; content_rating?: string }> = movies.items;
-        let ratingShows: Array<{ id: string; content_rating?: string }> = shows.items;
-        const parental = getParentalState();
-        if (parental.anyRestriction) {
-          const index = indexLibraryRatings(ratingMovies, ratingShows);
-          const missing = missingLibraryFetches(
-            [...progressRaw, ...favoritesRaw, ...derived],
-            index,
-          );
-          const [extraMovies, extraShows] = await Promise.all([
-            Promise.all(
-              missing.movies.map((id) => api.getMovie(id).catch(() => null)),
-            ),
-            Promise.all(
-              missing.shows.map((id) => api.getTVShow(id).catch(() => null)),
-            ),
-          ]);
-          if (cancelled) return;
-          ratingMovies = [
-            ...ratingMovies,
-            ...extraMovies.filter((m): m is Movie => m != null),
-          ];
-          ratingShows = [
-            ...ratingShows,
-            ...extraShows.filter((s): s is TVShow => s != null),
-          ];
-        }
+        const expanded = await expandLibraryRatingsForUserdata(
+          [...progressRaw, ...favoritesRaw, ...derived],
+          movies.items,
+          shows.items,
+          {
+            getMovie: (id) => api.getMovie(id).catch(() => null),
+            getTVShow: (id) => api.getTVShow(id).catch(() => null),
+          },
+        );
+        if (cancelled) return;
+        const ratingMovies = expanded.movies;
+        const ratingShows = expanded.shows;
 
         setProgress(progressRaw);
         setFavorites(favoritesRaw);

@@ -68,6 +68,7 @@ export default function PosterCard({
     <Link
       to={to}
       aria-label={label}
+      data-content-rating={libraryItem?.content_rating || undefined}
       onMouseEnter={prefetchDetail}
       onFocus={prefetchDetail}
       className="group block overflow-hidden rounded-[var(--radius-md)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"

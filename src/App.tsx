@@ -299,8 +299,8 @@ function LazyInviteJoin() {
   );
 }
 
-/** Mounts the ready-notification poller inside the router+capabilities context. */
-function NotificationWatcher() {
+/** Mounts the ready-to-watch polling hook when the request feature is enabled. */
+function ReadyNotificationWatcher() {
   useReadyNotifications();
   return null;
 }
@@ -337,10 +337,10 @@ function AppRoutes() {
 
   return (
     <>
-      <NotificationWatcher />
+      {featureEnabled(caps, 'request') && <ReadyNotificationWatcher />}
       <Routes>
         <Route
-        path="player"
+          path="player"
         element={
           <Suspense fallback={<PlayerSkeleton />}>
             <Player />

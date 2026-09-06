@@ -6,6 +6,7 @@ import { ShelfSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { applyParentalFilter } from '../lib/parental';
 import type { Episode, TVShow } from '../types';
 
 type UpcomingRow = {
@@ -49,7 +50,7 @@ export default function Upcoming() {
     const out: UpcomingRow[] = [];
     const now = Date.now();
     const horizon = now + 1000 * 60 * 60 * 24 * 120;
-    for (const show of shows) {
+    for (const show of applyParentalFilter(shows)) {
       for (const season of show.seasons || []) {
         for (const ep of season.episodes || []) {
           if (!ep.air_date) continue;

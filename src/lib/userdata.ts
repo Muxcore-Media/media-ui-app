@@ -176,6 +176,10 @@ export type UserPreferences = {
     showNetworks: boolean;
     /** Show the Music shelves (Browse Artists + Recently Added Albums) on the home feed (umbrella#113). */
     showMusic: boolean;
+    /** Show the Books shelf (Browse Authors) on the home feed (umbrella#117). */
+    showBooks: boolean;
+    /** Show the Audiobooks shelf on the home feed (umbrella#117). */
+    showAudiobooks: boolean;
   };
   playback: {
     autoplayNext: boolean;
@@ -260,6 +264,8 @@ const defaultPrefs = (): UserPreferences => ({
     showStudios: true,
     showNetworks: true,
     showMusic: true,
+    showBooks: true,
+    showAudiobooks: true,
   },
   parental: {
     kidsMode: false,

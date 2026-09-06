@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Building2, Home as HomeIcon, Layers, ListMusic, Music2, Play, Tag, Tv2 } from 'lucide-react';
+import { BookOpen, CalendarDays, Building2, Headphones, Home as HomeIcon, Layers, ListMusic, Music2, Play, Tag, Tv2 } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
@@ -41,6 +41,7 @@ import { useUpcomingEpisodes, type UpcomingEpisodeRow } from '../hooks/useUpcomi
 import { useGenreRails } from '../hooks/useGenreRails';
 import { useStudioNetworkRails } from '../hooks/useStudioNetworkRails';
 import { useMusicShelves } from '../hooks/useMusicShelves';
+import { useBooksShelves } from '../hooks/useBooksShelves';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -174,6 +175,37 @@ function AlbumTile({
   );
 }
 
+/** Compact tile for a book author on the home "Browse Authors" shelf. */
+function BookAuthorTile({ id, name }: { id: string; name: string }) {
+  return (
+    <Link
+      to={`/books/${encodeURIComponent(id)}`}
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={name}
+    >
+      <BookOpen className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{name}</span>
+    </Link>
+  );
+}
+
+/** Compact tile for a single audiobook on the home "Audiobooks" shelf. */
+function AudiobookTile({ title, narrator }: { title: string; narrator?: string }) {
+  return (
+    <Link
+      to="/audiobooks"
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={narrator ? `${title} narrated by ${narrator}` : title}
+    >
+      <Headphones className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{title}</span>
+      {narrator ? (
+        <span className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{narrator}</span>
+      ) : null}
+    </Link>
+  );
+}
+
 /** Format an ISO air-date string for display in the upcoming rail subtitle. */
 function formatUpcomingAirDate(airIso: string): string {
   const today = new Date();
@@ -299,6 +331,9 @@ export default function Home() {
 
   // Music shelves — fetched independently; errors are swallowed so Home never breaks.
   const musicShelves = useMusicShelves();
+
+  // Books and Audiobooks shelves — fetched independently; errors are swallowed so Home never breaks.
+  const booksShelves = useBooksShelves();
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
@@ -432,6 +467,8 @@ export default function Home() {
     (prefs.home.showStudios && studioRails.length > 0) ||
     (prefs.home.showNetworks && networkRails.length > 0) ||
     (prefs.home.showMusic && musicShelves.available && (musicShelves.artists.length > 0 || musicShelves.albums.length > 0)) ||
+    (prefs.home.showBooks && booksShelves.booksAvailable && booksShelves.authors.length > 0) ||
+    (prefs.home.showAudiobooks && booksShelves.audiobooksAvailable && booksShelves.audiobooks.length > 0) ||
     showReadyFallback ||
     (prefs.home.showRecentRequests && inProgressCount > 0);
 
@@ -725,6 +762,29 @@ export default function Home() {
                 artistName={al.artistName}
                 albumTitle={al.title}
                 year={al.year}
+              />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showBooks && !booksShelves.loading && booksShelves.booksAvailable && booksShelves.authors.length > 0 && (
+        <Shelf title="Browse Authors" seeAllHref="/books" testId="home-books-authors">
+          {booksShelves.authors.map((a) => (
+            <ShelfItem key={a.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <BookAuthorTile id={a.id} name={String(a.name || a.title || a.id)} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showAudiobooks && !booksShelves.loading && booksShelves.audiobooksAvailable && booksShelves.audiobooks.length > 0 && (
+        <Shelf title="Audiobooks" seeAllHref="/audiobooks" testId="home-audiobooks">
+          {booksShelves.audiobooks.map((ab) => (
+            <ShelfItem key={ab.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <AudiobookTile
+                title={String(ab.title || ab.name || ab.id)}
+                narrator={ab.narrator as string | undefined}
               />
             </ShelfItem>
           ))}

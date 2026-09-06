@@ -163,6 +163,8 @@ export type UserPreferences = {
     showRecentRequests: boolean;
     showNextUp: boolean;
     showRecentlyAdded: boolean;
+    showCollections: boolean;
+    showPlaylists: boolean;
   };
   playback: {
     autoplayNext: boolean;
@@ -230,6 +232,14 @@ const defaultPrefs = (): UserPreferences => ({
     showRecentRequests: true,
     showNextUp: true,
     showRecentlyAdded: true,
+    showCollections: true,
+    showPlaylists: true,
+  },
+  parental: {
+    kidsMode: false,
+    maxRating: '',
+    pinHash: '',
+    pinEnabled: false,
   },
   playback: {
     autoplayNext: false,
@@ -254,12 +264,6 @@ const defaultPrefs = (): UserPreferences => ({
     preferredQuality: 'auto',
     theaterMode: false,
     aspectMode: 'contain',
-  },
-  parental: {
-    kidsMode: false,
-    maxRating: '',
-    pinHash: '',
-    pinEnabled: false,
   },
 });
 

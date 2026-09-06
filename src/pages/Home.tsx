@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Home as HomeIcon } from 'lucide-react';
+import { Home as HomeIcon, Layers, ListMusic } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
@@ -14,10 +14,12 @@ import {
   continueWatching,
   getPreferences,
   listFavorites,
+  listPlaylists,
   pullUserdataFromServer,
   resolveNextUp,
   type FavoriteEntry,
   type NextUpEntry,
+  type Playlist,
   type ProgressEntry,
 } from '../lib/userdata';
 import { buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
@@ -48,6 +50,36 @@ function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
   };
 }
 
+/** Compact tile for a named collection (box set or genre group) on the home shelf. */
+function CollectionTile({ name, count }: { name: string; count: number }) {
+  return (
+    <Link
+      to="/collections"
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={`${name} — ${count} title${count !== 1 ? 's' : ''}`}
+    >
+      <Layers className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{name}</span>
+      <span className="text-xs text-[var(--text-tertiary)]">{count} title{count !== 1 ? 's' : ''}</span>
+    </Link>
+  );
+}
+
+/** Compact tile for a user playlist on the home shelf. */
+function PlaylistTile({ playlist }: { playlist: Playlist }) {
+  return (
+    <Link
+      to="/playlists"
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={`${playlist.name} — ${playlist.itemIds.length} item${playlist.itemIds.length !== 1 ? 's' : ''}`}
+    >
+      <ListMusic className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{playlist.name}</span>
+      <span className="text-xs text-[var(--text-tertiary)]">{playlist.itemIds.length} item{playlist.itemIds.length !== 1 ? 's' : ''}</span>
+    </Link>
+  );
+}
+
 export default function Home() {
   const prefs = getPreferences();
   const [inProgressCount, setInProgressCount] = useState(0);
@@ -62,6 +94,8 @@ export default function Home() {
   const [allShows, setAllShows] = useState<TVShow[]>([]);
   const [joinMovies, setJoinMovies] = useState<Array<{ id: string; content_rating?: string }>>([]);
   const [joinShows, setJoinShows] = useState<Array<{ id: string; content_rating?: string }>>([]);
+  const [serverCols, setServerCols] = useState<{ id: string; name: string; movie_count: number }[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const recommended = useMemo(
     () =>
       applyParentalFilter([...allMovies])
@@ -122,12 +156,14 @@ export default function Home() {
         if (cancelled) return;
         const progressRaw = continueWatching(16);
         const favoritesRaw = listFavorites().slice(0, 16);
+        setPlaylists(listPlaylists());
         const derived = await resolveNextUp((id) => api.getTVShow(id), 16);
         if (cancelled) return;
-        const [list, movies, shows] = await Promise.all([
+        const [list, movies, shows, cols] = await Promise.all([
           api.listRequests(),
           api.listMovies(1, 24),
           api.listTVShows(1, 24),
+          api.listCollections().catch(() => ({ items: [] as { id: string; name: string; movie_count: number }[] })),
         ]);
         if (cancelled) return;
 
@@ -154,6 +190,7 @@ export default function Home() {
         setAllMovies(movies.items);
         setAllShows(shows.items);
         setReadyShows(shows.items.filter((s) => s.has_file).slice(0, 16));
+        setServerCols(cols.items || []);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load home');
       } finally {
@@ -197,6 +234,8 @@ export default function Home() {
     (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
     recommended.length > 0 ||
     (prefs.home.showFavorites && visibleFavorites.length > 0) ||
+    (prefs.home.showCollections && serverCols.length > 0) ||
+    (prefs.home.showPlaylists && playlists.length > 0) ||
     showReadyFallback ||
     (prefs.home.showRecentRequests && inProgressCount > 0);
 
@@ -370,6 +409,26 @@ export default function Home() {
             </Link>
           </p>
         </section>
+      )}
+
+      {prefs.home.showCollections && serverCols.length > 0 && (
+        <Shelf title="Collections" seeAllHref="/collections" testId="home-collections">
+          {serverCols.map((c) => (
+            <ShelfItem key={c.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <CollectionTile name={c.name} count={c.movie_count} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showPlaylists && playlists.length > 0 && (
+        <Shelf title="Playlists" seeAllHref="/playlists" testId="home-playlists">
+          {playlists.map((p) => (
+            <ShelfItem key={p.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <PlaylistTile playlist={p} />
+            </ShelfItem>
+          ))}
+        </Shelf>
       )}
     </div>
   );

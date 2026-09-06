@@ -4,6 +4,7 @@ import { ChevronRight, Layers, X } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
+import { Shelf, ShelfItem } from '../components/media/Shelf';
 import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -11,13 +12,52 @@ import { LoadingStatus } from '../components/ui/LoadingStatus';
 import type { Movie } from '../types';
 
 type Collection = { id: string; name: string; items: Movie[]; source: 'tmdb' | 'genre' };
+type ServerCol = { id: string; name: string; movie_count: number };
+
+/** A horizontal shelf for a named box-set / genre collection. */
+function CollectionShelf({ collection, onClose }: { collection: { id: string; name: string; movies: Movie[] }; onClose: () => void }) {
+  return (
+    <section
+      className="space-y-2"
+      aria-labelledby={`collection-shelf-${collection.id}-heading`}
+      data-testid="collection-shelf"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          id={`collection-shelf-${collection.id}-heading`}
+          className="text-lg font-semibold text-[var(--text-primary)]"
+        >
+          {collection.name}
+        </h2>
+        <button
+          type="button"
+          aria-label={`Close ${collection.name} collection`}
+          className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          onClick={onClose}
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+          Close
+        </button>
+      </div>
+      {collection.movies.length > 0 ? (
+        <Shelf title={collection.name} testId={`collection-shelf-items-${collection.id}`}>
+          {collection.movies.map((item) => (
+            <ShelfItem key={item.id}>
+              <MediaCard item={item} type="movie" />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      ) : (
+        <p className="text-sm text-[var(--text-secondary)]">No movies in this collection.</p>
+      )}
+    </section>
+  );
+}
 
 /** Box sets from media-movies collections RPC, with genre groups as fallback. */
 export default function Collections() {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [serverCols, setServerCols] = useState<{ id: string; name: string; movie_count: number }[]>(
-    [],
-  );
+  const [serverCols, setServerCols] = useState<ServerCol[]>([]);
   const [detail, setDetail] = useState<{ id: string; name: string; movies: Movie[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +70,7 @@ export default function Collections() {
           api.listMovies(1, 200),
           api
             .listCollections()
-            .catch(() => ({ items: [] as { id: string; name: string; movie_count: number }[] })),
+            .catch(() => ({ items: [] as ServerCol[] })),
         ]);
         if (!cancelled) {
           setMovies(list.items);
@@ -96,33 +136,7 @@ export default function Collections() {
       {error && <ErrorBanner message={error} />}
 
       {detail && (
-        <section
-          className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
-          aria-labelledby="collection-detail-heading"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <h2
-              id="collection-detail-heading"
-              className="text-lg font-semibold text-[var(--text-primary)]"
-            >
-              {detail.name}
-            </h2>
-            <button
-              type="button"
-              aria-label={`Close ${detail.name} collection`}
-              className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              onClick={() => setDetail(null)}
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-              Close
-            </button>
-          </div>
-          <PosterGrid>
-            {detail.movies.map((item) => (
-              <MediaCard key={item.id} item={item} type="movie" />
-            ))}
-          </PosterGrid>
-        </section>
+        <CollectionShelf collection={detail} onClose={() => setDetail(null)} />
       )}
 
       {!loading && serverCols.length > 0 && (

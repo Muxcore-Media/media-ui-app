@@ -1408,3 +1408,266 @@ describe('Upcoming / On The Air rail', () => {
     expect(seeAll.getAttribute('href')).toBe('/upcoming');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Browse by Genre shelf (umbrella#105)
+// ---------------------------------------------------------------------------
+
+describe('Browse by Genre shelf', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
+    listRequests.mockResolvedValue([]);
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders the genre shelf when movies have genre metadata', async () => {
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'movie-drama',
+          title: 'Drama Film',
+          year: 2024,
+          overview: '',
+          runtime: 120,
+          vote_average: 8,
+          genres: ['Drama'],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/movie-drama',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+    });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-genres');
+    expect(shelf).toBeInTheDocument();
+    expect(within(shelf).getByText('Drama')).toBeInTheDocument();
+  });
+
+  it('genre tile shows item count', async () => {
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'm1',
+          title: 'Movie A',
+          year: 2024,
+          overview: '',
+          runtime: 90,
+          vote_average: 7,
+          genres: ['Comedy'],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/m1',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'm2',
+          title: 'Movie B',
+          year: 2024,
+          overview: '',
+          runtime: 90,
+          vote_average: 7,
+          genres: ['Comedy'],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/m2',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+      total: 2,
+    });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-genres');
+    expect(within(shelf).getByText('2 titles')).toBeInTheDocument();
+  });
+
+  it('genre tile links to /genre/:name', async () => {
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'm-sci',
+          title: 'Sci-Fi Flick',
+          year: 2024,
+          overview: '',
+          runtime: 100,
+          vote_average: 8,
+          genres: ['Sci-Fi'],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/m-sci',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+    });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-genres');
+    const link = within(shelf).getByRole('link', { name: /Sci-Fi/i });
+    expect(link.getAttribute('href')).toBe('/genre/Sci-Fi');
+  });
+
+  it('is soft-hidden when library items have no genre data', async () => {
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'no-genre',
+          title: 'No Genre Movie',
+          year: 2024,
+          overview: '',
+          runtime: 90,
+          vote_average: 7,
+          genres: [],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/no-genre',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+    });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Wait for page to finish loading.
+    await screen.findByTestId('home-recently-added');
+    expect(screen.queryByTestId('home-genres')).not.toBeInTheDocument();
+  });
+
+  it('is soft-hidden when all items are empty/absent', async () => {
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-genres')).not.toBeInTheDocument();
+  });
+
+  it('respects the showGenres preference — hides shelf when disabled', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.prefs.v1',
+      JSON.stringify({
+        home: {
+          showContinueWatching: true,
+          showFavorites: true,
+          showRecentRequests: true,
+          showNextUp: true,
+          showRecentlyAdded: true,
+          showUpcoming: true,
+          showCollections: true,
+          showPlaylists: true,
+          showWantToWatch: true,
+          showGenres: false,
+        },
+      }),
+    );
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'm-drama',
+          title: 'Drama Film',
+          year: 2024,
+          overview: '',
+          runtime: 120,
+          vote_average: 8,
+          genres: ['Drama'],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/m-drama',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+      total: 1,
+    });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Genre data exists but pref is off — shelf should be absent.
+    await screen.findByTestId('home-recently-added');
+    expect(screen.queryByTestId('home-genres')).not.toBeInTheDocument();
+  });
+
+  it('excludes restricted genre counts under parental controls', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.prefs.v1',
+      JSON.stringify({ parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false } }),
+    );
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'm-r',
+          title: 'Restricted Film',
+          year: 2024,
+          overview: '',
+          runtime: 100,
+          vote_average: 8,
+          genres: ['Horror'],
+          poster_url: '',
+          has_file: true,
+          stream_url: '/stream/m-r',
+          created_at: '2024-01-01T00:00:00Z',
+          content_rating: 'R',
+        },
+      ],
+      total: 1,
+    });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Genre shelf should not appear when all Horror items are parental-filtered out.
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-genres')).not.toBeInTheDocument();
+  });
+});

@@ -168,6 +168,8 @@ export type UserPreferences = {
     showCollections: boolean;
     showPlaylists: boolean;
     showWantToWatch: boolean;
+    /** Show the "Browse by Genre" shelf on the home feed (umbrella#105). */
+    showGenres: boolean;
   };
   playback: {
     autoplayNext: boolean;
@@ -248,6 +250,7 @@ const defaultPrefs = (): UserPreferences => ({
     showCollections: true,
     showPlaylists: true,
     showWantToWatch: true,
+    showGenres: true,
   },
   parental: {
     kidsMode: false,

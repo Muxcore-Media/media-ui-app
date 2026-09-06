@@ -158,6 +158,7 @@ function HomePane() {
         showUpcoming: fd.get('showUpcoming') === 'on',
         showCollections: fd.get('showCollections') === 'on',
         showPlaylists: fd.get('showPlaylists') === 'on',
+        showGenres: fd.get('showGenres') === 'on',
         showWantToWatch: fd.get('showWantToWatch') === 'on',
       },
     });
@@ -178,6 +179,7 @@ function HomePane() {
           ['showUpcoming', 'Upcoming / On The Air', prefs.home.showUpcoming],
           ['showCollections', 'Collections shelf', prefs.home.showCollections],
           ['showPlaylists', 'Playlists shelf', prefs.home.showPlaylists],
+          ['showGenres', 'Browse by Genre shelf', prefs.home.showGenres],
           ['showWantToWatch', 'Want to Watch shelf', prefs.home.showWantToWatch],
         ] as const
       ).map(([name, label, checked]) => (

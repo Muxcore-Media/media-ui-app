@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Home as HomeIcon, Layers, ListMusic, Play } from 'lucide-react';
+import { CalendarDays, Home as HomeIcon, Layers, ListMusic, Play, Tag } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
@@ -38,6 +38,7 @@ import { useBecauseYouWatched } from '../hooks/useBecauseYouWatched';
 import { useRecentlyAdded } from '../hooks/useRecentlyAdded';
 import { useRecentlyWatched } from '../hooks/useRecentlyWatched';
 import { useUpcomingEpisodes, type UpcomingEpisodeRow } from '../hooks/useUpcomingEpisodes';
+import { useGenreRails } from '../hooks/useGenreRails';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -83,6 +84,21 @@ function PlaylistTile({ playlist }: { playlist: Playlist }) {
       <ListMusic className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
       <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{playlist.name}</span>
       <span className="text-xs text-[var(--text-tertiary)]">{playlist.itemIds.length} item{playlist.itemIds.length !== 1 ? 's' : ''}</span>
+    </Link>
+  );
+}
+
+/** Compact tile for a genre on the home "Browse by Genre" shelf. */
+function GenreTile({ name, count }: { name: string; count: number }) {
+  return (
+    <Link
+      to={`/genre/${encodeURIComponent(name)}`}
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={`${name} — ${count} title${count !== 1 ? 's' : ''}`}
+    >
+      <Tag className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{name}</span>
+      <span className="text-xs text-[var(--text-tertiary)]">{count} title{count !== 1 ? 's' : ''}</span>
     </Link>
   );
 }
@@ -203,6 +219,9 @@ export default function Home() {
 
   // Recently Watched rail — deduplicates against Continue Watching + Next Up.
   const recentlyWatchedItems = useRecentlyWatched(recentlyWatchedRaw, becauseExcludeIds);
+
+  // Genre rails — derived from the same library lists already in state.
+  const genreRails = useGenreRails(allMovies, allShows);
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
@@ -332,6 +351,7 @@ export default function Home() {
     (prefs.home.showWantToWatch && visibleWantToWatch.length > 0) ||
     (prefs.home.showCollections && serverCols.length > 0) ||
     (prefs.home.showPlaylists && playlists.length > 0) ||
+    (prefs.home.showGenres && genreRails.length > 0) ||
     showReadyFallback ||
     (prefs.home.showRecentRequests && inProgressCount > 0);
 
@@ -571,6 +591,16 @@ export default function Home() {
           {playlists.map((p) => (
             <ShelfItem key={p.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
               <PlaylistTile playlist={p} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showGenres && genreRails.length > 0 && (
+        <Shelf title="Browse by Genre" testId="home-genres">
+          {genreRails.map((g) => (
+            <ShelfItem key={g.name} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <GenreTile name={g.name} count={g.count} />
             </ShelfItem>
           ))}
         </Shelf>

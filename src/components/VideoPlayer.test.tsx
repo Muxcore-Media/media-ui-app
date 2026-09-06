@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
@@ -780,5 +780,218 @@ describe('VideoPlayer subtitle search', () => {
     await waitFor(() => {
       expect(within(menu).getByTestId('subtitle-find-empty')).toBeInTheDocument();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PiP and Cast / AirPlay controls
+// ---------------------------------------------------------------------------
+
+describe('VideoPlayer PiP controls', () => {
+  beforeEach(() => {
+    stubFetch();
+  });
+
+  afterEach(() => {
+    // Restore Picture-in-Picture API state
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      value: false,
+      configurable: true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    });
+    // Remove any requestPictureInPicture mock added per-test
+    Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+  });
+
+  it('hides the PiP button when Picture-in-Picture is not supported', async () => {
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      value: false,
+      configurable: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    expect(screen.queryByRole('button', { name: 'Picture in picture' })).not.toBeInTheDocument();
+  });
+
+  it('shows the PiP button when Picture-in-Picture is supported', async () => {
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      value: true,
+      configurable: true,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockResolvedValue(undefined),
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    expect(screen.getByRole('button', { name: 'Picture in picture' })).toBeInTheDocument();
+  });
+
+  it('calls requestPictureInPicture when the PiP button is clicked', async () => {
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      value: true,
+      configurable: true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    });
+    const requestPiP = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+      configurable: true,
+      writable: true,
+      value: requestPiP,
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Picture in picture' }));
+    expect(requestPiP).toHaveBeenCalledTimes(1);
+  });
+
+  it('triggers PiP via the P keyboard shortcut', async () => {
+    Object.defineProperty(document, 'pictureInPictureEnabled', {
+      value: true,
+      configurable: true,
+    });
+    Object.defineProperty(document, 'pictureInPictureElement', {
+      value: null,
+      configurable: true,
+    });
+    const requestPiP = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(HTMLVideoElement.prototype, 'requestPictureInPicture', {
+      configurable: true,
+      writable: true,
+      value: requestPiP,
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.keyDown(window, { code: 'KeyP' });
+    expect(requestPiP).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('VideoPlayer Cast and AirPlay controls', () => {
+  beforeEach(() => {
+    stubFetch();
+  });
+
+  afterEach(() => {
+    // Remove Remote Playback API mock if added
+    const proto = HTMLVideoElement.prototype as unknown as Record<string, unknown>;
+    if ('remote' in HTMLVideoElement.prototype) {
+      delete proto['remote'];
+    }
+    // Remove AirPlay mock if added
+    if ('webkitShowPlaybackTargetPicker' in HTMLVideoElement.prototype) {
+      delete proto['webkitShowPlaybackTargetPicker'];
+    }
+  });
+
+  it('shows a disabled Cast stub when the Remote Playback API is not available', async () => {
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    const castBtn = screen.getByRole('button', {
+      name: 'Cast (not supported in this browser)',
+    });
+    expect(castBtn).toBeDisabled();
+  });
+
+  it('shows an enabled Cast button and invokes remote.prompt() when Remote Playback API is available', async () => {
+    const prompt = vi.fn().mockResolvedValue(undefined);
+    const mockRemote = {
+      state: 'disconnected' as const,
+      prompt,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    Object.defineProperty(HTMLVideoElement.prototype, 'remote', {
+      configurable: true,
+      get: () => mockRemote,
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    const castBtn = screen.getByRole('button', { name: 'Cast to device' });
+    expect(castBtn).not.toBeDisabled();
+    fireEvent.click(castBtn);
+    expect(prompt).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a disabled AirPlay stub when webkitShowPlaybackTargetPicker is not available', async () => {
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    const airPlayBtn = screen.getByRole('button', {
+      name: 'AirPlay (not supported in this browser)',
+    });
+    expect(airPlayBtn).toBeDisabled();
+  });
+
+  it('shows an enabled AirPlay button and invokes the picker when webkitShowPlaybackTargetPicker is available', async () => {
+    const picker = vi.fn();
+    Object.defineProperty(HTMLVideoElement.prototype, 'webkitShowPlaybackTargetPicker', {
+      configurable: true,
+      writable: true,
+      value: picker,
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    const airPlayBtn = screen.getByRole('button', { name: 'AirPlay' });
+    expect(airPlayBtn).not.toBeDisabled();
+    fireEvent.click(airPlayBtn);
+    expect(picker).toHaveBeenCalledTimes(1);
   });
 });

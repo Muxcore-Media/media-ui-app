@@ -214,6 +214,24 @@ select {
   background-color: var(--surface-2);
 }
 
+/* In-app download-ready toast slide-up animation */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast-card {
+    animation: toast-in 220ms ease-out both;
+  }
+}
+
 video[data-subtitle-size='sm']::cue {
   font-size: 0.85rem;
 }

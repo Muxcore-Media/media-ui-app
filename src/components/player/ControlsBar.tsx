@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../../lib/player/format';
 import SeekBar from './SeekBar';
-import SettingsMenu from './SettingsMenu';
+import SettingsMenu, { type SubtitleSearchMenuProps } from './SettingsMenu';
 import type { PlaybackChapter, PlaybackSegment } from '../../api/client';
 import type { AspectMode, PlayerTrackInfo, QualityOption } from '../../lib/player/types';
 import type { UserPreferences } from '../../lib/userdata';
@@ -72,6 +72,7 @@ type Props = {
   /** Previous/next chapter navigation (container chapters, else intro/outro segment boundaries). */
   onPrevMarker?: () => void;
   onNextMarker?: () => void;
+  subtitleSearch?: SubtitleSearchMenuProps;
 };
 
 export default function ControlsBar(props: Props) {
@@ -245,6 +246,7 @@ export default function ControlsBar(props: Props) {
                   onSubtitlePrefs={props.onSubtitlePrefs}
                   aspectMode={props.aspectMode}
                   onAspectMode={props.onAspectMode}
+                  subtitleSearch={props.subtitleSearch}
                 />
               ) : null}
             </div>

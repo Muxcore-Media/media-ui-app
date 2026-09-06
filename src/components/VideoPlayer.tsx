@@ -15,6 +15,7 @@ import { usePlaybackChapters } from './player/hooks/usePlaybackChapters';
 import { usePlaybackAnalysis } from './player/hooks/usePlaybackAnalysis';
 import { useTrickplay } from './player/hooks/useTrickplay';
 import { useSubtitleCues } from './player/hooks/useSubtitleCues';
+import { useSubtitleSearch } from './player/hooks/useSubtitleSearch';
 import { useUpNext } from './player/hooks/useUpNext';
 import { useProgressReporting } from './player/hooks/useProgressReporting';
 import { usePlayerChrome } from './player/hooks/usePlayerChrome';
@@ -40,6 +41,8 @@ import {
   mergeTextTracks,
   subtitleTracksFromAnalysis,
 } from '../lib/player/tracks';
+import type { PlaybackSubtitleTrack } from '../api/client';
+import type { PlayerTrackInfo } from '../lib/player/types';
 
 /** Show the "Next Episode" button this many seconds before the end of an episode. */
 const NEAR_END_SEC = 120;
@@ -63,6 +66,7 @@ type Props = {
   title?: string;
   mediaId?: string;
   mediaKind?: MediaKind;
+  mediaYear?: number;
   posterUrl?: string;
   href?: string;
   showId?: string;
@@ -78,6 +82,7 @@ export default function VideoPlayer({
   title,
   mediaId,
   mediaKind = 'movie',
+  mediaYear,
   posterUrl,
   href = '/',
   showId,
@@ -100,6 +105,7 @@ export default function VideoPlayer({
   const [subtitlePrefs, setSubtitlePrefs] = useState<UserPreferences['subtitles']>(prefs.subtitles);
   const [seekBubble, setSeekBubble] = useState<number | null>(null);
   const [aspectMode, setAspectMode] = useState<AspectMode>(prefs.player.aspectMode);
+  const [downloadedTracks, setDownloadedTracks] = useState<PlaybackSubtitleTrack[]>([]);
 
   const resumeCheckedSrcRef = useRef<string | null>(null);
   const autoSubtitleAppliedRef = useRef(false);
@@ -108,6 +114,8 @@ export default function VideoPlayer({
   const seekBubbleTimerRef = useRef<number | null>(null);
 
   const source = usePlaybackSource(src);
+
+  const subtitleSearch = useSubtitleSearch();
 
   const upNext = useUpNext({
     showId,
@@ -158,7 +166,6 @@ export default function VideoPlayer({
   const probeAudio = audioTracksFromAnalysis(probe.analysis?.audio ?? []);
   const probeSubs = subtitleTracksFromAnalysis(probe.analysis?.subtitles ?? []);
   const displayAudio = mergeAudioTracks(videoEl.audioTracks, probeAudio);
-  const displayText = mergeTextTracks(videoEl.textTracks, probeSubs).filter((t) => !t.pictureBased);
   const pictureSubtitles = probeSubs.filter((t) => t.pictureBased);
 
   const trickplay = useTrickplay({
@@ -167,9 +174,22 @@ export default function VideoPlayer({
     enabled: source.trickplayEnabled,
   });
 
-  const captionTracks: CaptionTrack[] = [...subtitleTracks, ...source.remoteTracks];
+  const captionTracks: CaptionTrack[] = [...subtitleTracks, ...source.remoteTracks, ...downloadedTracks];
   const activeCaption = videoEl.textIdx >= 0 ? captionTracks[videoEl.textIdx] : undefined;
   const subtitles = useSubtitleCues(activeCaption?.src ?? null);
+
+  // Downloaded subtitles appear in the UI track list alongside embedded/sidecar tracks.
+  const baseDisplayText = mergeTextTracks(videoEl.textTracks, probeSubs).filter(
+    (t) => !t.pictureBased,
+  );
+  const downloadedTextTracks: PlayerTrackInfo[] = downloadedTracks.map((t, i) => ({
+    id: `downloaded-${t.id}`,
+    label: t.label,
+    kind: 'text' as const,
+    index: subtitleTracks.length + source.remoteTracks.length + i,
+    language: t.language || t.srclang,
+  }));
+  const displayText = [...baseDisplayText, ...downloadedTextTracks];
 
   const stats = useStats({
     videoRef,
@@ -220,6 +240,9 @@ export default function VideoPlayer({
   useEffect(() => {
     autoSubtitleAppliedRef.current = false;
     outroTriggeredRef.current = false;
+    setDownloadedTracks([]);
+    subtitleSearch.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
   // Auto-select the user's preferred subtitle language once tracks are known.
@@ -334,6 +357,26 @@ export default function VideoPlayer({
 
   function handleText(idx: number) {
     videoEl.setTextIdx(idx);
+  }
+
+  function handleFindSubtitles() {
+    void subtitleSearch.search({
+      title: title || '',
+      language: subtitlePrefs.language,
+      mediaType: mediaKind === 'episode' ? 'tv' : 'movie',
+      season: seasonNumber,
+      episode: episodeNumber,
+      year: mediaYear,
+    });
+  }
+
+  async function handleDownloadSubtitle(id: string, provider: string) {
+    const track = await subtitleSearch.download(id, provider);
+    if (track) {
+      const newIdx = subtitleTracks.length + source.remoteTracks.length + downloadedTracks.length;
+      setDownloadedTracks((prev) => [...prev, track]);
+      videoEl.setTextIdx(newIdx);
+    }
   }
 
   function toggleSubtitlesShortcut() {
@@ -534,6 +577,15 @@ export default function VideoPlayer({
           onAspectMode={handleAspectMode}
           onPrevMarker={markerNavEnabled ? goToPrevMarker : undefined}
           onNextMarker={markerNavEnabled ? goToNextMarker : undefined}
+          subtitleSearch={{
+            status: subtitleSearch.status,
+            results: subtitleSearch.results,
+            error: subtitleSearch.error,
+            downloadingId: subtitleSearch.downloadingId,
+            downloadedId: subtitleSearch.downloadedId,
+            onSearch: handleFindSubtitles,
+            onDownload: (id, provider) => void handleDownloadSubtitle(id, provider),
+          }}
         />
 
         {activeSegment ? (

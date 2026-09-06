@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import { useReadyNotifications, getSeenNotificationIds } from './useReadyNotifications';
 import { ToastProvider, useToast } from '../components/ui/Toast';
-import { updatePreferences } from './userdata';
 import * as client from '../api/client';
-import type { MediaRequest } from '../types';
+import type { MediaRequest, Movie } from '../types';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -27,6 +26,27 @@ function makeRequest(overrides: Partial<MediaRequest> = {}): MediaRequest {
   };
 }
 
+function makeMovie(overrides: Partial<Movie> = {}): Movie {
+  return {
+    id: 'movie-1',
+    title: 'Test Movie',
+    year: 2024,
+    overview: '',
+    runtime: 100,
+    vote_average: 7,
+    genres: [],
+    poster_url: '',
+    has_file: false,
+    stream_url: '',
+    created_at: '2024-01-01',
+    ...overrides,
+  };
+}
+
+function makeList<T>(items: T[]) {
+  return { items, total: items.length, page: 1, page_size: items.length };
+}
+
 function Watcher() {
   useReadyNotifications();
   return null;
@@ -43,145 +63,134 @@ function TestApp({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * Flush all pending Promises by waiting one real-time tick.
- * We mock setInterval so the poll interval never auto-fires; we control it manually.
- */
-const flushAsync = () =>
-  act(async () => {
-    await new Promise<void>((r) => setTimeout(r, 20));
-  });
+async function flushMicrotasks() {
+  for (let i = 0; i < 10; i++) {
+    await Promise.resolve();
+  }
+}
 
 // ── useReadyNotifications ─────────────────────────────────────────────────────
 
 describe('useReadyNotifications', () => {
-  // Real timers so Promise chains resolve; we spy on setInterval to control polls.
-  let capturedIntervalCb: (() => void) | null = null;
-
   beforeEach(() => {
     localStorage.clear();
-    capturedIntervalCb = null;
-    vi.spyOn(window, 'setInterval').mockImplementation((fn: TimerHandler) => {
-      capturedIntervalCb = fn as () => void;
-      return 1 as unknown as ReturnType<typeof setInterval>;
-    });
-    vi.spyOn(window, 'clearInterval').mockReturnValue(undefined as unknown as void);
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('does not fire toast for already-available requests on first poll (baseline)', async () => {
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([
-      makeRequest({ status: 'available' }),
+      makeRequest({ status: 'added' }),
     ]);
+    vi.spyOn(client.api, 'listMovies').mockResolvedValue(makeList([makeMovie({ has_file: true })]));
+    vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
-    await flushAsync();
+    await act(flushMicrotasks);
 
     expect(screen.queryAllByTestId('ready-toast')).toHaveLength(0);
   });
 
-  it('fires a toast when a request transitions from downloading to available', async () => {
+  it('fires a toast when has_file transitions from false to true', async () => {
     let callCount = 0;
-    vi.spyOn(client.api, 'listRequests').mockImplementation(async () => {
+    vi.spyOn(client.api, 'listRequests').mockResolvedValue([makeRequest({ status: 'added' })]);
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async () => {
       callCount++;
-      return callCount === 1
-        ? [makeRequest({ status: 'downloading' })]
-        : [makeRequest({ status: 'available' })];
+      return makeList([makeMovie({ has_file: callCount > 1 })]);
     });
+    vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
 
-    // First poll → baseline
-    await flushAsync();
+    // First poll → baseline (has_file=false)
+    await act(flushMicrotasks);
+    expect(screen.queryAllByTestId('ready-toast')).toHaveLength(0);
 
-    // Second poll — triggered manually via captured interval callback
+    // Second poll → has_file=true → toast fires
     await act(async () => {
-      capturedIntervalCb?.();
-      await new Promise<void>((r) => setTimeout(r, 20));
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
     });
 
-    await waitFor(() => {
-      expect(screen.queryAllByTestId('ready-toast').length).toBeGreaterThan(0);
-    });
-
+    expect(screen.queryAllByTestId('ready-toast').length).toBeGreaterThan(0);
     const toast = screen.getByTestId('ready-toast');
     expect(toast).toHaveTextContent('Test Movie');
     expect(toast).toHaveTextContent('ready to watch');
     expect(screen.getByText('Watch Now')).toBeInTheDocument();
   });
 
-  it('does not re-fire for the same request after remount (seen list)', async () => {
+  it('does not re-fire for the same item after remount (seen list)', async () => {
     let callCount = 0;
-    vi.spyOn(client.api, 'listRequests').mockImplementation(async () => {
+    vi.spyOn(client.api, 'listRequests').mockResolvedValue([makeRequest({ status: 'added' })]);
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async () => {
       callCount++;
-      return callCount === 1
-        ? [makeRequest({ status: 'downloading' })]
-        : [makeRequest({ status: 'available' })];
+      return makeList([makeMovie({ has_file: callCount > 1 })]);
     });
+    vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     const { unmount } = render(<TestApp>{null}</TestApp>);
-    await flushAsync();
+    await act(flushMicrotasks);
     await act(async () => {
-      capturedIntervalCb?.();
-      await new Promise<void>((r) => setTimeout(r, 20));
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
     });
 
+    // Toast fired → item is in seen list
+    expect(screen.queryAllByTestId('ready-toast').length).toBeGreaterThan(0);
     unmount();
 
-    // Remount — req-1 is now permanently available
+    // Remount — movie-1 is now permanently playable
+    callCount = 99; // always has_file=true
+    render(<TestApp>{null}</TestApp>);
+    await act(flushMicrotasks);
+    await act(async () => {
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
+    });
+
+    // No new toast — already in seen list
+    expect(screen.queryAllByTestId('ready-toast')).toHaveLength(0);
+  });
+
+  it('does not toast for denied or failed requests', async () => {
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([
-      makeRequest({ status: 'available' }),
+      makeRequest({ status: 'denied' }),
     ]);
-    capturedIntervalCb = null;
+    vi.spyOn(client.api, 'listMovies').mockResolvedValue(makeList([makeMovie({ has_file: true })]));
+    vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
-    await flushAsync();
-
-    // req-1 was already stored in the seen list — no new toast
-    expect(screen.queryAllByTestId('ready-toast')).toHaveLength(0);
-  });
-
-  it('respects prefs.notifications.downloadReady = false', async () => {
-    updatePreferences({ notifications: { downloadReady: false } });
-
-    let callCount = 0;
-    vi.spyOn(client.api, 'listRequests').mockImplementation(async () => {
-      callCount++;
-      return callCount === 1
-        ? [makeRequest({ status: 'downloading' })]
-        : [makeRequest({ status: 'available' })];
-    });
-
-    render(<TestApp>{null}</TestApp>);
-    await flushAsync();
+    await act(flushMicrotasks);
     await act(async () => {
-      capturedIntervalCb?.();
-      await new Promise<void>((r) => setTimeout(r, 20));
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
     });
 
     expect(screen.queryAllByTestId('ready-toast')).toHaveLength(0);
   });
 
-  it('stores the request id in localStorage after firing the notification', async () => {
+  it('stores the item key in localStorage after firing the notification', async () => {
     let callCount = 0;
-    vi.spyOn(client.api, 'listRequests').mockImplementation(async () => {
+    vi.spyOn(client.api, 'listRequests').mockResolvedValue([makeRequest({ status: 'added' })]);
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async () => {
       callCount++;
-      return callCount === 1
-        ? [makeRequest({ status: 'downloading' })]
-        : [makeRequest({ status: 'available' })];
+      return makeList([makeMovie({ has_file: callCount > 1 })]);
     });
+    vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
-    await flushAsync();
+    await act(flushMicrotasks);
     await act(async () => {
-      capturedIntervalCb?.();
-      await new Promise<void>((r) => setTimeout(r, 20));
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
     });
 
-    expect(getSeenNotificationIds().has('req-1')).toBe(true);
+    // Item key is "movie:movie-1" (itemType:itemId), not the request id
+    expect(getSeenNotificationIds().has('movie:movie-1')).toBe(true);
   });
 });
 

@@ -15,12 +15,14 @@ import {
   getPreferences,
   listFavorites,
   listPlaylists,
+  listWantToWatch,
   pullUserdataFromServer,
   resolveNextUp,
   type FavoriteEntry,
   type NextUpEntry,
   type Playlist,
   type ProgressEntry,
+  type WantToWatchEntry,
 } from '../lib/userdata';
 import { buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
 import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
@@ -90,6 +92,7 @@ export default function Home() {
   const [progress, setProgress] = useState<ProgressEntry[]>([]);
   const [nextUp, setNextUp] = useState<NextUpEntry[]>([]);
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
+  const [wantToWatch, setWantToWatch] = useState<WantToWatchEntry[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
   const [allShows, setAllShows] = useState<TVShow[]>([]);
   const [joinMovies, setJoinMovies] = useState<Array<{ id: string; content_rating?: string }>>([]);
@@ -156,6 +159,7 @@ export default function Home() {
         if (cancelled) return;
         const progressRaw = continueWatching(16);
         const favoritesRaw = listFavorites().slice(0, 16);
+        const wantToWatchRaw = listWantToWatch().slice(0, 16);
         setPlaylists(listPlaylists());
         const derived = await resolveNextUp((id) => api.getTVShow(id), 16);
         if (cancelled) return;
@@ -168,7 +172,7 @@ export default function Home() {
         if (cancelled) return;
 
         const expanded = await expandLibraryRatingsForUserdata(
-          [...progressRaw, ...favoritesRaw, ...derived],
+          [...progressRaw, ...favoritesRaw, ...wantToWatchRaw, ...derived],
           movies.items,
           shows.items,
           {
@@ -182,6 +186,7 @@ export default function Home() {
 
         setProgress(progressRaw);
         setFavorites(favoritesRaw);
+        setWantToWatch(wantToWatchRaw);
         setNextUp(derived);
         setJoinMovies(ratingMovies);
         setJoinShows(ratingShows);
@@ -214,6 +219,10 @@ export default function Home() {
     () => applyUserdataParentalFilter(favorites, joinMovies, joinShows),
     [favorites, joinMovies, joinShows],
   );
+  const visibleWantToWatch = useMemo(
+    () => applyUserdataParentalFilter(wantToWatch, joinMovies, joinShows),
+    [wantToWatch, joinMovies, joinShows],
+  );
   const visibleReadyMovies = useMemo(
     () => applyParentalFilter(readyMovies),
     [readyMovies],
@@ -234,6 +243,7 @@ export default function Home() {
     (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
     recommended.length > 0 ||
     (prefs.home.showFavorites && visibleFavorites.length > 0) ||
+    (prefs.home.showWantToWatch && visibleWantToWatch.length > 0) ||
     (prefs.home.showCollections && serverCols.length > 0) ||
     (prefs.home.showPlaylists && playlists.length > 0) ||
     showReadyFallback ||
@@ -379,6 +389,19 @@ export default function Home() {
           {visibleFavorites.map((f) => (
             <ShelfItem key={f.id}>
               <MediaCard type={f.kind === 'tv' ? 'tv' : 'movie'} item={favoriteAsCardItem(f)} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showWantToWatch && visibleWantToWatch.length > 0 && (
+        <Shelf title="Want to Watch" seeAllHref="/want-to-watch" testId="home-want-to-watch">
+          {visibleWantToWatch.map((entry) => (
+            <ShelfItem key={entry.id}>
+              <MediaCard
+                type={entry.kind === 'tv' ? 'tv' : 'movie'}
+                item={favoriteAsCardItem(entry)}
+              />
             </ShelfItem>
           ))}
         </Shelf>

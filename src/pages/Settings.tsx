@@ -156,6 +156,7 @@ function HomePane() {
         showRecentlyAdded: fd.get('showRecentlyAdded') === 'on',
         showCollections: fd.get('showCollections') === 'on',
         showPlaylists: fd.get('showPlaylists') === 'on',
+        showWantToWatch: fd.get('showWantToWatch') === 'on',
       },
     });
   }
@@ -173,6 +174,7 @@ function HomePane() {
           ['showNextUp', 'Next up', prefs.home.showNextUp],
           ['showCollections', 'Collections shelf', prefs.home.showCollections],
           ['showPlaylists', 'Playlists shelf', prefs.home.showPlaylists],
+          ['showWantToWatch', 'Want to Watch shelf', prefs.home.showWantToWatch],
         ] as const
       ).map(([name, label, checked]) => (
         <label key={name} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">

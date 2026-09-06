@@ -31,6 +31,7 @@ const TVShows = lazy(() => import('./pages/TVShows'));
 const Home = lazy(() => import('./pages/Home'));
 const Search = lazy(() => import('./pages/Search'));
 const Watchlist = lazy(() => import('./pages/Watchlist'));
+const WantToWatch = lazy(() => import('./pages/WantToWatch'));
 const Collections = lazy(() => import('./pages/Collections'));
 const Music = lazy(() => import('./pages/Music'));
 const InProgress = lazy(() => import('./pages/InProgress'));
@@ -251,6 +252,14 @@ function LazyFavorites() {
   );
 }
 
+function LazyWantToWatch() {
+  return (
+    <Suspense fallback={<PosterGridSkeleton count={12} />}>
+      <WantToWatch />
+    </Suspense>
+  );
+}
+
 function LazyQueue() {
   return (
     <Suspense fallback={<QueueListSkeleton />}>
@@ -354,6 +363,9 @@ function AppRoutes() {
         {featureEnabled(caps, 'request') && <Route path="discover" element={<LazyDiscover />} />}
         {featureEnabled(caps, 'watchlist') && (
           <Route path="watchlist" element={<LazyWatchlist />} />
+        )}
+        {featureEnabled(caps, 'wantToWatch') && (
+          <Route path="want-to-watch" element={<LazyWantToWatch />} />
         )}
         <Route path="discover/:type/:id" element={<LazyDiscoverDetail />} />
         <Route path="favorites" element={<LazyFavorites />} />

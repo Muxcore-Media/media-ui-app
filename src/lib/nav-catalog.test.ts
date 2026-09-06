@@ -15,6 +15,7 @@ describe('nav-catalog', () => {
     const overflow = visibleOverflowNav(DEFAULT_CAPABILITIES);
     expect(overflow.map((i) => i.label)).toContain('Collections');
     expect(overflow.map((i) => i.label)).toContain('In progress');
+    expect(overflow.map((i) => i.label)).toContain('Want to Watch');
     expect(overflow.map((i) => i.label)).not.toContain('Watchlist');
     expect(overflow.map((i) => i.label)).not.toContain('Music Videos');
     expect(overflow.map((i) => i.label)).not.toContain('Home Videos');
@@ -85,6 +86,7 @@ describe('nav-catalog', () => {
         favorites: false,
         debrid: false,
         watchlist: false,
+        wantToWatch: false,
       },
     };
     expect(showDesktopMoreMenu(bare)).toBe(false);

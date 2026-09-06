@@ -7,6 +7,7 @@ const getMovie = vi.fn();
 const jellyfinPlayURL = vi.fn();
 const fetchPlaybackAnalysis = vi.fn();
 const getRelated = vi.fn();
+const getDiscoverDetail = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -17,6 +18,7 @@ vi.mock('../api/client', async () => {
       getMovie: (...args: unknown[]) => getMovie(...args),
       jellyfinPlayURL: (...args: unknown[]) => jellyfinPlayURL(...args),
       getRelated: (...args: unknown[]) => getRelated(...args),
+      getDiscoverDetail: (...args: unknown[]) => getDiscoverDetail(...args),
     },
   };
 });
@@ -27,8 +29,10 @@ describe('MovieDetail page', () => {
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
     getRelated.mockReset();
+    getDiscoverDetail.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
     getRelated.mockResolvedValue({ items: [], available: false });
+    getDiscoverDetail.mockResolvedValue(null);
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/movies/m-550',
       enabled: true,
@@ -122,8 +126,10 @@ describe('MovieDetail accessibility', () => {
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
     getRelated.mockReset();
+    getDiscoverDetail.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
     getRelated.mockResolvedValue({ items: [], available: false });
+    getDiscoverDetail.mockResolvedValue(null);
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/movies/m-550',
       enabled: true,
@@ -213,9 +219,11 @@ describe('MovieDetail – RelatedShelf integration', () => {
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
     getRelated.mockReset();
+    getDiscoverDetail.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
     fetchPlaybackAnalysis.mockResolvedValue({ src: '', enabled: false });
     getMovie.mockResolvedValue(baseMovie);
+    getDiscoverDetail.mockResolvedValue(null);
   });
 
   it('renders the Related Titles shelf when graph returns items', async () => {
@@ -283,5 +291,111 @@ describe('MovieDetail – RelatedShelf integration', () => {
     expect(screen.getByText('Fight Club')).toBeInTheDocument();
     await waitFor(() => expect(getRelated).toHaveBeenCalled());
     expect(screen.queryByTestId('related-shelf')).not.toBeInTheDocument();
+  });
+});
+
+describe('MovieDetail – trailer', () => {
+  const movieWithTmdb = {
+    id: 'm-550',
+    title: 'Fight Club',
+    year: 1999,
+    overview: 'An insomniac office worker...',
+    runtime: 139,
+    vote_average: 8.4,
+    genres: ['Drama'],
+    poster_url: '',
+    has_file: true,
+    stream_url: '/stream/movies/m-550',
+    created_at: '',
+    tmdb_id: 550,
+  };
+
+  beforeEach(() => {
+    getMovie.mockReset();
+    jellyfinPlayURL.mockReset();
+    fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
+    getDiscoverDetail.mockReset();
+    jellyfinPlayURL.mockResolvedValue(null);
+    fetchPlaybackAnalysis.mockResolvedValue({ src: '', enabled: false });
+    getRelated.mockResolvedValue({ items: [], available: false });
+    getMovie.mockResolvedValue(movieWithTmdb);
+  });
+
+  it('renders a trailer embed when discover detail includes a trailer', async () => {
+    getDiscoverDetail.mockResolvedValue({
+      id: 550,
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'An insomniac office worker...',
+      genres: ['Drama'],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 8.4,
+      mediaType: 'movie',
+      trailer: {
+        name: 'Official Trailer',
+        youtubeKey: 'SUXWAEX2jlg',
+        url: 'https://www.youtube.com/watch?v=SUXWAEX2jlg',
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('movie-detail-page');
+    const trailerSection = await screen.findByTestId('trailer-section');
+    expect(trailerSection).toBeInTheDocument();
+    expect(screen.getByTitle('Official Trailer')).toHaveAttribute(
+      'src',
+      expect.stringContaining('SUXWAEX2jlg'),
+    );
+  });
+
+  it('does not render a trailer section when discover detail has no trailer', async () => {
+    getDiscoverDetail.mockResolvedValue({
+      id: 550,
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'An insomniac office worker...',
+      genres: ['Drama'],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 8.4,
+      mediaType: 'movie',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('movie-detail-page');
+    await waitFor(() => expect(getDiscoverDetail).toHaveBeenCalled());
+    expect(screen.queryByTestId('trailer-section')).not.toBeInTheDocument();
+  });
+
+  it('does not render a trailer section when discover detail fetch fails', async () => {
+    getDiscoverDetail.mockRejectedValue(new Error('discover offline'));
+
+    render(
+      <MemoryRouter initialEntries={['/movies/m-550']}>
+        <Routes>
+          <Route path="/movies/:id" element={<MovieDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('movie-detail-page');
+    await waitFor(() => expect(getDiscoverDetail).toHaveBeenCalled());
+    expect(screen.queryByTestId('trailer-section')).not.toBeInTheDocument();
   });
 });

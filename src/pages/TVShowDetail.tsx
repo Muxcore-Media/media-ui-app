@@ -4,6 +4,7 @@ import { Bookmark, ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
 import CastSection from '../components/media/CastSection';
+import TrailerSection from '../components/media/TrailerSection';
 import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
 import RelatedShelf from '../components/media/RelatedShelf';
 import { DetailHero } from '../components/media/DetailHero';
@@ -319,6 +320,12 @@ export default function TVShowDetail() {
           message="Episode listings will appear here once metadata is available for this series."
         />
       )}
+
+      <TrailerSection
+        trailer={discover?.trailer}
+        titleLabel={show.title}
+        headingId="tv-trailer-heading"
+      />
 
       {discover?.cast?.length ? (
         <CastSection cast={discover.cast} headingId="tv-cast-heading" />

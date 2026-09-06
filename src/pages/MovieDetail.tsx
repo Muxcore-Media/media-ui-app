@@ -4,6 +4,7 @@ import { Bookmark, Check, ExternalLink, ListPlus, Play, Star } from 'lucide-reac
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
 import CastSection from '../components/media/CastSection';
+import TrailerSection from '../components/media/TrailerSection';
 import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
 import RelatedShelf from '../components/media/RelatedShelf';
 import { DetailHero } from '../components/media/DetailHero';
@@ -326,6 +327,12 @@ export default function MovieDetail() {
           </p>
         </section>
       ) : null}
+
+      <TrailerSection
+        trailer={discover?.trailer}
+        titleLabel={movie.title}
+        headingId="movie-trailer-heading"
+      />
 
       {discover?.cast?.length ? (
         <CastSection cast={discover.cast} headingId="movie-cast-heading" />

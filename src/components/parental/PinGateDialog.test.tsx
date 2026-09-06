@@ -3,33 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PinGateDialog } from './PinGateDialog';
 import { hashPin } from '../../lib/parental';
 
-async function renderDialog(pinHash: string, onSuccess = vi.fn(), onCancel = vi.fn()) {
-  render(
-    <PinGateDialog
-      pinHash={pinHash}
-      onSuccess={onSuccess}
-      onCancel={onCancel}
-      actionLabel="Unlock test title"
-    />,
-  );
-  return { onSuccess, onCancel };
-}
-
-function fillPin(digits: string) {
-  const inputs = screen.getAllByRole('textbox', { hidden: true }).filter((el) => {
-    return (el as HTMLInputElement).maxLength === 1;
-  });
-  // Some environments expose them as generic inputs; fall back to aria-label pattern
-  const pinInputs =
-    inputs.length >= 4
-      ? inputs
-      : ([1, 2, 3, 4].map((n) => screen.getByLabelText(`PIN digit ${n}`)) as HTMLElement[]);
-
-  for (let i = 0; i < digits.length; i++) {
-    fireEvent.change(pinInputs[i]!, { target: { value: digits[i] } });
-  }
-}
-
 describe('PinGateDialog', () => {
   it('renders with the action label', () => {
     render(

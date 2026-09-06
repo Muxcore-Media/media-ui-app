@@ -15,7 +15,7 @@ import {
   getParentalState,
   normalizeRating,
 } from './parental';
-import { getPreferences, updatePreferences } from './userdata';
+import { updatePreferences } from './userdata';
 
 // ---------------------------------------------------------------------------
 // Rating normalization

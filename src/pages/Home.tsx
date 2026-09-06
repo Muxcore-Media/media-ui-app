@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Home as HomeIcon, Layers, ListMusic } from 'lucide-react';
+import { CalendarDays, Home as HomeIcon, Layers, ListMusic, Play } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
@@ -24,7 +24,7 @@ import {
   type ProgressEntry,
   type WantToWatchEntry,
 } from '../lib/userdata';
-import { buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
+import { buildEpisodePlayerHref, buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
 import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
 import { mergeInProgressEntries } from '../lib/acquisition';
@@ -35,6 +35,7 @@ import {
 } from '../lib/parental';
 import { useBecauseYouWatched } from '../hooks/useBecauseYouWatched';
 import { useRecentlyAdded } from '../hooks/useRecentlyAdded';
+import { useUpcomingEpisodes, type UpcomingEpisodeRow } from '../hooks/useUpcomingEpisodes';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -84,6 +85,76 @@ function PlaylistTile({ playlist }: { playlist: Playlist }) {
   );
 }
 
+/** Format an ISO air-date string for display in the upcoming rail subtitle. */
+function formatUpcomingAirDate(airIso: string): string {
+  const today = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}`;
+  const airDay = airIso.slice(0, 10);
+  if (airDay === todayStr) return 'Today';
+  if (airDay === tomorrowStr) return 'Tomorrow';
+  // Parse at noon to avoid UTC vs. local off-by-one-day issues.
+  const d = new Date(`${airDay}T12:00:00`);
+  const formatted = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const isPast = airDay < todayStr;
+  return isPast ? `Aired ${formatted}` : formatted;
+}
+
+/** Card for a single upcoming / recently-aired episode on the home rail. */
+function UpcomingCard({ show, episode, air }: UpcomingEpisodeRow) {
+  const [imgError, setImgError] = useState(false);
+  const epCode = `S${String(episode.season_number).padStart(2, '0')}E${String(episode.episode_number).padStart(2, '0')}`;
+  const epLabel = episode.title ? `${epCode} · ${episode.title}` : epCode;
+  const airLabel = formatUpcomingAirDate(air);
+  const playerHref = buildEpisodePlayerHref(show, episode);
+  const href = playerHref ?? `/tv/${show.id}`;
+
+  return (
+    <Link
+      to={href}
+      aria-label={`${show.title}, ${epLabel}, ${airLabel}`}
+      className="group block overflow-hidden rounded-[var(--radius-md)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+    >
+      <div className="motion-safe-hover-lift relative aspect-[2/3] overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-elevated-2)] shadow-md group-hover:shadow-2xl">
+        {show.poster_url && !imgError ? (
+          <img
+            src={show.poster_url}
+            alt=""
+            className="motion-safe-scale h-full w-full object-cover"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--bg-elevated-2)] to-[var(--bg-elevated)] text-[var(--text-tertiary)]">
+            <CalendarDays className="h-8 w-8" aria-hidden="true" />
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--scrim-strong)] via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100" />
+        {episode.has_file && (
+          <div className="motion-safe-reveal pointer-events-none absolute inset-x-0 bottom-0 p-3">
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-contrast)] text-[var(--text-on-accent)] shadow-lg"
+              aria-hidden="true"
+            >
+              <Play className="h-4 w-4 fill-current" />
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="space-y-0.5 pt-2">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-color)] group-focus-visible:text-[var(--accent-color)]">
+          {show.title}
+        </h3>
+        <p className="text-xs text-[var(--text-tertiary)]">{epLabel}</p>
+        <p className="text-xs text-[var(--text-secondary)]">{airLabel}</p>
+      </div>
+    </Link>
+  );
+}
+
 export default function Home() {
   const prefs = getPreferences();
   const [inProgressCount, setInProgressCount] = useState(0);
@@ -123,6 +194,9 @@ export default function Home() {
   );
 
   const recentlyAdded = useRecentlyAdded(allMovies, allShows, recentlyAddedExcludeIds);
+
+  // Upcoming / On The Air rail — deduplicates against Continue Watching + Next Up.
+  const upcoming = useUpcomingEpisodes(allShows, becauseExcludeIds);
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
@@ -238,6 +312,7 @@ export default function Home() {
   const hasContent =
     (prefs.home.showContinueWatching && visibleProgress.length > 0) ||
     (prefs.home.showNextUp && visibleNextUp.length > 0) ||
+    (prefs.home.showUpcoming && upcoming.rows.length > 0) ||
     (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
     becauseYouWatched.items.length > 0 ||
     (prefs.home.showFavorites && visibleFavorites.length > 0) ||
@@ -353,6 +428,16 @@ export default function Home() {
                 href={withPlayerContentRating(n.href, n.content_rating)}
                 subtitle={n.subtitle || 'Next up'}
               />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showUpcoming && !upcoming.loading && upcoming.rows.length > 0 && (
+        <Shelf title="Upcoming / On The Air" seeAllHref="/upcoming" testId="home-upcoming">
+          {upcoming.rows.map((row) => (
+            <ShelfItem key={`${row.show.id}-${row.episode.id}`}>
+              <UpcomingCard show={row.show} episode={row.episode} air={row.air} />
             </ShelfItem>
           ))}
         </Shelf>

@@ -1078,3 +1078,333 @@ describe('Recently Added rail — deduplication', () => {
     expect(screen.queryByTestId('home-recently-added')).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Upcoming / On The Air rail (umbrella #100)
+// ---------------------------------------------------------------------------
+
+/** Returns an ISO date string for `offsetDays` days from today's date. */
+function futureDateIso(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+const SHOW_WITH_UPCOMING = {
+  id: 'show-upcoming',
+  title: 'Drama Series',
+  year: 2024,
+  overview: '',
+  vote_average: 8,
+  genres: ['Drama'],
+  poster_url: '/poster-drama.jpg',
+  has_file: true,
+  stream_url: '',
+  created_at: '2026-01-01T00:00:00.000Z',
+  seasons: [
+    {
+      id: 'season-1',
+      season_number: 1,
+      name: 'Season 1',
+      episode_count: 2,
+      poster_url: '',
+      episodes: [
+        {
+          id: 'ep-upcoming-1',
+          season_number: 1,
+          episode_number: 5,
+          title: 'The Storm',
+          overview: '',
+          runtime: 50,
+          has_file: false,
+          stream_url: '',
+          air_date: futureDateIso(7),
+        },
+        {
+          id: 'ep-aired-1',
+          season_number: 1,
+          episode_number: 4,
+          title: 'The Calm',
+          overview: '',
+          runtime: 50,
+          has_file: true,
+          stream_url: '/stream/ep-aired-1',
+          air_date: futureDateIso(-2),
+        },
+      ],
+    },
+  ],
+};
+
+describe('Upcoming / On The Air rail', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    getTVShow.mockRejectedValue(new Error('not found'));
+    getMovie.mockRejectedValue(new Error('not found'));
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders the upcoming shelf when shows have episodes with air dates in window', async () => {
+    listTVShows.mockResolvedValue({ items: [SHOW_WITH_UPCOMING], total: 1 });
+    getTVShow.mockResolvedValue(SHOW_WITH_UPCOMING);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-upcoming');
+    expect(shelf).toBeInTheDocument();
+    expect(shelf).toHaveTextContent('Drama Series');
+  });
+
+  it('shows episode code and title within the upcoming card', async () => {
+    listTVShows.mockResolvedValue({ items: [SHOW_WITH_UPCOMING], total: 1 });
+    getTVShow.mockResolvedValue(SHOW_WITH_UPCOMING);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-upcoming');
+    // Both upcoming and recently-aired episodes should appear in the shelf.
+    expect(shelf).toHaveTextContent('S01E05');
+    expect(shelf).toHaveTextContent('S01E04');
+  });
+
+  it('is soft-hidden when no shows have episodes in the air-date window', async () => {
+    const OLD_SHOW = {
+      ...SHOW_WITH_UPCOMING,
+      id: 'show-old',
+      seasons: [
+        {
+          id: 'season-1',
+          season_number: 1,
+          name: 'Season 1',
+          episode_count: 1,
+          poster_url: '',
+          episodes: [
+            {
+              id: 'ep-old',
+              season_number: 1,
+              episode_number: 1,
+              title: 'Old Episode',
+              overview: '',
+              runtime: 45,
+              has_file: true,
+              stream_url: '/stream/ep-old',
+              air_date: futureDateIso(-60),
+            },
+          ],
+        },
+      ],
+    };
+    listTVShows.mockResolvedValue({ items: [OLD_SHOW], total: 1 });
+    getTVShow.mockResolvedValue(OLD_SHOW);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Wait for page to fully load (empty feed shows the Home heading).
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-upcoming')).not.toBeInTheDocument();
+  });
+
+  it('is soft-hidden when shows have no air-date data', async () => {
+    const NO_DATE_SHOW = {
+      ...SHOW_WITH_UPCOMING,
+      id: 'show-no-date',
+      seasons: [
+        {
+          id: 'season-1',
+          season_number: 1,
+          name: 'Season 1',
+          episode_count: 1,
+          poster_url: '',
+          episodes: [
+            {
+              id: 'ep-no-date',
+              season_number: 1,
+              episode_number: 1,
+              title: 'No Date',
+              overview: '',
+              runtime: 45,
+              has_file: true,
+              stream_url: '/stream/ep-no-date',
+              // air_date absent
+            },
+          ],
+        },
+      ],
+    };
+    listTVShows.mockResolvedValue({ items: [NO_DATE_SHOW], total: 1 });
+    getTVShow.mockResolvedValue(NO_DATE_SHOW);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-upcoming')).not.toBeInTheDocument();
+  });
+
+  it('is soft-hidden when the showUpcoming preference is disabled', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.prefs.v1',
+      JSON.stringify({
+        display: { theme: 'dark', libraryPageSize: 48, showWatchedIndicators: true },
+        home: {
+          showContinueWatching: true,
+          showFavorites: true,
+          showRecentRequests: true,
+          showNextUp: true,
+          showRecentlyAdded: true,
+          showUpcoming: false,
+          showCollections: true,
+          showPlaylists: true,
+          showWantToWatch: true,
+        },
+        playback: { autoplayNext: false, rememberPosition: true, skipIntroSec: 0 },
+        subtitles: {
+          enabled: true,
+          language: 'eng',
+          textSize: 'md',
+          backgroundOpacity: 60,
+          edgeStyle: 'drop-shadow',
+          verticalPosition: 'bottom',
+        },
+        controls: { enableKeyboardShortcuts: true },
+        player: { preferredQuality: 'auto', theaterMode: false, aspectMode: 'contain' },
+      }),
+    );
+    listTVShows.mockResolvedValue({ items: [SHOW_WITH_UPCOMING], total: 1 });
+    getTVShow.mockResolvedValue(SHOW_WITH_UPCOMING);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('home-page');
+    // Wait for any async operations to settle.
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-upcoming')).not.toBeInTheDocument();
+  });
+
+  it('deduplicates: a show already in Continue Watching does not appear in upcoming', async () => {
+    listTVShows.mockResolvedValue({ items: [SHOW_WITH_UPCOMING], total: 1 });
+    getTVShow.mockResolvedValue(SHOW_WITH_UPCOMING);
+    vi.mocked(userdata.continueWatching).mockReturnValue([
+      {
+        id: 'show-upcoming',
+        kind: 'tv',
+        title: 'Drama Series',
+        href: '/tv/show-upcoming',
+        stream_url: '',
+        positionSec: 600,
+        durationSec: 3000,
+        updatedAt: '2026-09-01T00:00:00.000Z',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // CW should be visible.
+    const cwShelf = await screen.findByTestId('home-continue');
+    expect(cwShelf).toHaveTextContent('Drama Series');
+
+    // Upcoming should be hidden (all episodes belong to the excluded show).
+    await screen.findByTestId('home-continue'); // ensure load settled
+    expect(screen.queryByTestId('home-upcoming')).not.toBeInTheDocument();
+  });
+
+  it('an in-library episode card links to the player', async () => {
+    listTVShows.mockResolvedValue({ items: [SHOW_WITH_UPCOMING], total: 1 });
+    getTVShow.mockResolvedValue(SHOW_WITH_UPCOMING);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-upcoming');
+    // ep-aired-1 has has_file=true — its card should link to the player.
+    const links = within(shelf).getAllByRole('link');
+    const playerLinks = links.filter((l) => (l.getAttribute('href') ?? '').includes('/player'));
+    expect(playerLinks.length).toBeGreaterThan(0);
+    const href = playerLinks[0].getAttribute('href') ?? '';
+    expect(href).toContain('ep-aired-1');
+  });
+
+  it('a not-yet-available episode card links to the show detail page', async () => {
+    // Only include the upcoming (no file) episode.
+    const UPCOMING_ONLY = {
+      ...SHOW_WITH_UPCOMING,
+      seasons: [
+        {
+          id: 'season-1',
+          season_number: 1,
+          name: 'Season 1',
+          episode_count: 1,
+          poster_url: '',
+          episodes: [SHOW_WITH_UPCOMING.seasons[0].episodes[0]], // ep-upcoming-1, has_file=false
+        },
+      ],
+    };
+    listTVShows.mockResolvedValue({ items: [UPCOMING_ONLY], total: 1 });
+    getTVShow.mockResolvedValue(UPCOMING_ONLY);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-upcoming');
+    const link = within(shelf).getByRole('link', { name: /Drama Series/i });
+    expect(link.getAttribute('href')).toBe('/tv/show-upcoming');
+  });
+
+  it('the shelf "See all" link points to the /upcoming page', async () => {
+    listTVShows.mockResolvedValue({ items: [SHOW_WITH_UPCOMING], total: 1 });
+    getTVShow.mockResolvedValue(SHOW_WITH_UPCOMING);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-upcoming');
+    const seeAll = within(shelf).getByRole('link', { name: /see all/i });
+    expect(seeAll.getAttribute('href')).toBe('/upcoming');
+  });
+});

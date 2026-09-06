@@ -7,6 +7,7 @@ const getTVShow = vi.fn();
 const jellyfinPlayURL = vi.fn();
 const fetchPlaybackAnalysis = vi.fn();
 const getRelated = vi.fn();
+const getDiscoverDetail = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -17,6 +18,7 @@ vi.mock('../api/client', async () => {
       getTVShow: (...args: unknown[]) => getTVShow(...args),
       jellyfinPlayURL: (...args: unknown[]) => jellyfinPlayURL(...args),
       getRelated: (...args: unknown[]) => getRelated(...args),
+      getDiscoverDetail: (...args: unknown[]) => getDiscoverDetail(...args),
     },
   };
 });
@@ -57,8 +59,10 @@ describe('TVShowDetail page', () => {
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
     getRelated.mockReset();
+    getDiscoverDetail.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
     getRelated.mockResolvedValue({ items: [], available: false });
+    getDiscoverDetail.mockResolvedValue(null);
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/tv/bb/1/1',
       enabled: true,
@@ -165,8 +169,10 @@ describe('TVShowDetail accessibility', () => {
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
     getRelated.mockReset();
+    getDiscoverDetail.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
     getRelated.mockResolvedValue({ items: [], available: false });
+    getDiscoverDetail.mockResolvedValue(null);
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/tv/bb/1/1',
       enabled: true,
@@ -234,9 +240,11 @@ describe('TVShowDetail – RelatedShelf integration', () => {
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
     getRelated.mockReset();
+    getDiscoverDetail.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
     fetchPlaybackAnalysis.mockResolvedValue({ src: '', enabled: false });
     getTVShow.mockResolvedValue(baseShow);
+    getDiscoverDetail.mockResolvedValue(null);
   });
 
   it('renders the Related Titles shelf when graph returns items', async () => {
@@ -303,5 +311,101 @@ describe('TVShowDetail – RelatedShelf integration', () => {
     expect(screen.getByText('Breaking Bad')).toBeInTheDocument();
     await waitFor(() => expect(getRelated).toHaveBeenCalled());
     expect(screen.queryByTestId('related-shelf')).not.toBeInTheDocument();
+  });
+});
+
+describe('TVShowDetail – trailer', () => {
+  const showWithTmdb = {
+    ...showWithEpisodes,
+    tmdb_id: 1396,
+  };
+
+  beforeEach(() => {
+    getTVShow.mockReset();
+    jellyfinPlayURL.mockReset();
+    fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
+    getDiscoverDetail.mockReset();
+    jellyfinPlayURL.mockResolvedValue(null);
+    fetchPlaybackAnalysis.mockResolvedValue({ src: '', enabled: false });
+    getRelated.mockResolvedValue({ items: [], available: false });
+    getTVShow.mockResolvedValue(showWithTmdb);
+  });
+
+  it('renders a trailer embed when discover detail includes a trailer', async () => {
+    getDiscoverDetail.mockResolvedValue({
+      id: 1396,
+      title: 'Breaking Bad',
+      year: 2008,
+      overview: 'A chemistry teacher turns to crime.',
+      genres: ['Crime'],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 9.5,
+      mediaType: 'tv',
+      trailer: {
+        name: 'Official Trailer',
+        youtubeKey: 'HhesaQXLuRY',
+        url: 'https://www.youtube.com/watch?v=HhesaQXLuRY',
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('tv-detail-page');
+    const trailerSection = await screen.findByTestId('trailer-section');
+    expect(trailerSection).toBeInTheDocument();
+    expect(screen.getByTitle('Official Trailer')).toHaveAttribute(
+      'src',
+      expect.stringContaining('HhesaQXLuRY'),
+    );
+  });
+
+  it('does not render a trailer section when discover detail has no trailer', async () => {
+    getDiscoverDetail.mockResolvedValue({
+      id: 1396,
+      title: 'Breaking Bad',
+      year: 2008,
+      overview: 'A chemistry teacher turns to crime.',
+      genres: ['Crime'],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 9.5,
+      mediaType: 'tv',
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('tv-detail-page');
+    await waitFor(() => expect(getDiscoverDetail).toHaveBeenCalled());
+    expect(screen.queryByTestId('trailer-section')).not.toBeInTheDocument();
+  });
+
+  it('does not render a trailer section when discover detail fetch fails', async () => {
+    getDiscoverDetail.mockRejectedValue(new Error('discover offline'));
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('tv-detail-page');
+    await waitFor(() => expect(getDiscoverDetail).toHaveBeenCalled());
+    expect(screen.queryByTestId('trailer-section')).not.toBeInTheDocument();
   });
 });

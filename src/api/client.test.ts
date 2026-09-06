@@ -376,4 +376,97 @@ describe('api smoke (library + request + auth errors)', () => {
     expect(manifest?.url).toBe('blob:test');
     expect(String(fetchMock.mock.calls[0][0])).toContain('/stream/trickplay');
   });
+
+  // ── api.getRelated — BFF contract tests ──────────────────────────────────
+  // The BFF GET /api/graph/related requires id=tmdb:{movie|tv}:{n}.
+  // Any other id format (e.g. a library-internal id) returns 400 graph.invalid_id.
+  // The client must absorb errors and return { items: [], available: false }.
+
+  it('getRelated sends id=tmdb:movie:550 and parses items', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          available: true,
+          items: [
+            {
+              id: 550,
+              title: 'Fight Club',
+              year: 1999,
+              overview: '',
+              poster: '/fc.jpg',
+              vote_avg: 8.4,
+              media_type: 'movie',
+              relation: 'related_to',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const result = await api.getRelated('tmdb:movie:550');
+
+    expect(result.available).toBe(true);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].title).toBe('Fight Club');
+    expect(result.items[0].id).toBe(550);
+    expect(result.items[0].mediaType).toBe('movie');
+    expect(result.items[0].relation).toBe('related_to');
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain('/api/graph/related');
+    expect(url).toContain('id=tmdb%3Amovie%3A550');
+  });
+
+  it('getRelated returns available=false when BFF signals module unavailable', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ available: false, items: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const result = await api.getRelated('tmdb:movie:550');
+
+    expect(result.available).toBe(false);
+    expect(result.items).toHaveLength(0);
+  });
+
+  it('getRelated returns available=false on 400 graph.invalid_id (wrong id format)', async () => {
+    // BFF rejects library-internal ids with 400 graph.invalid_id.
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ error: 'invalid external id', code: 'graph.invalid_id' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const result = await api.getRelated('movie-seed'); // wrong format — library id, not tmdb:...
+
+    expect(result.available).toBe(false);
+    expect(result.items).toHaveLength(0);
+  });
+
+  it('getRelated returns available=false on network failure (graph service down)', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const result = await api.getRelated('tmdb:movie:550');
+
+    expect(result.available).toBe(false);
+    expect(result.items).toHaveLength(0);
+  });
+
+  it('getRelated sends tmdb:tv: prefix for TV shows', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ available: true, items: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    await api.getRelated('tmdb:tv:1396');
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain('id=tmdb%3Atv%3A1396');
+  });
 });

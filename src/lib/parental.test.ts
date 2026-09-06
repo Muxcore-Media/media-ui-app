@@ -5,6 +5,7 @@ import {
   filterByParentalControls,
   applyParentalFilter,
   applyUserdataParentalFilter,
+  expandLibraryRatingsForUserdata,
   filterUserdataByParental,
   indexLibraryRatings,
   missingLibraryFetches,
@@ -341,6 +342,47 @@ describe('applyUserdataParentalFilter', () => {
       [],
     );
     expect(visible.map((r) => r.id)).toEqual(['ok']);
+  });
+});
+
+describe('expandLibraryRatingsForUserdata', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('skips per-id fetches when no parental restriction is on', async () => {
+    const getMovie = async () => ({ id: 'need-movie', content_rating: 'R' });
+    const getTVShow = async () => ({ id: 'need-show', content_rating: 'TV-MA' });
+    const expanded = await expandLibraryRatingsForUserdata(
+      [{ id: 'need-movie', kind: 'movie' }],
+      [],
+      [],
+      { getMovie, getTVShow },
+    );
+    expect(expanded.movies).toEqual([]);
+    expect(expanded.shows).toEqual([]);
+  });
+
+  it('fetches missing library rows when kids mode is on', async () => {
+    updatePreferences({
+      parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false },
+    });
+    const getMovie = async (id: string) =>
+      id === 'need-movie' ? { id, content_rating: 'R' } : null;
+    const getTVShow = async (id: string) =>
+      id === 'need-show' ? { id, content_rating: 'TV-MA' } : null;
+    const expanded = await expandLibraryRatingsForUserdata(
+      [
+        { id: 'need-movie', kind: 'movie' },
+        { id: 'ep-1', kind: 'episode', href: '/tv/need-show' },
+        { id: 'known', kind: 'movie' },
+      ],
+      [{ id: 'known', content_rating: 'PG' }],
+      [],
+      { getMovie, getTVShow },
+    );
+    expect(expanded.movies.map((m) => m.id)).toEqual(['known', 'need-movie']);
+    expect(expanded.shows.map((s) => s.id)).toEqual(['need-show']);
   });
 });
 

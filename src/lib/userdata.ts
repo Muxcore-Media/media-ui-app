@@ -15,6 +15,8 @@ export type ProgressEntry = {
   durationSec: number;
   updatedAt: string;
   watched?: boolean;
+  /** Library content rating when known (joined or stashed on upsert). */
+  content_rating?: string;
 };
 
 export type FavoriteEntry = {
@@ -24,6 +26,7 @@ export type FavoriteEntry = {
   poster_url?: string;
   href: string;
   year?: number;
+  content_rating?: string;
 };
 
 /** Parental-control prefs written by admin-ui and synced via the BFF userdata blob. */
@@ -264,6 +267,7 @@ export type NextUpEntry = {
   stream_url?: string;
   subtitle?: string;
   showId?: string;
+  content_rating?: string;
 };
 
 type EpisodeLike = {
@@ -279,6 +283,7 @@ type ShowLike = {
   id: string;
   title: string;
   poster_url?: string;
+  content_rating?: string;
   seasons?: Array<{ season_number: number; episodes?: EpisodeLike[] }>;
 };
 
@@ -413,6 +418,7 @@ export async function resolveNextUp(
       stream_url: next.stream_url,
       subtitle: 'Next up',
       showId: show.id,
+      content_rating: show.content_rating,
     });
   }
 

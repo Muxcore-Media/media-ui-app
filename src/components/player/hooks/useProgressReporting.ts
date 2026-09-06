@@ -14,6 +14,8 @@ export type UseProgressReportingOptions = {
   durationSec: number;
   /** Suppress writes while a resume-decision dialog is pending, or right after a transcode restart. */
   suppress?: boolean;
+  /** Content rating forwarded from the player URL so later resume links can gate. */
+  contentRating?: string;
 };
 
 const REPORT_INTERVAL_MS = 4000;
@@ -38,6 +40,7 @@ export function useProgressReporting(opts: UseProgressReportingOptions) {
       stream_url: o.src,
       positionSec: o.positionSec,
       durationSec: Number.isFinite(o.durationSec) ? o.durationSec : 0,
+      content_rating: o.contentRating,
     });
   };
 

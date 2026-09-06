@@ -186,7 +186,7 @@ describe('Home music shelves — populated', () => {
     expect(seeAll.getAttribute('href')).toBe('/music');
   });
 
-  it('renders the Recently Added Albums shelf with album titles', async () => {
+  it('renders the Albums from your artists shelf with album titles', async () => {
     renderHome();
     const shelf = await screen.findByTestId('home-music-albums');
     expect(shelf).toBeInTheDocument();
@@ -208,7 +208,20 @@ describe('Home music shelves — populated', () => {
     expect(link.getAttribute('href')).toBe('/music/artist-1');
   });
 
-  it('Recently Added Albums shelf has a "See all" link pointing to /music', async () => {
+  it('albums are ordered newest-first by year (descending), nulls last', async () => {
+    renderHome();
+    const shelf = await screen.findByTestId('home-music-albums');
+    const links = within(shelf).getAllByRole('link', { name: /by /i });
+    // Kid A (2000) > OK Computer (1997) > Dummy (1994)
+    const titles = links.map((l) => l.getAttribute('aria-label') ?? '');
+    const kidAIdx = titles.findIndex((t) => /Kid A/i.test(t));
+    const okComputerIdx = titles.findIndex((t) => /OK Computer/i.test(t));
+    const dummyIdx = titles.findIndex((t) => /Dummy/i.test(t));
+    expect(kidAIdx).toBeLessThan(okComputerIdx);
+    expect(okComputerIdx).toBeLessThan(dummyIdx);
+  });
+
+  it('Albums from your artists shelf has a "See all" link pointing to /music', async () => {
     renderHome();
     const shelf = await screen.findByTestId('home-music-albums');
     const seeAll = within(shelf).getByRole('link', { name: /see all/i });

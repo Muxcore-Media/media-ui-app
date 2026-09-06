@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import CapabilitiesProvider from './components/CapabilitiesProvider';
 import Layout from './components/Layout';
 import { ErrorBanner } from './components/ui/ErrorBanner';
+import { ToastProvider } from './components/ui/Toast';
 import { PosterGridSkeleton } from './components/media/PosterGrid';
 import {
   DetailHeroSkeleton,
@@ -16,6 +17,7 @@ import {
 } from './components/ui/Skeleton';
 import { applyTheme, getPreferences, pullUserdataFromServer } from './lib/userdata';
 import { featureEnabled, libraryEnabled, useCapabilities } from './lib/capabilities';
+import { useReadyNotifications } from './lib/useReadyNotifications';
 
 const Player = lazy(() => import('./pages/Player'));
 const LiveTV = lazy(() => import('./pages/LiveTV'));
@@ -297,6 +299,12 @@ function LazyInviteJoin() {
   );
 }
 
+/** Mounts the ready-notification poller inside the router+capabilities context. */
+function NotificationWatcher() {
+  useReadyNotifications();
+  return null;
+}
+
 function AppRoutes() {
   const { caps, loading, error, retry } = useCapabilities();
 
@@ -328,8 +336,10 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route
+    <>
+      <NotificationWatcher />
+      <Routes>
+        <Route
         path="player"
         element={
           <Suspense fallback={<PlayerSkeleton />}>
@@ -410,6 +420,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }
 
@@ -427,16 +438,18 @@ export default function App() {
   return (
     <CapabilitiesProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        {userdataSyncFailed && (
-          <p
-            role="status"
-            data-testid="userdata-sync-warning"
-            className="border-b border-[var(--danger-color)]/30 bg-[var(--bg-elevated)] px-4 py-2 text-center text-sm text-[var(--text-secondary)]"
-          >
-            Couldn&apos;t sync your progress — showing local data.
-          </p>
-        )}
-        <AppRoutes />
+        <ToastProvider>
+          {userdataSyncFailed && (
+            <p
+              role="status"
+              data-testid="userdata-sync-warning"
+              className="border-b border-[var(--danger-color)]/30 bg-[var(--bg-elevated)] px-4 py-2 text-center text-sm text-[var(--text-secondary)]"
+            >
+              Couldn&apos;t sync your progress — showing local data.
+            </p>
+          )}
+          <AppRoutes />
+        </ToastProvider>
       </BrowserRouter>
     </CapabilitiesProvider>
   );

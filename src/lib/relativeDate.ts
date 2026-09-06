@@ -29,3 +29,20 @@ export function formatAddedRelative(createdAt: string, nowMs = Date.now()): stri
   if (diffWeek < 8) return `Added ${diffWeek} week${diffWeek === 1 ? '' : 's'} ago`;
   return `Added ${new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
 }
+
+/** Relative "Watched … ago" labels for recently-completed history items. */
+export function formatWatchedRelative(updatedAt: string, nowMs = Date.now()): string {
+  const t = Date.parse(updatedAt);
+  if (!Number.isFinite(t)) return 'Watched';
+  const diffSec = Math.max(0, Math.floor((nowMs - t) / 1000));
+  if (diffSec < 45) return 'Watched just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `Watched ${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `Watched ${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 14) return `Watched ${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+  const diffWeek = Math.floor(diffDay / 7);
+  if (diffWeek < 8) return `Watched ${diffWeek} week${diffWeek === 1 ? '' : 's'} ago`;
+  return `Watched ${new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}

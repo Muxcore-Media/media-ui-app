@@ -163,6 +163,7 @@ export type UserPreferences = {
     showRecentRequests: boolean;
     showNextUp: boolean;
     showRecentlyAdded: boolean;
+    showRecentlyWatched: boolean;
     showUpcoming: boolean;
     showCollections: boolean;
     showPlaylists: boolean;
@@ -242,6 +243,7 @@ const defaultPrefs = (): UserPreferences => ({
     showRecentRequests: true,
     showNextUp: true,
     showRecentlyAdded: true,
+    showRecentlyWatched: true,
     showUpcoming: true,
     showCollections: true,
     showPlaylists: true,

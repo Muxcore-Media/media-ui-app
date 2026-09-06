@@ -17,6 +17,7 @@ import {
   listPlaylists,
   listWantToWatch,
   pullUserdataFromServer,
+  recentlyWatched,
   resolveNextUp,
   type FavoriteEntry,
   type NextUpEntry,
@@ -25,7 +26,7 @@ import {
   type WantToWatchEntry,
 } from '../lib/userdata';
 import { buildEpisodePlayerHref, buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
-import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
+import { formatAddedRelative, formatTimeRemaining, formatWatchedRelative } from '../lib/relativeDate';
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
 import { mergeInProgressEntries } from '../lib/acquisition';
 import {
@@ -35,6 +36,7 @@ import {
 } from '../lib/parental';
 import { useBecauseYouWatched } from '../hooks/useBecauseYouWatched';
 import { useRecentlyAdded } from '../hooks/useRecentlyAdded';
+import { useRecentlyWatched } from '../hooks/useRecentlyWatched';
 import { useUpcomingEpisodes, type UpcomingEpisodeRow } from '../hooks/useUpcomingEpisodes';
 import type { Movie, TVShow } from '../types';
 
@@ -164,6 +166,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressEntry[]>([]);
   const [nextUp, setNextUp] = useState<NextUpEntry[]>([]);
+  const [recentlyWatchedRaw, setRecentlyWatchedRaw] = useState<ProgressEntry[]>([]);
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [wantToWatch, setWantToWatch] = useState<WantToWatchEntry[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
@@ -198,6 +201,9 @@ export default function Home() {
   // Upcoming / On The Air rail — deduplicates against Continue Watching + Next Up.
   const upcoming = useUpcomingEpisodes(allShows, becauseExcludeIds);
 
+  // Recently Watched rail — deduplicates against Continue Watching + Next Up.
+  const recentlyWatchedItems = useRecentlyWatched(recentlyWatchedRaw, becauseExcludeIds);
+
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
     const candidate = filteredReady.find((m) => m.backdrop_url) || filteredReady[0];
@@ -230,6 +236,7 @@ export default function Home() {
         await pullUserdataFromServer();
         if (cancelled) return;
         const progressRaw = continueWatching(16);
+        const recentlyWatchedFetch = recentlyWatched(16);
         const favoritesRaw = listFavorites().slice(0, 16);
         const wantToWatchRaw = listWantToWatch().slice(0, 16);
         setPlaylists(listPlaylists());
@@ -244,7 +251,7 @@ export default function Home() {
         if (cancelled) return;
 
         const expanded = await expandLibraryRatingsForUserdata(
-          [...progressRaw, ...favoritesRaw, ...wantToWatchRaw, ...derived],
+          [...progressRaw, ...recentlyWatchedFetch, ...favoritesRaw, ...wantToWatchRaw, ...derived],
           movies.items,
           shows.items,
           {
@@ -260,6 +267,7 @@ export default function Home() {
         setFavorites(favoritesRaw);
         setWantToWatch(wantToWatchRaw);
         setNextUp(derived);
+        setRecentlyWatchedRaw(recentlyWatchedFetch);
         setJoinMovies(ratingMovies);
         setJoinShows(ratingShows);
         setInProgressCount(mergeInProgressEntries(list, movies.items, shows.items).length);
@@ -303,6 +311,10 @@ export default function Home() {
     () => applyParentalFilter(readyShows),
     [readyShows],
   );
+  const visibleRecentlyWatched = useMemo(
+    () => applyUserdataParentalFilter(recentlyWatchedItems, joinMovies, joinShows),
+    [recentlyWatchedItems, joinMovies, joinShows],
+  );
 
   const showReadyFallback =
     prefs.home.showNextUp &&
@@ -312,6 +324,7 @@ export default function Home() {
   const hasContent =
     (prefs.home.showContinueWatching && visibleProgress.length > 0) ||
     (prefs.home.showNextUp && visibleNextUp.length > 0) ||
+    (prefs.home.showRecentlyWatched && visibleRecentlyWatched.length > 0) ||
     (prefs.home.showUpcoming && upcoming.rows.length > 0) ||
     (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
     becauseYouWatched.items.length > 0 ||
@@ -427,6 +440,22 @@ export default function Home() {
                 posterUrl={n.poster_url}
                 href={withPlayerContentRating(n.href, n.content_rating)}
                 subtitle={n.subtitle || 'Next up'}
+              />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showRecentlyWatched && visibleRecentlyWatched.length > 0 && (
+        <Shelf title="Recently watched" seeAllHref="/history" testId="home-recently-watched">
+          {visibleRecentlyWatched.map((p) => (
+            <ShelfItem key={p.id}>
+              <ProgressCard
+                title={p.title}
+                posterUrl={p.poster_url}
+                href={p.href}
+                subtitle={formatWatchedRelative(p.updatedAt)}
+                ariaLabel={`${p.title}, ${formatWatchedRelative(p.updatedAt)}`}
               />
             </ShelfItem>
           ))}

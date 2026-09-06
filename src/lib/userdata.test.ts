@@ -1,8 +1,13 @@
 import { describe, expect, it, beforeEach } from 'vitest';
+import { getParentalState, verifyPin } from './parental';
+import { getCurrentUserId, setCurrentUserId } from './session';
 import {
   continueWatching,
+  getParentalPrefs,
   isServerAuthoritative,
   listProgress,
+  normalizeParentalPrefs,
+  parentalForStorage,
   pullUserdataFromServer,
   resolveNextUp,
   showIdFromHref,
@@ -102,5 +107,153 @@ describe('userdata server cache', () => {
     expect(next[0]?.href).toContain('ep2');
     expect(next[0]?.content_rating).toBe('TV-14');
     expect(next[0]?.href).toContain('content_rating=TV-14');
+  });
+});
+
+async function adminHashParentalPin(userId: string, pin: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${userId}:${pin}`));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+describe('normalizeParentalPrefs', () => {
+  it('maps admin snake_case aliases and implies pinEnabled from pin_hash', () => {
+    expect(
+      normalizeParentalPrefs({
+        kids_mode: true,
+        max_parental_rating: 'PG',
+        pin_hash: 'abc123',
+      }),
+    ).toEqual({
+      kidsMode: true,
+      maxRating: 'PG',
+      pinHash: 'abc123',
+      pinEnabled: true,
+    });
+  });
+
+  it('keeps camelCase ParentalPrefs as-is', () => {
+    expect(
+      normalizeParentalPrefs({
+        kidsMode: false,
+        maxRating: 'PG-13',
+        pinHash: 'deadbeef',
+        pinEnabled: true,
+      }),
+    ).toEqual({
+      kidsMode: false,
+      maxRating: 'PG-13',
+      pinHash: 'deadbeef',
+      pinEnabled: true,
+    });
+  });
+
+  it('prefers camelCase when both styles are present', () => {
+    expect(
+      normalizeParentalPrefs({
+        kidsMode: false,
+        kids_mode: true,
+        maxRating: 'R',
+        max_parental_rating: 'G',
+        pinHash: 'camel',
+        pin_hash: 'snake',
+        pinEnabled: false,
+        pin_enabled: true,
+      }),
+    ).toEqual({
+      kidsMode: false,
+      maxRating: 'R',
+      pinHash: 'camel',
+      pinEnabled: false,
+    });
+  });
+
+  it('returns unrestricted defaults for missing parental', () => {
+    expect(normalizeParentalPrefs(undefined)).toEqual({
+      kidsMode: false,
+      maxRating: '',
+      pinHash: '',
+      pinEnabled: false,
+    });
+  });
+});
+
+describe('parentalForStorage', () => {
+  it('writes both aliases and keeps admin extras', () => {
+    expect(
+      parentalForStorage(
+        { kidsMode: true, maxRating: 'PG', pinHash: 'x', pinEnabled: true },
+        { blocked_tags: ['horror'], allow_unrated: false },
+      ),
+    ).toMatchObject({
+      kidsMode: true,
+      kids_mode: true,
+      maxRating: 'PG',
+      max_parental_rating: 'PG',
+      pinHash: 'x',
+      pin_hash: 'x',
+      pinEnabled: true,
+      pin_enabled: true,
+      blocked_tags: ['horror'],
+      allow_unrated: false,
+    });
+  });
+});
+
+describe('umbrella#85 admin snake_case userdata round-trip', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setCurrentUserId('');
+  });
+
+  it('activates kids/maxRating/PIN after a snake_case userdata pull', async () => {
+    const userId = 'household-user-42';
+    const pin = '2468';
+    const pinHash = await adminHashParentalPin(userId, pin);
+
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const method = (init?.method || 'GET').toUpperCase();
+      if (method === 'GET') {
+        return {
+          ok: true,
+          json: async () => ({
+            user_id: userId,
+            prefs: {
+              parental: {
+                kids_mode: true,
+                max_parental_rating: 'PG',
+                pin_hash: pinHash,
+                blocked_tags: ['violence'],
+                allow_unrated: false,
+              },
+            },
+          }),
+        } as Response;
+      }
+      return { ok: true, json: async () => ({}) } as Response;
+    }) as typeof fetch;
+
+    const ok = await pullUserdataFromServer();
+    expect(ok).toBe(true);
+    expect(getCurrentUserId()).toBe(userId);
+
+    const prefs = getParentalPrefs();
+    expect(prefs).toEqual({
+      kidsMode: true,
+      maxRating: 'PG',
+      pinHash,
+      pinEnabled: true,
+    });
+
+    const state = getParentalState();
+    expect(state.kidsMode).toBe(true);
+    expect(state.maxRating).toBe('PG');
+    expect(state.pinEnabled).toBe(true);
+    expect(state.pinHash).toBe(pinHash);
+    expect(state.anyRestriction).toBe(true);
+
+    expect(await verifyPin(pin, state.pinHash)).toBe(true);
+    expect(await verifyPin('0000', state.pinHash)).toBe(false);
   });
 });

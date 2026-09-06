@@ -1,6 +1,7 @@
 /** Server-authoritative userdata: BFF/userdata-local is source of truth; localStorage is cache/offline. */
 
 import { buildEpisodePlayerHref } from './playHref';
+import { refreshCurrentUserId, setCurrentUserId, userIdFromUnknown } from './session';
 
 export type MediaKind = 'movie' | 'tv' | 'episode' | 'music' | 'book' | 'other';
 
@@ -40,13 +41,115 @@ export type ParentalPrefs = {
    */
   maxRating: string;
   /**
-   * SHA-256 hex digest of the 4-digit PIN.  Empty string means no PIN is set.
-   * Admin-ui writes this field; media-ui-app only reads and verifies it.
+   * SHA-256 hex of `userID + ":" + pin` (admin-ui `hashParentalPIN`).
+   * Empty string means no PIN is set. Admin writes `pin_hash` or `pinHash`.
    */
   pinHash: string;
   /** Whether a PIN is required to leave kids mode or unlock a restricted title. */
   pinEnabled: boolean;
 };
+
+type ParentalAliasRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): ParentalAliasRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as ParentalAliasRecord)
+    : null;
+}
+
+function firstString(raw: ParentalAliasRecord, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = raw[key];
+    if (typeof value === 'string') return value;
+  }
+  return '';
+}
+
+function firstBool(raw: ParentalAliasRecord, ...keys: string[]): boolean | undefined {
+  for (const key of keys) {
+    const value = raw[key];
+    if (typeof value === 'boolean') return value;
+  }
+  return undefined;
+}
+
+/**
+ * Map admin snake_case (and camelCase) parental blobs onto `ParentalPrefs`.
+ * `pinEnabled` is implied when a PIN hash is present (admin omits the flag).
+ */
+export function normalizeParentalPrefs(raw: unknown): ParentalPrefs {
+  const defaults = defaultPrefs().parental;
+  const src = asRecord(raw);
+  if (!src) return { ...defaults };
+
+  const kidsMode = firstBool(src, 'kidsMode', 'kids_mode') ?? defaults.kidsMode;
+  const maxRating = firstString(src, 'maxRating', 'max_parental_rating') || defaults.maxRating;
+  const pinHash = firstString(src, 'pinHash', 'pin_hash');
+  const explicitPinEnabled = firstBool(src, 'pinEnabled', 'pin_enabled');
+  return {
+    kidsMode,
+    maxRating,
+    pinHash,
+    pinEnabled: explicitPinEnabled ?? Boolean(pinHash),
+  };
+}
+
+const PARENTAL_KNOWN_KEYS = new Set([
+  'kidsMode',
+  'kids_mode',
+  'maxRating',
+  'max_parental_rating',
+  'pinHash',
+  'pin_hash',
+  'pinEnabled',
+  'pin_enabled',
+]);
+
+/** Extra parental keys (blocked_tags, allow_unrated, …) that BFF/admin still consume. */
+export function parentalExtras(raw: unknown): Record<string, unknown> {
+  const src = asRecord(raw);
+  if (!src) return {};
+  const extras: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(src)) {
+    if (!PARENTAL_KNOWN_KEYS.has(key)) extras[key] = value;
+  }
+  return extras;
+}
+
+/**
+ * Persist both camelCase (media-ui) and snake_case (admin-ui) aliases so a later
+ * userdata push does not drop admin extras or force a re-save.
+ */
+export function parentalForStorage(
+  parental: ParentalPrefs,
+  extras?: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...(extras ?? {}),
+    kidsMode: parental.kidsMode,
+    kids_mode: parental.kidsMode,
+    maxRating: parental.maxRating,
+    max_parental_rating: parental.maxRating,
+    pinHash: parental.pinHash,
+    pin_hash: parental.pinHash,
+    pinEnabled: parental.pinEnabled,
+    pin_enabled: parental.pinEnabled,
+  };
+}
+
+function storedPrefsRecord(): Record<string, unknown> {
+  return readJSON<Record<string, unknown>>(KEYS.prefs, {});
+}
+
+function prefsForPush(): Record<string, unknown> {
+  const stored = storedPrefsRecord();
+  const prefs = getPreferences();
+  return {
+    ...stored,
+    ...prefs,
+    parental: parentalForStorage(prefs.parental, parentalExtras(stored.parental)),
+  };
+}
 
 export type UserPreferences = {
   display: {
@@ -473,7 +576,7 @@ export function getPreferences(): UserPreferences {
     controls: { ...base.controls, ...stored.controls },
     notifications: { ...base.notifications, ...stored.notifications },
     player: { ...base.player, ...stored.player },
-    parental: { ...base.parental, ...stored.parental },
+    parental: normalizeParentalPrefs(stored.parental),
   };
 }
 
@@ -484,6 +587,7 @@ export function getParentalPrefs(): ParentalPrefs {
 
 export function updatePreferences(patch: Partial<UserPreferences>): UserPreferences {
   const cur = getPreferences();
+  const extras = parentalExtras(storedPrefsRecord().parental);
   const next: UserPreferences = {
     display: { ...cur.display, ...patch.display },
     home: { ...cur.home, ...patch.home },
@@ -492,9 +596,9 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
     controls: { ...cur.controls, ...patch.controls },
     notifications: { ...cur.notifications, ...patch.notifications },
     player: { ...cur.player, ...patch.player },
-    parental: { ...cur.parental, ...patch.parental },
+    parental: normalizeParentalPrefs({ ...cur.parental, ...patch.parental }),
   };
-  writeJSON(KEYS.prefs, next);
+  writeJSON(KEYS.prefs, { ...next, parental: parentalForStorage(next.parental, extras) });
   void pushUserdataToServer();
   return next;
 }
@@ -533,9 +637,11 @@ export function clearQueue(): void {
 type ServerBlob = {
   progress?: Record<string, ProgressEntry>;
   favorites?: Record<string, FavoriteEntry>;
-  prefs?: UserPreferences;
+  prefs?: UserPreferences | Record<string, unknown>;
   playlists?: Playlist[];
   queue?: QueueItem[];
+  user_id?: string;
+  userId?: string;
 };
 
 function mergeProgressMaps(
@@ -570,7 +676,8 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     }
     if (blob.prefs && typeof blob.prefs === 'object') {
       writeJSON(KEYS.prefs, blob.prefs);
-      applyTheme((blob.prefs as UserPreferences).display?.theme || 'dark');
+      const theme = (blob.prefs as UserPreferences).display?.theme || 'dark';
+      applyTheme(theme);
     }
     if (Array.isArray(blob.playlists)) {
       writeJSON(KEYS.playlists, blob.playlists);
@@ -578,6 +685,9 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     if (Array.isArray(blob.queue)) {
       writeJSON(KEYS.queue, blob.queue);
     }
+    const blobUserId = userIdFromUnknown(blob);
+    if (blobUserId) setCurrentUserId(blobUserId);
+    else await refreshCurrentUserId();
     setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() });
     return true;
   } catch {
@@ -590,7 +700,7 @@ export async function pushUserdataToServer(): Promise<void> {
   try {
     const progress = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
     const favorites = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
-    const prefs = getPreferences();
+    const prefs = prefsForPush();
     const playlists = listPlaylists();
     const queue = listQueue();
     const res = await fetch('/api/userdata', {

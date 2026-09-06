@@ -27,6 +27,7 @@ import CenterOverlay from './player/CenterOverlay';
 import SubtitleOverlay from './player/SubtitleOverlay';
 import SkipSegmentButton from './player/SkipSegmentButton';
 import UpNextOverlay from './player/UpNextOverlay';
+import NextEpisodeButton from './player/NextEpisodeButton';
 import ResumeDialog from './player/ResumeDialog';
 import StatsOverlay from './player/StatsOverlay';
 import ShortcutsHelp from './player/ShortcutsHelp';
@@ -39,6 +40,9 @@ import {
   mergeTextTracks,
   subtitleTracksFromAnalysis,
 } from '../lib/player/tracks';
+
+/** Show the "Next Episode" button this many seconds before the end of an episode. */
+const NEAR_END_SEC = 120;
 
 const ASPECT_CLASS: Record<AspectMode, string> = {
   contain: 'object-contain',
@@ -532,10 +536,11 @@ export default function VideoPlayer({
           onNextMarker={markerNavEnabled ? goToNextMarker : undefined}
         />
 
-        {activeSegment && !upNext.countdownActive ? (
+        {activeSegment ? (
           <SkipSegmentButton
             segment={activeSegment}
             onSkip={() => seekAbsolute(activeSegment.end_seconds + 0.1)}
+            elevated={upNext.countdownActive}
           />
         ) : null}
 
@@ -546,6 +551,14 @@ export default function VideoPlayer({
             onPlayNow={upNext.playNow}
             onCancel={upNext.cancel}
           />
+        ) : null}
+
+        {!upNext.countdownActive &&
+        !activeSegment &&
+        upNext.next &&
+        absoluteDurationSec > 0 &&
+        absoluteDurationSec - videoEl.absoluteCurrent <= NEAR_END_SEC ? (
+          <NextEpisodeButton title={upNext.next.title} onPlay={upNext.playNow} />
         ) : null}
 
         {resumeDialogOpen ? (

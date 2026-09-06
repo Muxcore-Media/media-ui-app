@@ -75,6 +75,8 @@ type Props = {
   subtitleTracks?: CaptionTrack[];
   /** When true, skip the resume prompt and start at 0. */
   startOver?: boolean;
+  /** Content rating from the player URL, persisted onto progress for resume gating. */
+  contentRating?: string;
 };
 
 export default function VideoPlayer({
@@ -90,6 +92,7 @@ export default function VideoPlayer({
   episodeNumber,
   subtitleTracks = [],
   startOver = false,
+  contentRating,
 }: Props) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -218,6 +221,7 @@ export default function VideoPlayer({
     positionSec: videoEl.absoluteCurrent,
     durationSec: absoluteDurationSec,
     suppress: resumeDialogOpen,
+    contentRating,
   });
 
   // Resume-vs-start-over prompt: once per title, the first time metadata is ready.

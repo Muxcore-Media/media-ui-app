@@ -20,11 +20,17 @@ import {
   type NextUpEntry,
   type ProgressEntry,
 } from '../lib/userdata';
-import { buildMoviePlayerHref, buildProgressPlayerHref } from '../lib/playHref';
+import { buildMoviePlayerHref, buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
 import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
 import { isWatchable, mergeInProgressEntries } from '../lib/acquisition';
-import { applyParentalFilter } from '../lib/parental';
+import {
+  applyParentalFilter,
+  applyUserdataParentalFilter,
+  getParentalState,
+  indexLibraryRatings,
+  missingLibraryFetches,
+} from '../lib/parental';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -40,6 +46,7 @@ function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
     has_file: false,
     stream_url: '',
     created_at: '',
+    content_rating: f.content_rating,
   };
 }
 
@@ -55,6 +62,8 @@ export default function Home() {
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
   const [allShows, setAllShows] = useState<TVShow[]>([]);
+  const [joinMovies, setJoinMovies] = useState<Array<{ id: string; content_rating?: string }>>([]);
+  const [joinShows, setJoinShows] = useState<Array<{ id: string; content_rating?: string }>>([]);
   const recommended = useMemo(
     () =>
       applyParentalFilter([...allMovies])
@@ -113,17 +122,50 @@ export default function Home() {
         // Prefer server progress for continue-watching / next-up before painting rows.
         await pullUserdataFromServer();
         if (cancelled) return;
-        setProgress(continueWatching(16));
-        setFavorites(listFavorites().slice(0, 16));
+        const progressRaw = continueWatching(16);
+        const favoritesRaw = listFavorites().slice(0, 16);
         const derived = await resolveNextUp((id) => api.getTVShow(id), 16);
         if (cancelled) return;
-        setNextUp(derived);
         const [list, movies, shows] = await Promise.all([
           api.listRequests(),
           api.listMovies(1, 24),
           api.listTVShows(1, 24),
         ]);
         if (cancelled) return;
+
+        let ratingMovies: Array<{ id: string; content_rating?: string }> = movies.items;
+        let ratingShows: Array<{ id: string; content_rating?: string }> = shows.items;
+        const parental = getParentalState();
+        if (parental.anyRestriction) {
+          const index = indexLibraryRatings(ratingMovies, ratingShows);
+          const missing = missingLibraryFetches(
+            [...progressRaw, ...favoritesRaw, ...derived],
+            index,
+          );
+          const [extraMovies, extraShows] = await Promise.all([
+            Promise.all(
+              missing.movies.map((id) => api.getMovie(id).catch(() => null)),
+            ),
+            Promise.all(
+              missing.shows.map((id) => api.getTVShow(id).catch(() => null)),
+            ),
+          ]);
+          if (cancelled) return;
+          ratingMovies = [
+            ...ratingMovies,
+            ...extraMovies.filter((m): m is Movie => m != null),
+          ];
+          ratingShows = [
+            ...ratingShows,
+            ...extraShows.filter((s): s is TVShow => s != null),
+          ];
+        }
+
+        setProgress(progressRaw);
+        setFavorites(favoritesRaw);
+        setNextUp(derived);
+        setJoinMovies(ratingMovies);
+        setJoinShows(ratingShows);
         setInProgressCount(mergeInProgressEntries(list, movies.items, shows.items).length);
         setReadyMovies(movies.items.filter((m) => m.has_file).slice(0, 16));
         setAllMovies(movies.items);
@@ -140,17 +182,38 @@ export default function Home() {
     };
   }, []);
 
+  const visibleProgress = useMemo(
+    () => applyUserdataParentalFilter(progress, joinMovies, joinShows),
+    [progress, joinMovies, joinShows],
+  );
+  const visibleNextUp = useMemo(
+    () => applyUserdataParentalFilter(nextUp, joinMovies, joinShows),
+    [nextUp, joinMovies, joinShows],
+  );
+  const visibleFavorites = useMemo(
+    () => applyUserdataParentalFilter(favorites, joinMovies, joinShows),
+    [favorites, joinMovies, joinShows],
+  );
+  const visibleReadyMovies = useMemo(
+    () => applyParentalFilter(readyMovies),
+    [readyMovies],
+  );
+  const visibleReadyShows = useMemo(
+    () => applyParentalFilter(readyShows),
+    [readyShows],
+  );
+
   const showReadyFallback =
     prefs.home.showNextUp &&
-    nextUp.length === 0 &&
-    (readyMovies.length > 0 || readyShows.length > 0);
+    visibleNextUp.length === 0 &&
+    (visibleReadyMovies.length > 0 || visibleReadyShows.length > 0);
 
   const hasContent =
-    (prefs.home.showContinueWatching && progress.length > 0) ||
-    (prefs.home.showNextUp && nextUp.length > 0) ||
+    (prefs.home.showContinueWatching && visibleProgress.length > 0) ||
+    (prefs.home.showNextUp && visibleNextUp.length > 0) ||
     (prefs.home.showRecentlyAdded && recentlyAdded.length > 0) ||
     recommended.length > 0 ||
-    (prefs.home.showFavorites && favorites.length > 0) ||
+    (prefs.home.showFavorites && visibleFavorites.length > 0) ||
     showReadyFallback ||
     (prefs.home.showRecentRequests && inProgressCount > 0);
 
@@ -234,9 +297,9 @@ export default function Home() {
         </section>
       )}
 
-      {prefs.home.showContinueWatching && progress.length > 0 && (
+      {prefs.home.showContinueWatching && visibleProgress.length > 0 && (
         <Shelf title="Continue watching" testId="home-continue">
-          {progress.map((p) => (
+          {visibleProgress.map((p) => (
             <ShelfItem key={p.id}>
               <ProgressCard
                 title={p.title}
@@ -250,14 +313,14 @@ export default function Home() {
         </Shelf>
       )}
 
-      {prefs.home.showNextUp && nextUp.length > 0 && (
+      {prefs.home.showNextUp && visibleNextUp.length > 0 && (
         <Shelf title="Next up" testId="home-next-up">
-          {nextUp.map((n) => (
+          {visibleNextUp.map((n) => (
             <ShelfItem key={n.id}>
               <ProgressCard
                 title={n.title}
                 posterUrl={n.poster_url}
-                href={n.href}
+                href={withPlayerContentRating(n.href, n.content_rating)}
                 subtitle={n.subtitle || 'Next up'}
               />
             </ShelfItem>
@@ -289,9 +352,9 @@ export default function Home() {
         </Shelf>
       )}
 
-      {prefs.home.showFavorites && favorites.length > 0 && (
+      {prefs.home.showFavorites && visibleFavorites.length > 0 && (
         <Shelf title="Favorites" seeAllHref="/favorites">
-          {favorites.map((f) => (
+          {visibleFavorites.map((f) => (
             <ShelfItem key={f.id}>
               <MediaCard type={f.kind === 'tv' ? 'tv' : 'movie'} item={favoriteAsCardItem(f)} />
             </ShelfItem>
@@ -301,12 +364,12 @@ export default function Home() {
 
       {showReadyFallback && (
         <Shelf title="Available now" testId="home-ready">
-          {readyMovies.map((item) => (
+          {visibleReadyMovies.map((item) => (
             <ShelfItem key={`m-${item.id}`}>
               <MediaCard item={item} type="movie" />
             </ShelfItem>
           ))}
-          {readyShows.map((item) => (
+          {visibleReadyShows.map((item) => (
             <ShelfItem key={`t-${item.id}`}>
               <MediaCard item={item} type="tv" />
             </ShelfItem>

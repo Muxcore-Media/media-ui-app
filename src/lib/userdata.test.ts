@@ -76,6 +76,7 @@ describe('userdata server cache', () => {
         id: 'show-1',
         title: 'Demo Show',
         poster_url: '/p.jpg',
+        content_rating: 'TV-14',
         seasons: [
           {
             season_number: 1,
@@ -99,5 +100,7 @@ describe('userdata server cache', () => {
     expect(next[0]?.id).toBe('ep2');
     expect(next[0]?.subtitle).toBe('Next up');
     expect(next[0]?.href).toContain('ep2');
+    expect(next[0]?.content_rating).toBe('TV-14');
+    expect(next[0]?.href).toContain('content_rating=TV-14');
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Player from './Player';
+import { updatePreferences } from '../lib/userdata';
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -69,5 +70,47 @@ describe('Player accessibility', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(/isn't available to play/i);
     expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies');
+  });
+});
+
+describe('Player parental gate (progress resume)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('blocks playback when a resume URL carries a rating above the kids ceiling', () => {
+    updatePreferences({
+      parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false },
+    });
+    renderPlayer(
+      '?src=%2Fstream%2Fmovies%2Fm1&title=R%20Movie&id=m1&kind=movie&content_rating=R',
+    );
+    expect(screen.getByTestId('restricted-overlay')).toBeInTheDocument();
+    expect(screen.getByText(/rated R/i)).toBeInTheDocument();
+    expect(document.querySelector('video')).toBeNull();
+  });
+
+  it('allows playback when the resume rating is within the ceiling', async () => {
+    updatePreferences({
+      parental: { kidsMode: false, maxRating: 'PG-13', pinHash: '', pinEnabled: false },
+    });
+    renderPlayer(
+      '?src=%2Fstream%2Fmovies%2Fm1&title=Family%20Film&id=m1&kind=movie&content_rating=PG',
+    );
+    expect(screen.queryByTestId('restricted-overlay')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('video')).not.toBeNull();
+    });
+  });
+
+  it('soft-fails open when the resume URL has no content_rating', async () => {
+    updatePreferences({
+      parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false },
+    });
+    renderPlayer('?src=%2Fstream%2Fmovies%2Fm1&title=Unknown&id=m1&kind=movie');
+    expect(screen.queryByTestId('restricted-overlay')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('video')).not.toBeNull();
+    });
   });
 });

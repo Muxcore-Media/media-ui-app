@@ -8,6 +8,7 @@
  */
 
 import type { Movie, TVShow } from '../types';
+import { getCurrentUserId } from './session';
 import { getParentalPrefs, showIdFromHref, type ParentalPrefs } from './userdata';
 
 // ---------------------------------------------------------------------------
@@ -284,11 +285,12 @@ export async function expandLibraryRatingsForUserdata(
 // ---------------------------------------------------------------------------
 
 /**
- * Hash a PIN string using SHA-256.  Returns the hex digest that can be
- * compared against `ParentalPrefs.pinHash` stored by admin-ui.
+ * Hash a PIN the same way admin-ui does: SHA-256(userID + ":" + pin) hex.
+ * `userId` defaults to the current session user id.
  */
-export async function hashPin(pin: string): Promise<string> {
-  const data = new TextEncoder().encode(pin);
+export async function hashPin(pin: string, userId?: string): Promise<string> {
+  const salt = (userId ?? getCurrentUserId()).trim();
+  const data = new TextEncoder().encode(`${salt}:${pin}`);
   const buf = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(buf))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -296,12 +298,12 @@ export async function hashPin(pin: string): Promise<string> {
 }
 
 /**
- * Returns true when `pin` matches the stored `pinHash`.
+ * Returns true when `pin` matches the stored `pinHash` using the current user id.
  * Also returns true when `pinHash` is empty (no PIN configured).
  */
-export async function verifyPin(pin: string, pinHash: string): Promise<boolean> {
+export async function verifyPin(pin: string, pinHash: string, userId?: string): Promise<boolean> {
   if (!pinHash) return true;
-  const digest = await hashPin(pin);
+  const digest = await hashPin(pin, userId);
   return digest === pinHash.toLowerCase();
 }
 

@@ -37,14 +37,37 @@ function markNotificationSeen(keys: string[]): void {
 
 type ItemMap = Map<string, Movie | TVShow>;
 
-function buildItemMap(movies: Movie[], shows: TVShow[]): ItemMap {
+/**
+ * Resolve `has_file` for open/watched movie+TV requests by their linked
+ * library `itemId` (`getMovie` / `getTVShow`).
+ *
+ * Tip media-movies / media-tvshows clamp `pageSize > 100` down to 20
+ * (title ASC), so a single `listMovies(1, 500)` / `listTVShows(1, 500)`
+ * silently drops everything past the first alphabetical page. Targeted
+ * lookups stay correct for libraries of any size.
+ *
+ * Denied/failed requests are skipped. Missing items (404 / not imported
+ * yet) are left unresolved so `isRequestPlayable` can fall through.
+ */
+export async function resolveLinkedLibraryItems(requests: MediaRequest[]): Promise<ItemMap> {
   const map: ItemMap = new Map();
-  for (const m of movies) {
-    if (m.id) map.set(`movie:${m.id}`, m);
-  }
-  for (const s of shows) {
-    if (s.id) map.set(`tv:${s.id}`, s);
-  }
+  await Promise.all(
+    watchableRequests(requests).map(async (req) => {
+      if (!req.itemId) return;
+      const kind = req.itemType.trim().toLowerCase();
+      try {
+        if (kind === 'movie') {
+          const item = await api.getMovie(req.itemId);
+          map.set(`${req.itemType}:${req.itemId}`, item);
+        } else if (kind === 'tv') {
+          const item = await api.getTVShow(req.itemId);
+          map.set(`${req.itemType}:${req.itemId}`, item);
+        }
+      } catch {
+        // Not in library yet, or transient fetch error — leave unresolved.
+      }
+    }),
+  );
   return map;
 }
 
@@ -98,8 +121,9 @@ export function watchableRequests(requests: MediaRequest[]): MediaRequest[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Background-polls the request list + movie/TV feeds to detect when a
- * requested title becomes playable (`has_file === true` on the linked item).
+ * Background-polls the request list and looks up each open movie/TV
+ * request by `itemId` to detect when a title becomes playable
+ * (`has_file === true` on the linked item).
  *
  * Spam controls:
  *  - **Baseline**: on the first successful poll, records all currently-playable
@@ -135,14 +159,12 @@ export function useReadyNotifications(): void {
       }
 
       try {
-        const [requests, moviesResp, showsResp] = await Promise.all([
-          api.listRequests(),
-          api.listMovies(1, 500),
-          api.listTVShows(1, 500),
-        ]);
+        const requests = await api.listRequests();
         if (cancelled) return;
 
-        const itemMap = buildItemMap(moviesResp.items, showsResp.items);
+        const itemMap = await resolveLinkedLibraryItems(requests);
+        if (cancelled) return;
+
         const candidates = watchableRequests(requests);
 
         const nowPlayable = new Set<string>(

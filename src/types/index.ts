@@ -22,6 +22,8 @@ export interface Movie {
   library_type?: string;
   /** MPAA / TV content rating as returned by the media server (e.g. "PG-13", "TV-MA"). */
   content_rating?: string;
+  /** Production studio / distributor as returned by the media server (e.g. "Pixar", "Warner Bros."). */
+  studio?: string;
 }
 
 export interface Episode {
@@ -62,6 +64,10 @@ export interface TVShow {
   seasons?: Season[];
   /** MPAA / TV content rating as returned by the media server (e.g. "TV-14", "TV-MA"). */
   content_rating?: string;
+  /** Broadcast / streaming network (e.g. "HBO", "Netflix", "ABC"). */
+  network?: string;
+  /** Production studio (e.g. "HBO Studios", "Bad Robot Productions"). */
+  studio?: string;
 }
 
 export interface ListResponse<T> {

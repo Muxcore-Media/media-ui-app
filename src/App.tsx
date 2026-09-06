@@ -54,6 +54,8 @@ const InviteJoin = lazy(() => import('./pages/InviteJoin'));
 const PersonDetail = lazy(() => import('./pages/PersonDetail'));
 const History = lazy(() => import('./pages/History'));
 const GenreLanding = lazy(() => import('./pages/GenreLanding'));
+const StudioLanding = lazy(() => import('./pages/StudioLanding'));
+const NetworkLanding = lazy(() => import('./pages/NetworkLanding'));
 
 function LazyLiveTV() {
   return (
@@ -335,6 +337,22 @@ function LazyGenreLanding() {
   );
 }
 
+function LazyStudioLanding() {
+  return (
+    <Suspense fallback={<PosterGridSkeleton count={12} />}>
+      <StudioLanding />
+    </Suspense>
+  );
+}
+
+function LazyNetworkLanding() {
+  return (
+    <Suspense fallback={<PosterGridSkeleton count={12} />}>
+      <NetworkLanding />
+    </Suspense>
+  );
+}
+
 /** Mounts the ready-to-watch polling hook when the request feature is enabled. */
 function ReadyNotificationWatcher() {
   useReadyNotifications();
@@ -397,6 +415,8 @@ function AppRoutes() {
         <Route path="discover/:type/:id" element={<LazyDiscoverDetail />} />
         <Route path="person/:id" element={<LazyPersonDetail />} />
         <Route path="genre/:name" element={<LazyGenreLanding />} />
+        <Route path="studio/:name" element={<LazyStudioLanding />} />
+        <Route path="network/:name" element={<LazyNetworkLanding />} />
         <Route path="favorites" element={<LazyFavorites />} />
         <Route path="history" element={<LazyHistory />} />
         {featureEnabled(caps, 'queue') && <Route path="queue" element={<LazyQueue />} />}

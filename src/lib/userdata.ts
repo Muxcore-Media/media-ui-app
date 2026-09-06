@@ -165,6 +165,7 @@ export type UserPreferences = {
     showRecentlyAdded: boolean;
     showCollections: boolean;
     showPlaylists: boolean;
+    showWantToWatch: boolean;
   };
   playback: {
     autoplayNext: boolean;
@@ -203,11 +204,19 @@ const KEYS = {
   favorites: 'muxcore.userdata.favorites.v1',
   prefs: 'muxcore.userdata.prefs.v1',
   playlists: 'muxcore.userdata.playlists.v1',
+  wantToWatch: 'muxcore.userdata.wantToWatch.v1',
   queue: 'muxcore.userdata.queue.v1',
   meta: 'muxcore.userdata.meta.v1',
 } as const;
 
 export type Playlist = { id: string; name: string; itemIds: string[] };
+
+/** Saved title of interest — favorites-like row plus fields needed to request. */
+export type WantToWatchEntry = FavoriteEntry & {
+  tmdbId?: number;
+  overview?: string;
+  poster?: string;
+};
 
 export type QueueItem = {
   id: string;
@@ -234,6 +243,7 @@ const defaultPrefs = (): UserPreferences => ({
     showRecentlyAdded: true,
     showCollections: true,
     showPlaylists: true,
+    showWantToWatch: true,
   },
   parental: {
     kidsMode: false,
@@ -569,6 +579,38 @@ export function toggleFavorite(entry: FavoriteEntry): boolean {
   return true;
 }
 
+export function listWantToWatch(): WantToWatchEntry[] {
+  const map = readJSON<Record<string, WantToWatchEntry>>(KEYS.wantToWatch, {});
+  return Object.values(map).sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export function isWantToWatch(id: string): boolean {
+  const map = readJSON<Record<string, WantToWatchEntry>>(KEYS.wantToWatch, {});
+  return Boolean(map[id]);
+}
+
+export function toggleWantToWatch(entry: WantToWatchEntry): boolean {
+  const map = readJSON<Record<string, WantToWatchEntry>>(KEYS.wantToWatch, {});
+  if (map[entry.id]) {
+    delete map[entry.id];
+    writeJSON(KEYS.wantToWatch, map);
+    void pushUserdataToServer();
+    return false;
+  }
+  map[entry.id] = entry;
+  writeJSON(KEYS.wantToWatch, map);
+  void pushUserdataToServer();
+  return true;
+}
+
+export function removeWantToWatch(id: string): void {
+  const map = readJSON<Record<string, WantToWatchEntry>>(KEYS.wantToWatch, {});
+  if (!map[id]) return;
+  delete map[id];
+  writeJSON(KEYS.wantToWatch, map);
+  void pushUserdataToServer();
+}
+
 export function getPreferences(): UserPreferences {
   const stored = readJSON<Partial<UserPreferences>>(KEYS.prefs, {});
   const base = defaultPrefs();
@@ -643,6 +685,7 @@ type ServerBlob = {
   favorites?: Record<string, FavoriteEntry>;
   prefs?: UserPreferences | Record<string, unknown>;
   playlists?: Playlist[];
+  wantToWatch?: Record<string, WantToWatchEntry>;
   queue?: QueueItem[];
   user_id?: string;
   userId?: string;
@@ -686,6 +729,9 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     if (Array.isArray(blob.playlists)) {
       writeJSON(KEYS.playlists, blob.playlists);
     }
+    if (blob.wantToWatch && typeof blob.wantToWatch === 'object') {
+      writeJSON(KEYS.wantToWatch, blob.wantToWatch);
+    }
     if (Array.isArray(blob.queue)) {
       writeJSON(KEYS.queue, blob.queue);
     }
@@ -706,11 +752,12 @@ export async function pushUserdataToServer(): Promise<void> {
     const favorites = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
     const prefs = prefsForPush();
     const playlists = listPlaylists();
+    const wantToWatch = readJSON<Record<string, WantToWatchEntry>>(KEYS.wantToWatch, {});
     const queue = listQueue();
     const res = await fetch('/api/userdata', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ progress, favorites, prefs, playlists, queue }),
+      body: JSON.stringify({ progress, favorites, prefs, playlists, wantToWatch, queue }),
     });
     if (!res.ok) return;
     const merged = (await res.json()) as ServerBlob;
@@ -719,6 +766,9 @@ export async function pushUserdataToServer(): Promise<void> {
     if (merged.favorites) writeJSON(KEYS.favorites, merged.favorites);
     if (merged.prefs) writeJSON(KEYS.prefs, merged.prefs);
     if (Array.isArray(merged.playlists)) writeJSON(KEYS.playlists, merged.playlists);
+    if (merged.wantToWatch && typeof merged.wantToWatch === 'object') {
+      writeJSON(KEYS.wantToWatch, merged.wantToWatch);
+    }
     if (Array.isArray(merged.queue)) writeJSON(KEYS.queue, merged.queue);
     setMeta({ serverAuthoritative: true });
   } catch {

@@ -25,7 +25,8 @@ export type FeatureKey =
   | 'queue'
   | 'favorites'
   | 'debrid'
-  | 'watchlist';
+  | 'watchlist'
+  | 'wantToWatch';
 
 export type Capabilities = {
   libraries: Record<LibraryKey, boolean>;
@@ -57,6 +58,7 @@ export const ALL_CAPABILITIES: Capabilities = {
     favorites: true,
     debrid: false,
     watchlist: true,
+    wantToWatch: true,
   },
 };
 
@@ -86,6 +88,7 @@ export const DEFAULT_CAPABILITIES: Capabilities = {
     favorites: true,
     debrid: false,
     watchlist: false,
+    wantToWatch: true,
   },
 };
 

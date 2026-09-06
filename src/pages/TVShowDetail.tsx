@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
+import { Bookmark, ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
 import CastSection from '../components/media/CastSection';
@@ -13,7 +13,16 @@ import { IconButton } from '../components/ui/IconButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
-import { enqueue, isFavorite, listProgress, resolveShowPlayTargets, showIdFromHref, toggleFavorite } from '../lib/userdata';
+import {
+  enqueue,
+  isFavorite,
+  isWantToWatch,
+  listProgress,
+  resolveShowPlayTargets,
+  showIdFromHref,
+  toggleFavorite,
+  toggleWantToWatch,
+} from '../lib/userdata';
 import { buildEpisodePlayerHref } from '../lib/playHref';
 import { PinGateDialog } from '../components/parental/PinGateDialog';
 import { RestrictedOverlay } from '../components/parental/RestrictedOverlay';
@@ -41,6 +50,7 @@ export default function TVShowDetail() {
   const [error, setError] = useState<string | null>(null);
   const [jellyfinURL, setJellyfinURL] = useState<string | null>(null);
   const [fav, setFav] = useState(false);
+  const [wantToWatch, setWantToWatch] = useState(false);
   const [discover, setDiscover] = useState<DiscoverDetail | null>(null);
   const [pinOpen, setPinOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -66,6 +76,7 @@ export default function TVShowDetail() {
         if (!cancelled) {
           setShow(item);
           setFav(isFavorite(item.id));
+          setWantToWatch(isWantToWatch(item.id));
           setJellyfinURL(jf);
         }
       } catch (err) {
@@ -231,6 +242,32 @@ export default function TVShowDetail() {
               }}
             >
               {fav ? 'Favorited' : 'Favorite'}
+            </Button>
+            <Button
+              variant={wantToWatch ? 'primary' : 'secondary'}
+              icon={
+                <Bookmark
+                  className={wantToWatch ? 'h-4 w-4 fill-current' : 'h-4 w-4'}
+                  aria-hidden="true"
+                />
+              }
+              onClick={() => {
+                const on = toggleWantToWatch({
+                  id: show.id,
+                  kind: 'tv',
+                  title: show.title,
+                  poster_url: show.poster_url,
+                  href: `/tv/${show.id}`,
+                  year: show.year,
+                  content_rating: show.content_rating,
+                  tmdbId: show.tmdb_id,
+                  overview: show.overview,
+                  poster: show.poster_url,
+                });
+                setWantToWatch(on);
+              }}
+            >
+              {wantToWatch ? 'On Want to Watch' : 'Want to Watch'}
             </Button>
             {jellyfinURL && (
               <a

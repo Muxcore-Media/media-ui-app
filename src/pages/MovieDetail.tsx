@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react';
+import { Bookmark, Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
 import CastSection from '../components/media/CastSection';
@@ -13,7 +13,15 @@ import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { PinGateDialog } from '../components/parental/PinGateDialog';
 import { RestrictedOverlay } from '../components/parental/RestrictedOverlay';
-import { getProgress, isFavorite, toggleFavorite, upsertProgress, enqueue } from '../lib/userdata';
+import {
+  getProgress,
+  isFavorite,
+  isWantToWatch,
+  toggleFavorite,
+  toggleWantToWatch,
+  upsertProgress,
+  enqueue,
+} from '../lib/userdata';
 import { buildMoviePlayerHref, buildMoviePlayerHrefFromBeginning } from '../lib/playHref';
 import { getParentalState, isItemRestricted } from '../lib/parental';
 import type { DiscoverDetail, Movie } from '../types';
@@ -26,6 +34,7 @@ export default function MovieDetail() {
   const [error, setError] = useState<string | null>(null);
   const [jellyfinURL, setJellyfinURL] = useState<string | null>(null);
   const [fav, setFav] = useState(false);
+  const [wantToWatch, setWantToWatch] = useState(false);
   const [watched, setWatched] = useState(false);
   const [queued, setQueued] = useState(false);
   const [discover, setDiscover] = useState<DiscoverDetail | null>(null);
@@ -54,6 +63,7 @@ export default function MovieDetail() {
         if (!cancelled) {
           setMovie(item);
           setFav(isFavorite(item.id));
+          setWantToWatch(isWantToWatch(item.id));
           setWatched(Boolean(getProgress(item.id)?.watched));
           setJellyfinURL(jf);
         }
@@ -236,6 +246,32 @@ export default function MovieDetail() {
               }}
             >
               {fav ? 'Favorited' : 'Favorite'}
+            </Button>
+            <Button
+              variant={wantToWatch ? 'primary' : 'secondary'}
+              icon={
+                <Bookmark
+                  className={wantToWatch ? 'h-4 w-4 fill-current' : 'h-4 w-4'}
+                  aria-hidden="true"
+                />
+              }
+              onClick={() => {
+                const on = toggleWantToWatch({
+                  id: movie.id,
+                  kind: 'movie',
+                  title: movie.title,
+                  poster_url: movie.poster_url,
+                  href: `/movies/${movie.id}`,
+                  year: movie.year,
+                  content_rating: movie.content_rating,
+                  tmdbId: movie.tmdb_id,
+                  overview: movie.overview,
+                  poster: movie.poster_url,
+                });
+                setWantToWatch(on);
+              }}
+            >
+              {wantToWatch ? 'On Want to Watch' : 'Want to Watch'}
             </Button>
             <Button
               variant="secondary"

@@ -5,12 +5,15 @@ import {
   continueWatching,
   getParentalPrefs,
   isServerAuthoritative,
+  isWantToWatch,
   listProgress,
+  listWantToWatch,
   normalizeParentalPrefs,
   parentalForStorage,
   pullUserdataFromServer,
   resolveNextUp,
   showIdFromHref,
+  toggleWantToWatch,
   upsertProgress,
 } from './userdata';
 
@@ -255,5 +258,55 @@ describe('umbrella#85 admin snake_case userdata round-trip', () => {
 
     expect(await verifyPin(pin, state.pinHash)).toBe(true);
     expect(await verifyPin('0000', state.pinHash)).toBe(false);
+  });
+});
+
+describe('want-to-watch userdata', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('toggles titles and lists them from local cache', () => {
+    const on = toggleWantToWatch({
+      id: 'tmdb:movie:550',
+      kind: 'movie',
+      title: 'Fight Club',
+      href: '/discover/movie/550',
+      tmdbId: 550,
+    });
+    expect(on).toBe(true);
+    expect(isWantToWatch('tmdb:movie:550')).toBe(true);
+    expect(listWantToWatch()).toHaveLength(1);
+    expect(toggleWantToWatch({
+      id: 'tmdb:movie:550',
+      kind: 'movie',
+      title: 'Fight Club',
+      href: '/discover/movie/550',
+      tmdbId: 550,
+    })).toBe(false);
+    expect(listWantToWatch()).toHaveLength(0);
+  });
+
+  it('applies wantToWatch from a userdata pull', async () => {
+    globalThis.fetch = (async () =>
+      ({
+        ok: true,
+        json: async () => ({
+          wantToWatch: {
+            'tmdb:movie:550': {
+              id: 'tmdb:movie:550',
+              kind: 'movie',
+              title: 'Fight Club',
+              href: '/discover/movie/550',
+              tmdbId: 550,
+            },
+          },
+        }),
+      }) as Response) as typeof fetch;
+
+    const ok = await pullUserdataFromServer();
+    expect(ok).toBe(true);
+    expect(listWantToWatch()[0]?.title).toBe('Fight Club');
+    expect(isWantToWatch('tmdb:movie:550')).toBe(true);
   });
 });

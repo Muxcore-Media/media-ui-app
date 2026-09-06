@@ -33,6 +33,7 @@ vi.mock('../lib/userdata', async () => {
     pullUserdataFromServer: vi.fn(async () => true),
     continueWatching: vi.fn(() => []),
     listFavorites: vi.fn(() => []),
+    listWantToWatch: vi.fn(() => []),
     resolveNextUp: vi.fn(async () => []),
   };
 });
@@ -252,6 +253,7 @@ describe('Continue Watching rail', () => {
     vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
     vi.mocked(userdata.continueWatching).mockReturnValue([]);
     vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
     vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
   });
 
@@ -374,6 +376,7 @@ describe('Up Next rail', () => {
     vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
     vi.mocked(userdata.continueWatching).mockReturnValue([]);
     vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
     vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
   });
 
@@ -498,6 +501,7 @@ describe('Home parental rails', () => {
     vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
     vi.mocked(userdata.continueWatching).mockReturnValue([]);
     vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
     vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
   });
 
@@ -664,6 +668,7 @@ describe('Collections shelf', () => {
     vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
     vi.mocked(userdata.continueWatching).mockReturnValue([]);
     vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
     vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
   });
 
@@ -734,6 +739,7 @@ describe('Playlists shelf', () => {
     vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
     vi.mocked(userdata.continueWatching).mockReturnValue([]);
     vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
     vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
   });
 
@@ -781,5 +787,99 @@ describe('Playlists shelf', () => {
     const shelf = await screen.findByTestId('home-playlists');
     const link = within(shelf).getByRole('link', { name: /Weekend Watchlist/i });
     expect(link.getAttribute('href')).toBe('/playlists');
+  });
+});
+
+describe('Want to Watch rail', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders a Want to Watch shelf when titles are saved', async () => {
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([
+      {
+        id: 'movie-pg',
+        kind: 'movie',
+        title: 'Finding Nemo',
+        href: '/movies/movie-pg',
+        poster_url: '/poster.jpg',
+        tmdbId: 12,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-want-to-watch');
+    expect(shelf).toHaveTextContent('Finding Nemo');
+    expect(within(shelf).getByRole('link', { name: /Finding Nemo/i })).toHaveAttribute(
+      'href',
+      '/movies/movie-pg',
+    );
+  });
+
+  it('hides a restricted Want to Watch rail title', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.prefs.v1',
+      JSON.stringify({
+        parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false },
+      }),
+    );
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'movie-42',
+          title: 'Inception',
+          year: 2010,
+          overview: '',
+          runtime: 148,
+          vote_average: 8.8,
+          genres: ['Sci-Fi'],
+          poster_url: '/poster.jpg',
+          has_file: true,
+          stream_url: '/stream/movies/movie-42',
+          created_at: '2026-08-21T00:00:00.000Z',
+          content_rating: 'R',
+        },
+      ],
+      total: 1,
+    });
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([
+      {
+        id: 'movie-42',
+        kind: 'movie',
+        title: 'Inception',
+        href: '/movies/movie-42',
+        poster_url: '/poster.jpg',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByText('Inception')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('home-want-to-watch')).not.toBeInTheDocument();
   });
 });

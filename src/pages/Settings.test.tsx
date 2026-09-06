@@ -44,6 +44,13 @@ describe('Settings page', () => {
     expect(getPreferences().home.showRecentlyAdded).toBe(false);
   });
 
+  it('persists Want to Watch home preference', () => {
+    renderSettings('/settings/home');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Want to Watch shelf' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(getPreferences().home.showWantToWatch).toBe(false);
+  });
+
   it('marks the active settings section with aria-current', () => {
     renderSettings('/settings/display');
     expect(screen.getByRole('link', { name: 'Display' })).toHaveAttribute('aria-current', 'page');

@@ -52,6 +52,7 @@ const MusicArtist = lazy(() => import('./pages/MusicArtist'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const InviteJoin = lazy(() => import('./pages/InviteJoin'));
 const PersonDetail = lazy(() => import('./pages/PersonDetail'));
+const History = lazy(() => import('./pages/History'));
 
 function LazyLiveTV() {
   return (
@@ -309,6 +310,14 @@ function LazyPersonDetail() {
   );
 }
 
+function LazyHistory() {
+  return (
+    <Suspense fallback={<PosterGridSkeleton count={12} />}>
+      <History />
+    </Suspense>
+  );
+}
+
 function LazyInviteJoin() {
   return (
     <Suspense fallback={<FormPageSkeleton label="Loading invite" />}>
@@ -379,6 +388,7 @@ function AppRoutes() {
         <Route path="discover/:type/:id" element={<LazyDiscoverDetail />} />
         <Route path="person/:id" element={<LazyPersonDetail />} />
         <Route path="favorites" element={<LazyFavorites />} />
+        <Route path="history" element={<LazyHistory />} />
         {featureEnabled(caps, 'queue') && <Route path="queue" element={<LazyQueue />} />}
         {featureEnabled(caps, 'request') && <Route path="requests" element={<LazyInProgress />} />}
         {featureEnabled(caps, 'collections') && (

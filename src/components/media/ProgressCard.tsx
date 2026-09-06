@@ -2,26 +2,29 @@ import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
 
-/** Compact card for Continue Watching / Next Up rows — poster + progress bar + subtitle. */
+/** Compact card for Continue Watching / Next Up / Recently Watched rows — poster + optional progress bar + subtitle. */
 export function ProgressCard({
   title,
   subtitle,
   posterUrl,
   href,
   progressPct,
+  ariaLabel,
 }: {
   title: string;
   subtitle?: string;
   posterUrl?: string;
   href: string;
   progressPct?: number;
+  /** Override the default "Resume <title>" aria-label (e.g. for watched items). */
+  ariaLabel?: string;
 }) {
   const label = subtitle ? `${title}, ${subtitle}` : title;
 
   return (
     <Link
       to={href}
-      aria-label={`Resume ${label}`}
+      aria-label={ariaLabel ?? `Resume ${label}`}
       className="group block rounded-[var(--radius-md)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
     >
       <div className="motion-safe-hover-lift relative aspect-[2/3] overflow-hidden rounded-[var(--radius-md)] bg-[var(--bg-elevated-2)] shadow-md group-hover:shadow-2xl">

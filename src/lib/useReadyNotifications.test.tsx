@@ -47,6 +47,24 @@ function makeList<T>(items: T[]) {
   return { items, total: items.length, page: 1, page_size: items.length };
 }
 
+/** Mirrors tip List* clamp: pageSize > 100 becomes 20. */
+function tipClampedList<T extends { title: string }>(library: T[], pageSize: number) {
+  const size = pageSize < 1 || pageSize > 100 ? 20 : pageSize;
+  const sorted = [...library].sort((a, b) => a.title.localeCompare(b.title));
+  return { items: sorted.slice(0, size), total: library.length, page: 1, page_size: size };
+}
+
+function oversizedMovieLibrary(): Movie[] {
+  const fillers = Array.from({ length: 200 }, (_, i) =>
+    makeMovie({
+      id: `filler-${i}`,
+      title: `Alpha ${String(i).padStart(3, '0')}`,
+      has_file: true,
+    }),
+  );
+  return [...fillers, makeMovie({ id: 'movie-1', title: 'Test Movie', has_file: true })];
+}
+
 function Watcher() {
   useReadyNotifications();
   return null;
@@ -86,7 +104,11 @@ describe('useReadyNotifications', () => {
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([
       makeRequest({ status: 'added' }),
     ]);
-    vi.spyOn(client.api, 'listMovies').mockResolvedValue(makeList([makeMovie({ has_file: true })]));
+    vi.spyOn(client.api, 'getMovie').mockResolvedValue(makeMovie({ has_file: true }));
+    vi.spyOn(client.api, 'getTVShow').mockRejectedValue(new Error('unused'));
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async (_page, pageSize = 48) =>
+      tipClampedList(oversizedMovieLibrary(), pageSize),
+    );
     vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
@@ -98,10 +120,14 @@ describe('useReadyNotifications', () => {
   it('fires a toast when has_file transitions from false to true', async () => {
     let callCount = 0;
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([makeRequest({ status: 'added' })]);
-    vi.spyOn(client.api, 'listMovies').mockImplementation(async () => {
+    vi.spyOn(client.api, 'getMovie').mockImplementation(async () => {
       callCount++;
-      return makeList([makeMovie({ has_file: callCount > 1 })]);
+      return makeMovie({ has_file: callCount > 1 });
     });
+    vi.spyOn(client.api, 'getTVShow').mockRejectedValue(new Error('unused'));
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async (_page, pageSize = 48) =>
+      tipClampedList(oversizedMovieLibrary(), pageSize),
+    );
     vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
@@ -126,10 +152,14 @@ describe('useReadyNotifications', () => {
   it('does not re-fire for the same item after remount (seen list)', async () => {
     let callCount = 0;
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([makeRequest({ status: 'added' })]);
-    vi.spyOn(client.api, 'listMovies').mockImplementation(async () => {
+    vi.spyOn(client.api, 'getMovie').mockImplementation(async () => {
       callCount++;
-      return makeList([makeMovie({ has_file: callCount > 1 })]);
+      return makeMovie({ has_file: callCount > 1 });
     });
+    vi.spyOn(client.api, 'getTVShow').mockRejectedValue(new Error('unused'));
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async (_page, pageSize = 48) =>
+      tipClampedList(oversizedMovieLibrary(), pageSize),
+    );
     vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     const { unmount } = render(<TestApp>{null}</TestApp>);
@@ -160,7 +190,11 @@ describe('useReadyNotifications', () => {
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([
       makeRequest({ status: 'denied' }),
     ]);
-    vi.spyOn(client.api, 'listMovies').mockResolvedValue(makeList([makeMovie({ has_file: true })]));
+    vi.spyOn(client.api, 'getMovie').mockResolvedValue(makeMovie({ has_file: true }));
+    vi.spyOn(client.api, 'getTVShow').mockRejectedValue(new Error('unused'));
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async (_page, pageSize = 48) =>
+      tipClampedList(oversizedMovieLibrary(), pageSize),
+    );
     vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);
@@ -176,10 +210,14 @@ describe('useReadyNotifications', () => {
   it('stores the item key in localStorage after firing the notification', async () => {
     let callCount = 0;
     vi.spyOn(client.api, 'listRequests').mockResolvedValue([makeRequest({ status: 'added' })]);
-    vi.spyOn(client.api, 'listMovies').mockImplementation(async () => {
+    vi.spyOn(client.api, 'getMovie').mockImplementation(async () => {
       callCount++;
-      return makeList([makeMovie({ has_file: callCount > 1 })]);
+      return makeMovie({ has_file: callCount > 1 });
     });
+    vi.spyOn(client.api, 'getTVShow').mockRejectedValue(new Error('unused'));
+    vi.spyOn(client.api, 'listMovies').mockImplementation(async (_page, pageSize = 48) =>
+      tipClampedList(oversizedMovieLibrary(), pageSize),
+    );
     vi.spyOn(client.api, 'listTVShows').mockResolvedValue(makeList([]));
 
     render(<TestApp>{null}</TestApp>);

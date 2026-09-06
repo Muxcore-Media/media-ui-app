@@ -51,6 +51,7 @@ const QuickConnect = lazy(() => import('./pages/QuickConnect'));
 const MusicArtist = lazy(() => import('./pages/MusicArtist'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const InviteJoin = lazy(() => import('./pages/InviteJoin'));
+const PersonDetail = lazy(() => import('./pages/PersonDetail'));
 
 function LazyLiveTV() {
   return (
@@ -300,6 +301,14 @@ function LazyForgotPassword() {
   );
 }
 
+function LazyPersonDetail() {
+  return (
+    <Suspense fallback={<DetailHeroSkeleton />}>
+      <PersonDetail />
+    </Suspense>
+  );
+}
+
 function LazyInviteJoin() {
   return (
     <Suspense fallback={<FormPageSkeleton label="Loading invite" />}>
@@ -368,6 +377,7 @@ function AppRoutes() {
           <Route path="want-to-watch" element={<LazyWantToWatch />} />
         )}
         <Route path="discover/:type/:id" element={<LazyDiscoverDetail />} />
+        <Route path="person/:id" element={<LazyPersonDetail />} />
         <Route path="favorites" element={<LazyFavorites />} />
         {featureEnabled(caps, 'queue') && <Route path="queue" element={<LazyQueue />} />}
         {featureEnabled(caps, 'request') && <Route path="requests" element={<LazyInProgress />} />}

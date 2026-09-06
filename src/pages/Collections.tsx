@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
+import { applyParentalFilter } from '../lib/parental';
 import type { Movie } from '../types';
 
 type Collection = { id: string; name: string; items: Movie[]; source: 'tmdb' | 'genre' };
@@ -16,6 +17,7 @@ type ServerCol = { id: string; name: string; movie_count: number };
 
 /** A horizontal shelf for a named box-set / genre collection. */
 function CollectionShelf({ collection, onClose }: { collection: { id: string; name: string; movies: Movie[] }; onClose: () => void }) {
+  const movies = applyParentalFilter(collection.movies);
   return (
     <section
       className="space-y-2"
@@ -39,9 +41,9 @@ function CollectionShelf({ collection, onClose }: { collection: { id: string; na
           Close
         </button>
       </div>
-      {collection.movies.length > 0 ? (
+      {movies.length > 0 ? (
         <Shelf title={collection.name} testId={`collection-shelf-items-${collection.id}`}>
-          {collection.movies.map((item) => (
+          {movies.map((item) => (
             <ShelfItem key={item.id}>
               <MediaCard item={item} type="movie" />
             </ShelfItem>
@@ -87,9 +89,11 @@ export default function Collections() {
     };
   }, []);
 
+  const visibleMovies = useMemo(() => applyParentalFilter(movies), [movies]);
+
   const genreCollections = useMemo(() => {
     const map = new Map<string, Movie[]>();
-    for (const m of movies) {
+    for (const m of visibleMovies) {
       for (const g of m.genres.length ? m.genres : ['Uncategorized']) {
         const arr = map.get(g) || [];
         arr.push(m);
@@ -106,7 +110,7 @@ export default function Collections() {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
     return out;
-  }, [movies]);
+  }, [visibleMovies]);
 
   async function openServerCollection(id: string) {
     try {

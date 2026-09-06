@@ -35,14 +35,19 @@ export default function MovieDetail() {
       setJellyfinURL(null);
       setQueued(false);
       try {
-        const item = await api.getMovie(id);
+        // Fetch movie data and the optional Jellyfin deep-link in parallel so the
+        // native "Play" button is never delayed by the linked-app handoff lookup.
+        // jellyfinPlayURL already swallows 404s (unlinked server) and returns null.
+        const [item, jf] = await Promise.all([
+          api.getMovie(id),
+          api.jellyfinPlayURL(id),
+        ]);
         if (!cancelled) {
           setMovie(item);
           setFav(isFavorite(item.id));
           setWatched(Boolean(getProgress(item.id)?.watched));
+          setJellyfinURL(jf);
         }
-        const jf = await api.jellyfinPlayURL(id);
-        if (!cancelled) setJellyfinURL(jf);
       } catch (err) {
         if (!cancelled) {
           setMovie(null);

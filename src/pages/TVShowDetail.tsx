@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
 import CastSection from '../components/media/CastSection';
 import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
+import RelatedShelf from '../components/media/RelatedShelf';
 import { DetailHero } from '../components/media/DetailHero';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -324,6 +325,8 @@ export default function TVShowDetail() {
       ) : null}
 
       <MoreLikeThisShelf kind="tv" genres={show.genres} excludeId={show.id} />
+
+      <RelatedShelf kind="tv" tmdbId={show.tmdb_id} />
     </div>
   );
 }

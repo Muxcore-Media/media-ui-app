@@ -21,7 +21,7 @@ import {
   type ProgressEntry,
 } from '../lib/userdata';
 import { buildMoviePlayerHref, buildProgressPlayerHref } from '../lib/playHref';
-import { formatAddedRelative } from '../lib/relativeDate';
+import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
 import { isWatchable, mergeInProgressEntries } from '../lib/acquisition';
 import type { Movie, TVShow } from '../types';
@@ -241,11 +241,7 @@ export default function Home() {
                 posterUrl={p.poster_url}
                 href={buildProgressPlayerHref(p) || p.href}
                 progressPct={p.durationSec > 0 ? (p.positionSec / p.durationSec) * 100 : 5}
-                subtitle={
-                  p.durationSec > 0
-                    ? `${Math.round((p.positionSec / p.durationSec) * 100)}% · resume`
-                    : 'Resume'
-                }
+                subtitle={formatTimeRemaining(p.positionSec, p.durationSec) ?? 'Resume'}
               />
             </ShelfItem>
           ))}

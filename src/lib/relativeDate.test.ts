@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatAddedRelative } from './relativeDate';
+import { formatAddedRelative, formatTimeRemaining } from './relativeDate';
 
 describe('formatAddedRelative', () => {
   const now = Date.parse('2026-08-23T12:00:00.000Z');
@@ -20,5 +20,24 @@ describe('formatAddedRelative', () => {
 
   it('returns empty for invalid input', () => {
     expect(formatAddedRelative('not-a-date', now)).toBe('');
+  });
+});
+
+describe('formatTimeRemaining', () => {
+  it('returns null when duration is unknown (zero)', () => {
+    expect(formatTimeRemaining(300, 0)).toBeNull();
+  });
+
+  it('returns null when under one minute remains', () => {
+    expect(formatTimeRemaining(7159, 7200)).toBeNull(); // 41s left
+  });
+
+  it('formats minutes when under one hour remains', () => {
+    expect(formatTimeRemaining(1200, 7200)).toBe('1h 40m left'); // 6000s = 100min left
+    expect(formatTimeRemaining(7080, 7200)).toBe('2 min left');  // 120s = 2min left
+  });
+
+  it('formats whole hours when no extra minutes', () => {
+    expect(formatTimeRemaining(0, 7200)).toBe('2h left'); // 7200s = 120min = 2h exactly
   });
 });

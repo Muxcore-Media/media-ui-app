@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Home from './Home';
 import * as userdata from '../lib/userdata';
@@ -195,5 +195,239 @@ describe('Home accessibility', () => {
     );
 
     expect(screen.getByRole('status', { name: 'Loading home' })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Continue Watching rail
+// ---------------------------------------------------------------------------
+
+const MOVIE_PROGRESS = {
+  id: 'movie-42',
+  kind: 'movie' as const,
+  title: 'Inception',
+  poster_url: '/poster.jpg',
+  href: '/movies/movie-42',
+  stream_url: '/stream/movies/movie-42',
+  positionSec: 1200,
+  durationSec: 7200,
+  updatedAt: '2026-09-01T00:00:00.000Z',
+};
+
+const EPISODE_PROGRESS = {
+  id: 'ep-5',
+  kind: 'episode' as const,
+  title: 'Breaking Bad S01E05 · Gray Matter',
+  poster_url: '/poster-bb.jpg',
+  href: '/tv/show-bb',
+  stream_url: '/stream/tv/ep-5',
+  positionSec: 900,
+  durationSec: 3600,
+  updatedAt: '2026-09-02T00:00:00.000Z',
+};
+
+describe('Continue Watching rail', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    // Restore mocks that a previous test may have overridden (e.g. loading test).
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders when in-progress movie entries exist', async () => {
+    vi.mocked(userdata.continueWatching).mockReturnValue([MOVIE_PROGRESS]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    expect(shelf).toBeInTheDocument();
+    expect(shelf).toHaveTextContent('Inception');
+  });
+
+  it('renders when in-progress episodic entries exist', async () => {
+    vi.mocked(userdata.continueWatching).mockReturnValue([EPISODE_PROGRESS]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    expect(shelf).toHaveTextContent('Breaking Bad S01E05');
+  });
+
+  it('is hidden when there are no in-progress items (quiet empty state)', async () => {
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Wait for page to finish loading — empty state heading appears when done.
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-continue')).not.toBeInTheDocument();
+  });
+
+  it('card link resolves to the player route so tap resumes at stored position', async () => {
+    vi.mocked(userdata.continueWatching).mockReturnValue([MOVIE_PROGRESS]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    const link = within(shelf).getAllByRole('link')[0];
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toContain('/player');
+    expect(href).toContain('movie-42');
+    // Must not force a restart — player should resume from saved position.
+    expect(href).not.toContain('restart=1');
+  });
+
+  it('shows time remaining in the subtitle when duration is known', async () => {
+    // positionSec=1200, durationSec=7200 → 6000s = 100 min remaining → "1h 40m left"
+    vi.mocked(userdata.continueWatching).mockReturnValue([MOVIE_PROGRESS]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    expect(shelf).toHaveTextContent('left');
+  });
+
+  it('falls back to "Resume" subtitle when duration is unknown', async () => {
+    vi.mocked(userdata.continueWatching).mockReturnValue([
+      { ...MOVIE_PROGRESS, durationSec: 0 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-continue');
+    expect(shelf).toHaveTextContent('Resume');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Up Next rail
+// ---------------------------------------------------------------------------
+
+const NEXT_UP_ENTRY = {
+  id: 'ep-2',
+  kind: 'episode' as const,
+  title: "Breaking Bad S01E02 · Cat's in the Bag",
+  poster_url: '/poster-bb.jpg',
+  href: '/player?src=%2Fstream%2Ftv%2Fep-2&id=ep-2&kind=episode&title=BB+S01E02&showId=show-bb',
+  subtitle: 'Next up',
+  showId: 'show-bb',
+};
+
+describe('Up Next rail', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders when next-up episodes are available', async () => {
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([NEXT_UP_ENTRY]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-next-up');
+    expect(shelf).toBeInTheDocument();
+    expect(shelf).toHaveTextContent('Breaking Bad');
+  });
+
+  it('is hidden when there are no next-up episodes (quiet empty state)', async () => {
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-next-up')).not.toBeInTheDocument();
+  });
+
+  it('card link goes directly to the episode player', async () => {
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([NEXT_UP_ENTRY]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-next-up');
+    const link = within(shelf).getAllByRole('link')[0];
+    expect(link.getAttribute('href')).toContain('/player');
+    expect(link.getAttribute('href')).toContain('ep-2');
+  });
+
+  it('shows the "Next up" subtitle label from the derived entry', async () => {
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([NEXT_UP_ENTRY]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-next-up');
+    expect(shelf).toHaveTextContent('Next up');
+  });
+
+  it('both rails can be visible simultaneously', async () => {
+    vi.mocked(userdata.continueWatching).mockReturnValue([MOVIE_PROGRESS]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([NEXT_UP_ENTRY]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('home-continue')).toBeInTheDocument();
+    expect(await screen.findByTestId('home-next-up')).toBeInTheDocument();
   });
 });

@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { isRequestPlayable, playableKey, useReadyNotifications, watchableRequests } from './useReadyNotifications';
+import {
+  isRequestPlayable,
+  playableKey,
+  resolveLinkedLibraryItems,
+  useReadyNotifications,
+  watchableRequests,
+} from './useReadyNotifications';
 import type { MediaRequest, Movie, TVShow } from '../types';
 import * as apiClient from '../api/client';
 import { renderHook, act } from '@testing-library/react';
@@ -67,9 +73,39 @@ function makeShow(overrides: Partial<TVShow> = {}): TVShow {
   };
 }
 
-function makeListResponse<T>(items: T[]) {
-  return { items, total: items.length, page: 1, page_size: items.length };
+/**
+ * Mirrors tip media-movies / media-tvshows List* handling:
+ * pageSize < 1 or pageSize > 100 is clamped to 20, default title ASC.
+ */
+function tipClampedList<T extends { title: string }>(library: T[], pageSize: number) {
+  const size = pageSize < 1 || pageSize > 100 ? 20 : pageSize;
+  const sorted = [...library].sort((a, b) => a.title.localeCompare(b.title));
+  return { items: sorted.slice(0, size), total: library.length, page: 1, page_size: size };
 }
+
+function fillerMovies(count: number): Movie[] {
+  return Array.from({ length: count }, (_, i) =>
+    makeMovie({
+      id: `filler-m-${String(i + 1).padStart(3, '0')}`,
+      title: `Alpha Filler ${String(i + 1).padStart(3, '0')}`,
+      has_file: true,
+    }),
+  );
+}
+
+function fillerShows(count: number): TVShow[] {
+  return Array.from({ length: count }, (_, i) =>
+    makeShow({
+      id: `filler-s-${String(i + 1).padStart(3, '0')}`,
+      title: `Alpha Show ${String(i + 1).padStart(3, '0')}`,
+      has_file: true,
+    }),
+  );
+}
+
+/** Oversized library: requested title sorts after the first clamped page. */
+const OVERSIZED_MOVIES = [...fillerMovies(200), makeMovie({ id: 'zebra-1', title: 'Zebra', has_file: true })];
+const OVERSIZED_SHOWS = [...fillerShows(200), makeShow({ id: 'zebra-s1', title: 'Zebra Show', has_file: true })];
 
 /**
  * Flush pending microtasks without advancing fake timers.
@@ -153,6 +189,57 @@ describe('isRequestPlayable', () => {
   });
 });
 
+describe('resolveLinkedLibraryItems', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('looks up movies and TV by itemId and ignores list-page windows', async () => {
+    const getMovie = vi.spyOn(apiClient.api, 'getMovie').mockResolvedValue(
+      makeMovie({ id: 'zebra-1', title: 'Zebra', has_file: true }),
+    );
+    const getTVShow = vi.spyOn(apiClient.api, 'getTVShow').mockResolvedValue(
+      makeShow({ id: 'zebra-s1', title: 'Zebra Show', has_file: true }),
+    );
+    const listMovies = vi.spyOn(apiClient.api, 'listMovies');
+    const listTVShows = vi.spyOn(apiClient.api, 'listTVShows');
+
+    const map = await resolveLinkedLibraryItems([
+      makeRequest({ itemId: 'zebra-1', title: 'Zebra' }),
+      makeRequest({ itemType: 'tv', itemId: 'zebra-s1', title: 'Zebra Show' }),
+    ]);
+
+    expect(map.get('movie:zebra-1')?.has_file).toBe(true);
+    expect(map.get('tv:zebra-s1')?.has_file).toBe(true);
+    expect(getMovie).toHaveBeenCalledWith('zebra-1');
+    expect(getTVShow).toHaveBeenCalledWith('zebra-s1');
+    expect(listMovies).not.toHaveBeenCalled();
+    expect(listTVShows).not.toHaveBeenCalled();
+  });
+
+  it('skips denied requests and items without an itemId', async () => {
+    const getMovie = vi.spyOn(apiClient.api, 'getMovie').mockResolvedValue(makeMovie());
+    const getTVShow = vi.spyOn(apiClient.api, 'getTVShow').mockResolvedValue(makeShow());
+
+    const map = await resolveLinkedLibraryItems([
+      makeRequest({ id: 'r-denied', status: 'denied', itemId: 'm1' }),
+      makeRequest({ id: 'r-music', itemType: 'music', itemId: '', status: 'requested' }),
+    ]);
+
+    expect(map.size).toBe(0);
+    expect(getMovie).not.toHaveBeenCalled();
+    expect(getTVShow).not.toHaveBeenCalled();
+  });
+
+  it('leaves unresolved items out of the map when getMovie 404s', async () => {
+    vi.spyOn(apiClient.api, 'getMovie').mockRejectedValue(new Error('not found'));
+
+    const map = await resolveLinkedLibraryItems([makeRequest({ itemId: 'missing' })]);
+
+    expect(map.size).toBe(0);
+  });
+});
+
 describe('watchableRequests', () => {
   it('excludes denied, failed, and import_failed requests', () => {
     const requests = [
@@ -179,16 +266,27 @@ describe('useReadyNotifications hook', () => {
   let listRequestsMock: Mock;
   let listMoviesMock: Mock;
   let listTVShowsMock: Mock;
+  let getMovieMock: Mock;
+  let getTVShowMock: Mock;
 
   beforeEach(() => {
     toastSpy.mockClear();
     localStorage.removeItem('media-ui:notified-playable');
     listRequestsMock = vi.fn();
-    listMoviesMock = vi.fn();
-    listTVShowsMock = vi.fn();
+    // Live tip clamp: pageSize > 100 returns the first 20 title-ASC rows only.
+    listMoviesMock = vi.fn(async (_page = 1, pageSize = 48) => tipClampedList(OVERSIZED_MOVIES, pageSize));
+    listTVShowsMock = vi.fn(async (_page = 1, pageSize = 48) => tipClampedList(OVERSIZED_SHOWS, pageSize));
+    getMovieMock = vi.fn(async (id: string) => {
+      throw new Error(`movie not found: ${id}`);
+    });
+    getTVShowMock = vi.fn(async (id: string) => {
+      throw new Error(`show not found: ${id}`);
+    });
     vi.spyOn(apiClient.api, 'listRequests').mockImplementation(listRequestsMock);
     vi.spyOn(apiClient.api, 'listMovies').mockImplementation(listMoviesMock);
     vi.spyOn(apiClient.api, 'listTVShows').mockImplementation(listTVShowsMock);
+    vi.spyOn(apiClient.api, 'getMovie').mockImplementation(getMovieMock);
+    vi.spyOn(apiClient.api, 'getTVShow').mockImplementation(getTVShowMock);
     vi.useFakeTimers();
   });
 
@@ -197,16 +295,27 @@ describe('useReadyNotifications hook', () => {
     vi.useRealTimers();
   });
 
+  function expectNoOversizedListPage() {
+    for (const call of listMoviesMock.mock.calls) {
+      const pageSize = Number(call[1] ?? 48);
+      expect(pageSize, 'listMovies pageSize must stay within the tip legal window').toBeLessThanOrEqual(100);
+    }
+    for (const call of listTVShowsMock.mock.calls) {
+      const pageSize = Number(call[1] ?? 48);
+      expect(pageSize, 'listTVShows pageSize must stay within the tip legal window').toBeLessThanOrEqual(100);
+    }
+  }
+
   it('does not toast on the first poll (baseline establishment)', async () => {
     listRequestsMock.mockResolvedValue([makeRequest({ status: 'added' })]);
-    listMoviesMock.mockResolvedValue(makeListResponse([makeMovie({ has_file: true })]));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
+    getMovieMock.mockResolvedValue(makeMovie({ has_file: true }));
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
     await act(flushMicrotasks);
 
     expect(toastSpy).not.toHaveBeenCalled();
+    expectNoOversizedListPage();
     unmount();
   });
 
@@ -214,10 +323,9 @@ describe('useReadyNotifications hook', () => {
     listRequestsMock
       .mockResolvedValueOnce([makeRequest({ status: 'requested' })])
       .mockResolvedValueOnce([makeRequest({ status: 'added' })]);
-    listMoviesMock
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: false })]))
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: true })]));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
+    getMovieMock
+      .mockResolvedValueOnce(makeMovie({ has_file: false }))
+      .mockResolvedValueOnce(makeMovie({ has_file: true }));
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -235,6 +343,8 @@ describe('useReadyNotifications hook', () => {
     const call = toastSpy.mock.calls[0][0] as { title: string; href: string };
     expect(call.title).toBe('Test Film is ready to watch');
     expect(call.href).toBe('/movies/m1');
+    expect(getMovieMock).toHaveBeenCalledWith('m1');
+    expectNoOversizedListPage();
     unmount();
   });
 
@@ -245,10 +355,9 @@ describe('useReadyNotifications hook', () => {
     listRequestsMock
       .mockResolvedValueOnce([tvReq])
       .mockResolvedValueOnce([{ ...tvReq, status: 'added' }]);
-    listMoviesMock.mockResolvedValue(makeListResponse([]));
-    listTVShowsMock
-      .mockResolvedValueOnce(makeListResponse([show]))
-      .mockResolvedValueOnce(makeListResponse([{ ...show, has_file: true }]));
+    getTVShowMock
+      .mockResolvedValueOnce(show)
+      .mockResolvedValueOnce({ ...show, has_file: true });
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -264,16 +373,83 @@ describe('useReadyNotifications hook', () => {
     const call = toastSpy.mock.calls[0][0] as { title: string; href: string };
     expect(call.title).toBe('Test Show is ready to watch');
     expect(call.href).toBe('/tv/s1');
+    expect(getTVShowMock).toHaveBeenCalledWith('s1');
+    expectNoOversizedListPage();
+    unmount();
+  });
+
+  it('toasts a movie whose title sorts outside the first clamped list page', async () => {
+    const zebraReq = makeRequest({
+      itemId: 'zebra-1',
+      title: 'Zebra',
+      status: 'added',
+    });
+    listRequestsMock.mockResolvedValue([zebraReq]);
+    getMovieMock
+      .mockResolvedValueOnce(makeMovie({ id: 'zebra-1', title: 'Zebra', has_file: false }))
+      .mockResolvedValueOnce(makeMovie({ id: 'zebra-1', title: 'Zebra', has_file: true }));
+
+    const { unmount } = renderHook(() => useReadyNotifications());
+
+    await act(flushMicrotasks);
+    expect(toastSpy).not.toHaveBeenCalled();
+    // A single listMovies(1, 500) would clamp to the first 20 Alpha fillers — not Zebra.
+    expect(tipClampedList(OVERSIZED_MOVIES, 500).items.some((m) => m.id === 'zebra-1')).toBe(false);
+
+    await act(async () => {
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
+    });
+
+    expect(toastSpy).toHaveBeenCalledOnce();
+    expect(toastSpy.mock.calls[0][0]).toMatchObject({
+      title: 'Zebra is ready to watch',
+      href: '/movies/zebra-1',
+    });
+    expect(getMovieMock).toHaveBeenCalledWith('zebra-1');
+    expectNoOversizedListPage();
+    unmount();
+  });
+
+  it('toasts a TV show whose title sorts outside the first clamped list page', async () => {
+    const zebraReq = makeRequest({
+      itemType: 'tv',
+      itemId: 'zebra-s1',
+      title: 'Zebra Show',
+      status: 'added',
+    });
+    listRequestsMock.mockResolvedValue([zebraReq]);
+    getTVShowMock
+      .mockResolvedValueOnce(makeShow({ id: 'zebra-s1', title: 'Zebra Show', has_file: false }))
+      .mockResolvedValueOnce(makeShow({ id: 'zebra-s1', title: 'Zebra Show', has_file: true }));
+
+    const { unmount } = renderHook(() => useReadyNotifications());
+
+    await act(flushMicrotasks);
+    expect(toastSpy).not.toHaveBeenCalled();
+    expect(tipClampedList(OVERSIZED_SHOWS, 500).items.some((s) => s.id === 'zebra-s1')).toBe(false);
+
+    await act(async () => {
+      vi.advanceTimersByTime(46_000);
+      await flushMicrotasks();
+    });
+
+    expect(toastSpy).toHaveBeenCalledOnce();
+    expect(toastSpy.mock.calls[0][0]).toMatchObject({
+      title: 'Zebra Show is ready to watch',
+      href: '/tv/zebra-s1',
+    });
+    expect(getTVShowMock).toHaveBeenCalledWith('zebra-s1');
+    expectNoOversizedListPage();
     unmount();
   });
 
   it('does not toast for the same item on a subsequent poll (localStorage seen-list)', async () => {
     listRequestsMock.mockResolvedValue([makeRequest({ status: 'requested' })]);
-    listMoviesMock
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: false })]))
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: true })]))
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: true })]));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
+    getMovieMock
+      .mockResolvedValueOnce(makeMovie({ has_file: false }))
+      .mockResolvedValueOnce(makeMovie({ has_file: true }))
+      .mockResolvedValueOnce(makeMovie({ has_file: true }));
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -299,10 +475,9 @@ describe('useReadyNotifications hook', () => {
     localStorage.setItem('media-ui:notified-playable', JSON.stringify(['movie:m1']));
 
     listRequestsMock.mockResolvedValue([makeRequest({ status: 'added' })]);
-    listMoviesMock
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: false })]))
-      .mockResolvedValueOnce(makeListResponse([makeMovie({ has_file: true })]));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
+    getMovieMock
+      .mockResolvedValueOnce(makeMovie({ has_file: false }))
+      .mockResolvedValueOnce(makeMovie({ has_file: true }));
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -322,13 +497,10 @@ describe('useReadyNotifications hook', () => {
       makeRequest({ id: 'r1', status: 'denied' }),
       makeRequest({ id: 'r2', status: 'failed', itemId: 'm2' }),
     ];
-    const movies = [
-      makeMovie({ id: 'm1', has_file: true }),
-      makeMovie({ id: 'm2', has_file: true }),
-    ];
     listRequestsMock.mockResolvedValue(requests);
-    listMoviesMock.mockResolvedValue(makeListResponse(movies));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
+    getMovieMock.mockImplementation(async (id: string) =>
+      makeMovie({ id, has_file: true }),
+    );
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -339,13 +511,12 @@ describe('useReadyNotifications hook', () => {
     });
 
     expect(toastSpy).not.toHaveBeenCalled();
+    expect(getMovieMock).not.toHaveBeenCalled();
     unmount();
   });
 
   it('handles polling errors silently (no crash, no toast)', async () => {
     listRequestsMock.mockRejectedValue(new Error('Network error'));
-    listMoviesMock.mockResolvedValue(makeListResponse([]));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -372,8 +543,6 @@ describe('useReadyNotifications hook', () => {
     listRequestsMock
       .mockResolvedValueOnce([musicReq])
       .mockResolvedValueOnce([{ ...musicReq, status: 'available' }]);
-    listMoviesMock.mockResolvedValue(makeListResponse([]));
-    listTVShowsMock.mockResolvedValue(makeListResponse([]));
 
     const { unmount } = renderHook(() => useReadyNotifications());
 
@@ -388,6 +557,8 @@ describe('useReadyNotifications hook', () => {
     expect(toastSpy).toHaveBeenCalledOnce();
     const call = toastSpy.mock.calls[0][0] as { title: string };
     expect(call.title).toBe('Radiohead - OK Computer is ready to watch');
+    expect(getMovieMock).not.toHaveBeenCalled();
+    expect(getTVShowMock).not.toHaveBeenCalled();
     unmount();
   });
 });

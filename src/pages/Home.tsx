@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Building2, Home as HomeIcon, Layers, ListMusic, Play, Tag, Tv2 } from 'lucide-react';
+import { CalendarDays, Building2, Home as HomeIcon, Layers, ListMusic, Music2, Play, Tag, Tv2 } from 'lucide-react';
 import { api } from '../api/client';
 import MediaCard from '../components/MediaCard';
 import { HeroBanner, type HeroItem } from '../components/media/HeroBanner';
@@ -40,6 +40,7 @@ import { useRecentlyWatched } from '../hooks/useRecentlyWatched';
 import { useUpcomingEpisodes, type UpcomingEpisodeRow } from '../hooks/useUpcomingEpisodes';
 import { useGenreRails } from '../hooks/useGenreRails';
 import { useStudioNetworkRails } from '../hooks/useStudioNetworkRails';
+import { useMusicShelves } from '../hooks/useMusicShelves';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -130,6 +131,45 @@ function NetworkTile({ name, count }: { name: string; count: number }) {
       <Tv2 className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
       <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{name}</span>
       <span className="text-xs text-[var(--text-tertiary)]">{count} title{count !== 1 ? 's' : ''}</span>
+    </Link>
+  );
+}
+
+/** Compact tile for a music artist on the home "Browse Artists" shelf. */
+function ArtistTile({ id, name }: { id: string; name: string }) {
+  return (
+    <Link
+      to={`/music/${id}`}
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={name}
+    >
+      <Music2 className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{name}</span>
+    </Link>
+  );
+}
+
+/** Compact tile for a music album on the home "Recently Added Albums" shelf. */
+function AlbumTile({
+  artistId,
+  artistName,
+  albumTitle,
+  year,
+}: {
+  artistId: string;
+  artistName: string;
+  albumTitle: string;
+  year?: number;
+}) {
+  return (
+    <Link
+      to={`/music/${artistId}`}
+      className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+      aria-label={`${albumTitle} by ${artistName}`}
+    >
+      <Music2 className="h-6 w-6 text-[var(--text-tertiary)]" aria-hidden="true" />
+      <span className="line-clamp-2 text-xs font-medium text-[var(--text-primary)]">{albumTitle}</span>
+      <span className="text-xs text-[var(--text-tertiary)]">{artistName}{year ? ` · ${year}` : ''}</span>
     </Link>
   );
 }
@@ -256,6 +296,9 @@ export default function Home() {
 
   // Studio and network rails — derived from the same library lists.
   const { studioRails, networkRails } = useStudioNetworkRails(allMovies, allShows);
+
+  // Music shelves — fetched independently; errors are swallowed so Home never breaks.
+  const musicShelves = useMusicShelves();
 
   const hero = useMemo<HeroItem | null>(() => {
     const filteredReady = applyParentalFilter(readyMovies);
@@ -388,6 +431,7 @@ export default function Home() {
     (prefs.home.showGenres && genreRails.length > 0) ||
     (prefs.home.showStudios && studioRails.length > 0) ||
     (prefs.home.showNetworks && networkRails.length > 0) ||
+    (prefs.home.showMusic && musicShelves.available && (musicShelves.artists.length > 0 || musicShelves.albums.length > 0)) ||
     showReadyFallback ||
     (prefs.home.showRecentRequests && inProgressCount > 0);
 
@@ -657,6 +701,31 @@ export default function Home() {
           {networkRails.map((n) => (
             <ShelfItem key={n.name} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
               <NetworkTile name={n.name} count={n.count} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showMusic && !musicShelves.loading && musicShelves.available && musicShelves.artists.length > 0 && (
+        <Shelf title="Browse Artists" seeAllHref="/music" testId="home-music-artists">
+          {musicShelves.artists.map((a) => (
+            <ShelfItem key={a.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <ArtistTile id={a.id} name={String(a.name || a.title || a.id)} />
+            </ShelfItem>
+          ))}
+        </Shelf>
+      )}
+
+      {prefs.home.showMusic && !musicShelves.loading && musicShelves.available && musicShelves.albums.length > 0 && (
+        <Shelf title="Recently Added Albums" seeAllHref="/music" testId="home-music-albums">
+          {musicShelves.albums.map((al) => (
+            <ShelfItem key={`${al.artistId}-${al.id}`} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
+              <AlbumTile
+                artistId={al.artistId}
+                artistName={al.artistName}
+                albumTitle={al.title}
+                year={al.year}
+              />
             </ShelfItem>
           ))}
         </Shelf>

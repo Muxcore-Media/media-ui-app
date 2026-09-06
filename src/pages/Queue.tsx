@@ -4,6 +4,7 @@ import { ListMusic, Play, Trash2, X } from 'lucide-react';
 import { api, friendlyFetchError } from '../api/client';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { Badge } from '../components/ui/Badge';
 import {
   isActiveRequestStatus,
@@ -19,7 +20,12 @@ import {
   listQueue,
   type QueueItem,
 } from '../lib/userdata';
-import { buildProgressPlayerHref } from '../lib/playHref';
+import { buildProgressPlayerHref, withPlayerContentRating } from '../lib/playHref';
+import {
+  applyUserdataParentalFilter,
+  expandLibraryRatingsForUserdata,
+  getParentalState,
+} from '../lib/parental';
 import type { MediaRequest } from '../types';
 
 function attentionHint(status: string): string | null {
@@ -43,6 +49,14 @@ function queueItemRequestKey(item: QueueItem): string | null {
   return null;
 }
 
+function queuePlayHref(item: QueueItem & { content_rating?: string }): string {
+  return (
+    buildProgressPlayerHref(item) ||
+    withPlayerContentRating(item.href, item.content_rating) ||
+    item.href
+  );
+}
+
 function buildActiveRequestMap(requests: MediaRequest[]): Map<string, MediaRequest> {
   const map = new Map<string, MediaRequest>();
   for (const req of requests) {
@@ -59,6 +73,11 @@ export default function Queue() {
   const [queue, setQueue] = useState(() => listQueue());
   const [requests, setRequests] = useState<MediaRequest[]>([]);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [joinMovies, setJoinMovies] = useState<Array<{ id: string; content_rating?: string }>>(
+    [],
+  );
+  const [joinShows, setJoinShows] = useState<Array<{ id: string; content_rating?: string }>>([]);
+  const [joinReady, setJoinReady] = useState(() => !getParentalState().anyRestriction);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +94,37 @@ export default function Queue() {
           setRequestError(friendlyFetchError(err, 'Failed to load request status'));
         }
       }
+
+      const progressRaw = continueWatching(20);
+      const favRaw = listFavorites().slice(0, 20);
+      const queued = listQueue();
+      let ratingMovies: Array<{ id: string; content_rating?: string }> = [];
+      let ratingShows: Array<{ id: string; content_rating?: string }> = [];
+      try {
+        const [movies, shows] = await Promise.all([
+          api.listMovies(1, 24),
+          api.listTVShows(1, 24),
+        ]);
+        if (cancelled) return;
+        const expanded = await expandLibraryRatingsForUserdata(
+          [...progressRaw, ...favRaw, ...queued],
+          movies.items,
+          shows.items,
+          {
+            getMovie: (id) => api.getMovie(id).catch(() => null),
+            getTVShow: (id) => api.getTVShow(id).catch(() => null),
+          },
+        );
+        if (cancelled) return;
+        ratingMovies = expanded.movies;
+        ratingShows = expanded.shows;
+      } catch {
+        // Soft-fail open: join with empty library (unknown ratings stay visible).
+      }
+      if (cancelled) return;
+      setJoinMovies(ratingMovies);
+      setJoinShows(ratingShows);
+      setJoinReady(true);
     })();
     return () => {
       cancelled = true;
@@ -84,31 +134,42 @@ export default function Queue() {
   const activeRequests = useMemo(() => buildActiveRequestMap(requests), [requests]);
 
   const seeded = useMemo(() => {
-    const fromProgress = continueWatching(20).map(
+    if (!joinReady) return { fromProgress: [] as QueueItem[], fromFav: [] as QueueItem[] };
+    const fromProgress = applyUserdataParentalFilter(
+      continueWatching(20),
+      joinMovies,
+      joinShows,
+    ).map(
       (p): QueueItem => ({
         id: p.id,
         kind: p.kind,
         title: p.title,
-        href: buildProgressPlayerHref(p) || p.href,
+        href: queuePlayHref(p),
         stream_url: p.stream_url,
         poster_url: p.poster_url,
       }),
     );
-    const fromFav = listFavorites()
-      .slice(0, 20)
-      .map(
-        (f): QueueItem => ({
-          id: f.id,
-          kind: f.kind,
-          title: f.title,
-          href: f.href,
-          poster_url: f.poster_url,
-        }),
-      );
+    const fromFav = applyUserdataParentalFilter(listFavorites().slice(0, 20), joinMovies, joinShows).map(
+      (f): QueueItem => ({
+        id: f.id,
+        kind: f.kind,
+        title: f.title,
+        href: withPlayerContentRating(f.href, f.content_rating) || f.href,
+        poster_url: f.poster_url,
+      }),
+    );
     return { fromProgress, fromFav };
-  }, []);
+  }, [joinMovies, joinShows, joinReady]);
 
-  const display = queue.length > 0 ? queue : [...seeded.fromProgress, ...seeded.fromFav];
+  const visibleQueue = useMemo(() => {
+    if (!joinReady) return [];
+    return applyUserdataParentalFilter(queue, joinMovies, joinShows).map((item) => ({
+      ...item,
+      href: queuePlayHref(item),
+    }));
+  }, [queue, joinMovies, joinShows, joinReady]);
+
+  const display = queue.length > 0 ? visibleQueue : [...seeded.fromProgress, ...seeded.fromFav];
   const showingSuggestions = queue.length === 0 && display.length > 0;
   const listLabel = showingSuggestions
     ? 'Suggested picks from continue watching and favorites'
@@ -146,7 +207,9 @@ export default function Queue() {
         )}
       </div>
       {requestError && <ErrorBanner message={requestError} testId="queue-request-error" />}
-      {display.length === 0 ? (
+      {!joinReady ? (
+        <LoadingStatus label="Loading queue" />
+      ) : display.length === 0 ? (
         <EmptyState
           icon={ListMusic}
           title="Queue empty"

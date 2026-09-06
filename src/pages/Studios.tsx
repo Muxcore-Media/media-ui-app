@@ -7,6 +7,7 @@ import { PosterGrid, PosterGridSkeleton } from '../components/media/PosterGrid';
 import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { applyParentalFilter } from '../lib/parental';
 import type { Movie } from '../types';
 
 /** Studio browse from collection_name / genre buckets (Jellyfin studios parity). */
@@ -36,9 +37,14 @@ export default function Studios() {
     };
   }, []);
 
+  const parentalFilteredMovies = useMemo(
+    () => applyParentalFilter(movies),
+    [movies],
+  );
+
   const studios = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const m of movies) {
+    for (const m of parentalFilteredMovies) {
       const keys = m.collection_name?.trim()
         ? [m.collection_name.trim()]
         : m.genres.length
@@ -47,15 +53,15 @@ export default function Studios() {
       for (const k of keys) counts.set(k, (counts.get(k) || 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [movies]);
+  }, [parentalFilteredMovies]);
 
   const filtered = useMemo(() => {
     if (!selected) return [];
-    return movies.filter((m) => {
+    return parentalFilteredMovies.filter((m) => {
       if (m.collection_name?.trim() === selected) return true;
       return m.genres.includes(selected);
     });
-  }, [movies, selected]);
+  }, [parentalFilteredMovies, selected]);
 
   return (
     <div className="space-y-6" data-testid="studios-page">

@@ -883,3 +883,198 @@ describe('Want to Watch rail', () => {
     expect(screen.queryByTestId('home-want-to-watch')).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Recently Added rail — deduplication (umbrella #97)
+// ---------------------------------------------------------------------------
+
+describe('Recently Added rail — deduplication', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.listWantToWatch).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('omits a title from Recently Added when it is already in Continue Watching', async () => {
+    const MOVIE = {
+      id: 'movie-overlap',
+      title: 'Overlap Movie',
+      year: 2026,
+      overview: '',
+      runtime: 90,
+      vote_average: 7,
+      genres: [],
+      poster_url: '',
+      has_file: true,
+      stream_url: '/stream/movies/movie-overlap',
+      created_at: '2026-09-01T00:00:00.000Z',
+    };
+    listMovies.mockResolvedValue({ items: [MOVIE], total: 1 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.continueWatching).mockReturnValue([
+      {
+        id: 'movie-overlap',
+        kind: 'movie',
+        title: 'Overlap Movie',
+        href: '/movies/movie-overlap',
+        stream_url: '/stream/movies/movie-overlap',
+        positionSec: 600,
+        durationSec: 5400,
+        updatedAt: '2026-09-01T00:00:00.000Z',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Continue Watching should have the title …
+    const cwShelf = await screen.findByTestId('home-continue');
+    expect(cwShelf).toHaveTextContent('Overlap Movie');
+    // … but Recently Added should be absent (soft-hidden when empty after dedupe).
+    expect(screen.queryByTestId('home-recently-added')).not.toBeInTheDocument();
+  });
+
+  it('omits a title from Recently Added when it is already in Next Up', async () => {
+    const SHOW = {
+      id: 'show-overlap',
+      title: 'Overlap Show',
+      year: 2026,
+      overview: '',
+      runtime: 0,
+      vote_average: 8,
+      genres: [],
+      poster_url: '',
+      has_file: true,
+      stream_url: '',
+      created_at: '2026-09-02T00:00:00.000Z',
+      seasons: [],
+    };
+    listTVShows.mockResolvedValue({ items: [SHOW], total: 1 });
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([
+      {
+        id: 'show-overlap',
+        kind: 'episode',
+        title: 'Overlap Show S01E01',
+        href: '/player?src=/stream/tv/ep-1&id=show-overlap&kind=episode',
+        subtitle: 'Next up',
+        showId: 'show-overlap',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Next Up should be visible with the show …
+    const nextUpShelf = await screen.findByTestId('home-next-up');
+    expect(nextUpShelf).toHaveTextContent('Overlap Show');
+    // … and Recently Added should be absent after dedupe.
+    expect(screen.queryByTestId('home-recently-added')).not.toBeInTheDocument();
+  });
+
+  it('still shows Recently Added when the overlapping title is in a different rail', async () => {
+    // One movie in CW, a *different* movie in Recently Added — both appear.
+    const CW_MOVIE = {
+      id: 'movie-cw',
+      title: 'CW Movie',
+      year: 2026,
+      overview: '',
+      runtime: 90,
+      vote_average: 7,
+      genres: [],
+      poster_url: '',
+      has_file: true,
+      stream_url: '/stream/movies/movie-cw',
+      created_at: '2026-09-01T00:00:00.000Z',
+    };
+    const NEW_MOVIE = {
+      id: 'movie-new',
+      title: 'Brand New Movie',
+      year: 2026,
+      overview: '',
+      runtime: 100,
+      vote_average: 8,
+      genres: [],
+      poster_url: '',
+      has_file: true,
+      stream_url: '/stream/movies/movie-new',
+      created_at: '2026-09-03T00:00:00.000Z',
+    };
+    listMovies.mockResolvedValue({ items: [CW_MOVIE, NEW_MOVIE], total: 2 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.continueWatching).mockReturnValue([
+      {
+        id: 'movie-cw',
+        kind: 'movie',
+        title: 'CW Movie',
+        href: '/movies/movie-cw',
+        stream_url: '/stream/movies/movie-cw',
+        positionSec: 300,
+        durationSec: 5400,
+        updatedAt: '2026-09-01T00:00:00.000Z',
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    // Continue Watching shows the CW title …
+    const cwShelf = await screen.findByTestId('home-continue');
+    expect(cwShelf).toHaveTextContent('CW Movie');
+    // … and Recently Added shows the non-overlapping new title.
+    const raShelf = await screen.findByTestId('home-recently-added');
+    expect(raShelf).toHaveTextContent('Brand New Movie');
+    expect(raShelf).not.toHaveTextContent('CW Movie');
+  });
+
+  it('hides Recently Added shelf when all items lack has_file', async () => {
+    listMovies.mockResolvedValue({
+      items: [
+        {
+          id: 'no-file',
+          title: 'Unavailable Title',
+          year: 2026,
+          overview: '',
+          runtime: 90,
+          vote_average: 7,
+          genres: [],
+          poster_url: '',
+          has_file: false,
+          stream_url: '',
+          created_at: '2026-09-01T00:00:00.000Z',
+        },
+      ],
+      total: 1,
+    });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-recently-added')).not.toBeInTheDocument();
+  });
+});

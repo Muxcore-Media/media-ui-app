@@ -9,6 +9,7 @@ const listTVShows = vi.fn();
 const listRequests = vi.fn();
 const getTVShow = vi.fn();
 const getMovie = vi.fn();
+const listCollections = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -20,6 +21,7 @@ vi.mock('../api/client', async () => {
       listRequests: (...args: unknown[]) => listRequests(...args),
       getTVShow: (...args: unknown[]) => getTVShow(...args),
       getMovie: (...args: unknown[]) => getMovie(...args),
+      listCollections: (...args: unknown[]) => listCollections(...args),
     },
   };
 });
@@ -43,6 +45,8 @@ describe('Home page', () => {
     listRequests.mockReset();
     getTVShow.mockReset();
     getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
     listRequests.mockResolvedValue([]);
     listTVShows.mockResolvedValue({
       items: [
@@ -141,6 +145,8 @@ describe('Home accessibility', () => {
     listMovies.mockReset();
     listTVShows.mockReset();
     listRequests.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
     listRequests.mockResolvedValue([]);
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
@@ -237,6 +243,8 @@ describe('Continue Watching rail', () => {
     listRequests.mockReset();
     getTVShow.mockReset();
     getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
     listRequests.mockResolvedValue([]);
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
@@ -358,6 +366,8 @@ describe('Up Next rail', () => {
     listRequests.mockReset();
     getTVShow.mockReset();
     getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
     listRequests.mockResolvedValue([]);
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
@@ -478,6 +488,8 @@ describe('Home parental rails', () => {
     listRequests.mockReset();
     getTVShow.mockReset();
     getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
     listRequests.mockResolvedValue([]);
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
@@ -630,5 +642,144 @@ describe('Home parental rails', () => {
     const href = within(shelf).getAllByRole('link')[0].getAttribute('href') ?? '';
     expect(href).toContain('/player');
     expect(href).toContain('content_rating=TV-Y');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Collections shelf
+// ---------------------------------------------------------------------------
+
+describe('Collections shelf', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listCollections.mockReset();
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders a collections shelf when server collections are available', async () => {
+    listCollections.mockResolvedValue({
+      items: [{ id: 'col-1', name: 'MCU', movie_count: 30 }],
+    });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-collections');
+    expect(shelf).toBeInTheDocument();
+    expect(shelf).toHaveTextContent('MCU');
+    expect(shelf).toHaveTextContent('30 titles');
+  });
+
+  it('does not render the collections shelf when no server collections exist', async () => {
+    listCollections.mockResolvedValue({ items: [] });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-collections')).not.toBeInTheDocument();
+  });
+
+  it('collections shelf items link to /collections', async () => {
+    listCollections.mockResolvedValue({
+      items: [{ id: 'col-2', name: 'Bond Films', movie_count: 25 }],
+    });
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-collections');
+    const link = within(shelf).getByRole('link', { name: /Bond Films/i });
+    expect(link.getAttribute('href')).toBe('/collections');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Playlists shelf
+// ---------------------------------------------------------------------------
+
+describe('Playlists shelf', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listRequests.mockReset();
+    getTVShow.mockReset();
+    getMovie.mockReset();
+    listCollections.mockReset();
+    listCollections.mockResolvedValue({ items: [] });
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(userdata.pullUserdataFromServer).mockResolvedValue(true);
+    vi.mocked(userdata.continueWatching).mockReturnValue([]);
+    vi.mocked(userdata.listFavorites).mockReturnValue([]);
+    vi.mocked(userdata.resolveNextUp).mockResolvedValue([]);
+  });
+
+  it('renders a playlists shelf when playlists exist', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.playlists.v1',
+      JSON.stringify([{ id: 'pl-1', name: 'Road Trip Mix', itemIds: ['a', 'b'] }]),
+    );
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-playlists');
+    expect(shelf).toBeInTheDocument();
+    expect(shelf).toHaveTextContent('Road Trip Mix');
+    expect(shelf).toHaveTextContent('2 items');
+  });
+
+  it('does not render the playlists shelf when no playlists exist', async () => {
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('heading', { level: 1, name: 'Home' });
+    expect(screen.queryByTestId('home-playlists')).not.toBeInTheDocument();
+  });
+
+  it('playlists shelf items link to /playlists', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.playlists.v1',
+      JSON.stringify([{ id: 'pl-2', name: 'Weekend Watchlist', itemIds: [] }]),
+    );
+
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    const shelf = await screen.findByTestId('home-playlists');
+    const link = within(shelf).getByRole('link', { name: /Weekend Watchlist/i });
+    expect(link.getAttribute('href')).toBe('/playlists');
   });
 });

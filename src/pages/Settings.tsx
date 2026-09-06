@@ -154,6 +154,8 @@ function HomePane() {
         showRecentRequests: fd.get('showRecentRequests') === 'on',
         showNextUp: fd.get('showNextUp') === 'on',
         showRecentlyAdded: fd.get('showRecentlyAdded') === 'on',
+        showCollections: fd.get('showCollections') === 'on',
+        showPlaylists: fd.get('showPlaylists') === 'on',
       },
     });
   }
@@ -169,6 +171,8 @@ function HomePane() {
           ['showFavorites', 'Favorites row', prefs.home.showFavorites],
           ['showRecentRequests', 'In progress on home', prefs.home.showRecentRequests],
           ['showNextUp', 'Next up', prefs.home.showNextUp],
+          ['showCollections', 'Collections shelf', prefs.home.showCollections],
+          ['showPlaylists', 'Playlists shelf', prefs.home.showPlaylists],
         ] as const
       ).map(([name, label, checked]) => (
         <label key={name} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">

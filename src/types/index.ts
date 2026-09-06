@@ -20,6 +20,8 @@ export interface Movie {
   collection_name?: string;
   root_folder_path?: string;
   library_type?: string;
+  /** MPAA / TV content rating as returned by the media server (e.g. "PG-13", "TV-MA"). */
+  content_rating?: string;
 }
 
 export interface Episode {
@@ -58,6 +60,8 @@ export interface TVShow {
   backdrop_url?: string;
   status?: string;
   seasons?: Season[];
+  /** MPAA / TV content rating as returned by the media server (e.g. "TV-14", "TV-MA"). */
+  content_rating?: string;
 }
 
 export interface ListResponse<T> {

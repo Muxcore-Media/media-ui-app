@@ -24,6 +24,7 @@ import { buildMoviePlayerHref, buildProgressPlayerHref } from '../lib/playHref';
 import { formatAddedRelative, formatTimeRemaining } from '../lib/relativeDate';
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
 import { isWatchable, mergeInProgressEntries } from '../lib/acquisition';
+import { applyParentalFilter } from '../lib/parental';
 import type { Movie, TVShow } from '../types';
 
 function favoriteAsCardItem(f: FavoriteEntry): Movie | TVShow {
@@ -56,7 +57,7 @@ export default function Home() {
   const [allShows, setAllShows] = useState<TVShow[]>([]);
   const recommended = useMemo(
     () =>
-      [...allMovies]
+      applyParentalFilter([...allMovies])
         .filter((m) => isWatchable(m) && m.vote_average > 0)
         .sort((a, b) => b.vote_average - a.vote_average)
         .slice(0, 16),
@@ -66,11 +67,11 @@ export default function Home() {
   const recentlyAdded = useMemo(() => {
     type Row = { kind: 'movie' | 'tv'; item: Movie | TVShow; createdAt: string };
     const rows: Row[] = [];
-    for (const m of allMovies) {
+    for (const m of applyParentalFilter(allMovies)) {
       if (!isWatchable(m) || !m.created_at) continue;
       rows.push({ kind: 'movie', item: m, createdAt: m.created_at });
     }
-    for (const s of allShows) {
+    for (const s of applyParentalFilter(allShows)) {
       if (!isWatchable(s) || !s.created_at) continue;
       rows.push({ kind: 'tv', item: s, createdAt: s.created_at });
     }
@@ -78,9 +79,10 @@ export default function Home() {
   }, [allMovies, allShows]);
 
   const hero = useMemo<HeroItem | null>(() => {
+    const filteredReady = applyParentalFilter(readyMovies);
     const candidate =
-      readyMovies.find((m) => m.backdrop_url) ||
-      readyMovies[0] ||
+      filteredReady.find((m) => m.backdrop_url) ||
+      filteredReady[0] ||
       recommended.find((m) => m.backdrop_url) ||
       recommended[0];
     if (!candidate) return null;

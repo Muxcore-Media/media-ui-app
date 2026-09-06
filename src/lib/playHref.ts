@@ -12,6 +12,11 @@ export type PlayerHrefParams = {
   episode?: number;
   /** Skip the resume prompt and start at 0 (detail-page "Play from beginning"). */
   restart?: boolean;
+  /**
+   * Content rating of this item (e.g. "R", "TV-MA") forwarded from the media server
+   * so the player page can enforce parental controls without an extra API round-trip.
+   */
+  contentRating?: string;
 };
 
 export function buildPlayerHref(params: PlayerHrefParams): string {
@@ -26,6 +31,7 @@ export function buildPlayerHref(params: PlayerHrefParams): string {
   if (params.season != null) q.set('season', String(params.season));
   if (params.episode != null) q.set('episode', String(params.episode));
   if (params.restart) q.set('restart', '1');
+  if (params.contentRating) q.set('content_rating', params.contentRating);
   return `/player?${q.toString()}`;
 }
 
@@ -34,6 +40,7 @@ export function buildMoviePlayerHrefFromBeginning(movie: {
   title: string;
   stream_url: string;
   poster_url?: string;
+  content_rating?: string;
 }): string {
   return buildPlayerHref({
     src: movie.stream_url,
@@ -43,6 +50,7 @@ export function buildMoviePlayerHrefFromBeginning(movie: {
     poster: movie.poster_url,
     back: `/movies/${movie.id}`,
     restart: true,
+    contentRating: movie.content_rating,
   });
 }
 
@@ -51,6 +59,7 @@ export function buildMoviePlayerHref(movie: {
   title: string;
   stream_url: string;
   poster_url?: string;
+  content_rating?: string;
 }): string {
   return buildPlayerHref({
     src: movie.stream_url,
@@ -59,11 +68,12 @@ export function buildMoviePlayerHref(movie: {
     kind: 'movie',
     poster: movie.poster_url,
     back: `/movies/${movie.id}`,
+    contentRating: movie.content_rating,
   });
 }
 
 export function buildEpisodePlayerHref(
-  show: { id: string; title: string; poster_url?: string },
+  show: { id: string; title: string; poster_url?: string; content_rating?: string },
   ep: {
     id: string;
     season_number: number;
@@ -88,6 +98,7 @@ export function buildEpisodePlayerHref(
     season: ep.season_number,
     episode: ep.episode_number,
     restart: opts?.restart,
+    contentRating: show.content_rating,
   });
 }
 

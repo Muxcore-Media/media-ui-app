@@ -17,7 +17,9 @@ import {
   runUnifiedSearch,
   searchScopesForCaps,
   type SearchScope,
+  type LibraryHit,
 } from '../lib/unified-search';
+import { getParentalState, isItemRestricted } from '../lib/parental';
 import type { Movie, SearchResult, TVShow } from '../types';
 
 export default function Search() {
@@ -78,8 +80,22 @@ export default function Search() {
     };
   }, [caps, q, scope, canSearch]);
 
-  const remoteOnly = useMemo(() => remoteNotInLibrary(library, remote), [library, remote]);
-  const grouped = useMemo(() => groupLibraryHits(library), [library]);
+  const parentalFiltered = useMemo<LibraryHit[]>(() => {
+    try {
+      const ps = getParentalState();
+      if (!ps.anyRestriction) return library;
+      return library.filter((hit) => {
+        if (hit.kind === 'movie' || hit.kind === 'tv') {
+          return !isItemRestricted(hit.item, ps);
+        }
+        return true;
+      });
+    } catch {
+      return library;
+    }
+  }, [library]);
+  const remoteOnly = useMemo(() => remoteNotInLibrary(parentalFiltered, remote), [parentalFiltered, remote]);
+  const grouped = useMemo(() => groupLibraryHits(parentalFiltered), [parentalFiltered]);
   const returnTo = useMemo(() => {
     const p = new URLSearchParams();
     if (q) p.set('q', q);

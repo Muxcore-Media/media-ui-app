@@ -56,6 +56,10 @@ export type UserPreferences = {
   controls: {
     enableKeyboardShortcuts: boolean;
   };
+  notifications: {
+    /** Show in-app toast when a user-requested title finishes downloading (umbrella#78). */
+    downloadReady: boolean;
+  };
   player: {
     /** Manual quality/version cap id from QUALITY_OPTIONS; 'auto' = original/source. */
     preferredQuality: string;
@@ -115,6 +119,9 @@ const defaultPrefs = (): UserPreferences => ({
   },
   controls: {
     enableKeyboardShortcuts: true,
+  },
+  notifications: {
+    downloadReady: true,
   },
   player: {
     preferredQuality: 'auto',
@@ -431,6 +438,7 @@ export function getPreferences(): UserPreferences {
     playback: { ...base.playback, ...stored.playback },
     subtitles: { ...base.subtitles, ...stored.subtitles },
     controls: { ...base.controls, ...stored.controls },
+    notifications: { ...base.notifications, ...stored.notifications },
     player: { ...base.player, ...stored.player },
   };
 }
@@ -443,6 +451,7 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
     playback: { ...cur.playback, ...patch.playback },
     subtitles: { ...cur.subtitles, ...patch.subtitles },
     controls: { ...cur.controls, ...patch.controls },
+    notifications: { ...cur.notifications, ...patch.notifications },
     player: { ...cur.player, ...patch.player },
   };
   writeJSON(KEYS.prefs, next);

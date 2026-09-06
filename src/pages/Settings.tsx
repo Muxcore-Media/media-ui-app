@@ -162,6 +162,7 @@ function HomePane() {
         showWantToWatch: fd.get('showWantToWatch') === 'on',
         showStudios: fd.get('showStudios') === 'on',
         showNetworks: fd.get('showNetworks') === 'on',
+        showMusic: fd.get('showMusic') === 'on',
       },
     });
   }
@@ -185,6 +186,7 @@ function HomePane() {
           ['showWantToWatch', 'Want to Watch shelf', prefs.home.showWantToWatch],
           ['showStudios', 'Browse by Studio shelf', prefs.home.showStudios],
           ['showNetworks', 'Browse by Network shelf', prefs.home.showNetworks],
+          ['showMusic', 'Music shelves (Artists & Albums)', prefs.home.showMusic],
         ] as const
       ).map(([name, label, checked]) => (
         <label key={name} className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">

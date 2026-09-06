@@ -174,6 +174,8 @@ export type UserPreferences = {
     showStudios: boolean;
     /** Show the "Browse by Network" shelf on the home feed (umbrella#107). */
     showNetworks: boolean;
+    /** Show the Music shelves (Browse Artists + Recently Added Albums) on the home feed (umbrella#113). */
+    showMusic: boolean;
   };
   playback: {
     autoplayNext: boolean;
@@ -257,6 +259,7 @@ const defaultPrefs = (): UserPreferences => ({
     showGenres: true,
     showStudios: true,
     showNetworks: true,
+    showMusic: true,
   },
   parental: {
     kidsMode: false,

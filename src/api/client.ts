@@ -6,6 +6,8 @@ import type {
   MediaRequest,
   Movie,
   MusicArtistDetail,
+  RelatedItem,
+  RelatedResponse,
   SearchResult,
   DiscoverDetail,
   Season,
@@ -311,6 +313,44 @@ export const api = {
       mediaType: data.mediaType === 'tv' ? 'tv' : 'movie',
       genres: Array.isArray(data.genres) ? data.genres : [],
     };
+  },
+
+  /**
+   * Fetch related titles from the media-graph module via the BFF proxy.
+   *
+   * `externalId` must be a media-graph external-id string, e.g.:
+   *   "tmdb:movie:550"  or  "tmdb:tv:1396"
+   *
+   * Returns `{ items: [], available: false }` when the graph module is not
+   * installed or the BFF proxy returns a non-2xx response, so callers can
+   * safely hide the rail without breaking the page.
+   */
+  async getRelated(externalId: string): Promise<RelatedResponse> {
+    try {
+      const q = new URLSearchParams({ id: externalId });
+      const data = await getJSON<{
+        items?: Array<Record<string, unknown>>;
+        available?: boolean;
+      }>(`/api/graph/related?${q}`);
+      if (data.available === false) return { items: [], available: false };
+      const items: RelatedItem[] = (data.items || []).map((raw) => ({
+        id: Number(raw.id ?? raw.tmdb_id ?? raw.tmdbId ?? 0),
+        title: String(raw.title ?? ''),
+        year: Number(raw.year ?? 0),
+        overview: String(raw.overview ?? ''),
+        poster: String(raw.poster ?? raw.poster_path ?? raw.posterPath ?? ''),
+        voteAvg: Number(raw.vote_avg ?? raw.voteAvg ?? raw.vote_average ?? 0),
+        mediaType: String(raw.media_type ?? raw.mediaType ?? 'movie') === 'tv' ? 'tv' : ('movie' as const),
+        relation: raw.relation != null ? String(raw.relation) : undefined,
+        content_rating:
+          raw.content_rating != null || raw.contentRating != null
+            ? String(raw.content_rating ?? raw.contentRating)
+            : undefined,
+      }));
+      return { items, available: true };
+    } catch {
+      return { items: [], available: false };
+    }
   },
 
   async discoverBrowse(

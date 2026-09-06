@@ -6,6 +6,7 @@ import TVShowDetail from './TVShowDetail';
 const getTVShow = vi.fn();
 const jellyfinPlayURL = vi.fn();
 const fetchPlaybackAnalysis = vi.fn();
+const getRelated = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -15,6 +16,7 @@ vi.mock('../api/client', async () => {
     api: {
       getTVShow: (...args: unknown[]) => getTVShow(...args),
       jellyfinPlayURL: (...args: unknown[]) => jellyfinPlayURL(...args),
+      getRelated: (...args: unknown[]) => getRelated(...args),
     },
   };
 });
@@ -54,7 +56,9 @@ describe('TVShowDetail page', () => {
     getTVShow.mockReset();
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
+    getRelated.mockResolvedValue({ items: [], available: false });
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/tv/bb/1/1',
       enabled: true,
@@ -160,7 +164,9 @@ describe('TVShowDetail accessibility', () => {
     getTVShow.mockReset();
     jellyfinPlayURL.mockReset();
     fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
     jellyfinPlayURL.mockResolvedValue(null);
+    getRelated.mockResolvedValue({ items: [], available: false });
     fetchPlaybackAnalysis.mockResolvedValue({
       src: '/stream/tv/bb/1/1',
       enabled: true,
@@ -214,5 +220,88 @@ describe('TVShowDetail accessibility', () => {
       await screen.findByRole('heading', { level: 1, name: 'TV show not found' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Not found');
+  });
+});
+
+describe('TVShowDetail – RelatedShelf integration', () => {
+  const baseShow = {
+    ...showWithEpisodes,
+    tmdb_id: 1396,
+  };
+
+  beforeEach(() => {
+    getTVShow.mockReset();
+    jellyfinPlayURL.mockReset();
+    fetchPlaybackAnalysis.mockReset();
+    getRelated.mockReset();
+    jellyfinPlayURL.mockResolvedValue(null);
+    fetchPlaybackAnalysis.mockResolvedValue({ src: '', enabled: false });
+    getTVShow.mockResolvedValue(baseShow);
+  });
+
+  it('renders the Related Titles shelf when graph returns items', async () => {
+    getRelated.mockResolvedValue({
+      items: [
+        {
+          id: 1438,
+          title: 'Better Call Saul',
+          year: 2015,
+          overview: 'Prequel.',
+          poster: '/bcs.jpg',
+          voteAvg: 8.9,
+          mediaType: 'tv',
+          relation: 'same_franchise',
+        },
+      ],
+      available: true,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('tv-detail-page');
+    const shelf = await screen.findByTestId('related-shelf');
+    expect(shelf).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Better Call Saul/i })).toBeInTheDocument();
+    expect(getRelated).toHaveBeenCalledWith('tmdb:tv:1396');
+  });
+
+  it('does not render the Related Titles shelf when graph is unavailable', async () => {
+    getRelated.mockResolvedValue({ items: [], available: false });
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await screen.findByTestId('tv-detail-page');
+    await waitFor(() => expect(getRelated).toHaveBeenCalled());
+    expect(screen.queryByTestId('related-shelf')).not.toBeInTheDocument();
+  });
+
+  it('does not break the TV detail page when getRelated rejects', async () => {
+    getRelated.mockRejectedValue(new Error('graph offline'));
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const page = await screen.findByTestId('tv-detail-page');
+    expect(page).toBeInTheDocument();
+    expect(screen.getByText('Breaking Bad')).toBeInTheDocument();
+    await waitFor(() => expect(getRelated).toHaveBeenCalled());
+    expect(screen.queryByTestId('related-shelf')).not.toBeInTheDocument();
   });
 });

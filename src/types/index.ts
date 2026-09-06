@@ -179,3 +179,22 @@ export interface MusicArtistDetail {
   artist: { id: string; name: string; path?: string; monitored?: boolean };
   albums: MusicAlbum[];
 }
+
+/**
+ * A single item returned by the media-graph /api/graph/related endpoint.
+ * Extends SearchResult so it can be passed directly to PosterCard as `type="external"`.
+ * `content_rating` enables parental filtering via applyParentalFilter.
+ */
+export type RelatedItem = SearchResult & {
+  /** Graph edge label (e.g. "related_to", "same_franchise", "adaptation", "neighbor"). */
+  relation?: string;
+  /** Library content rating when the BFF can join it (optional; absent = unrestricted). */
+  content_rating?: string;
+};
+
+/** Response shape for GET /api/graph/related. */
+export type RelatedResponse = {
+  items: RelatedItem[];
+  /** False when the media-graph module is not installed / reachable. */
+  available: boolean;
+};

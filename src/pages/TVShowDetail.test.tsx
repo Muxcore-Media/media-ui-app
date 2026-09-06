@@ -81,6 +81,56 @@ describe('TVShowDetail page', () => {
     });
   });
 
+  it('primary Play button links to the in-app player route, not an external URL', async () => {
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByTestId('tv-detail-page');
+
+    // The episode-level play link should go to /player, not an external Jellyfin URL
+    const episodePlayLink = screen.getByRole('link', { name: /Play Pilot/i });
+    const href = episodePlayLink.getAttribute('href') ?? '';
+    expect(href).toMatch(/^\/player\?/);
+    expect(href).toContain('src=');
+    expect(href).not.toMatch(/^https?:\/\//);
+  });
+
+  it('does not show "Open in linked app" when Jellyfin is not configured', async () => {
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByTestId('tv-detail-page');
+    expect(screen.queryByText('Open in linked app')).not.toBeInTheDocument();
+  });
+
+  it('shows "Open in linked app" as a secondary option when Jellyfin is available', async () => {
+    jellyfinPlayURL.mockResolvedValue('jellyfin://play/breaking-bad');
+
+    render(
+      <MemoryRouter initialEntries={['/tv/bb']}>
+        <Routes>
+          <Route path="/tv/:id" element={<TVShowDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByTestId('tv-detail-page');
+
+    // Primary native play links are still present
+    expect(screen.getByRole('link', { name: /Play Breaking Bad/i })).toBeInTheDocument();
+    // Secondary Jellyfin link is also present
+    await waitFor(() => {
+      expect(screen.getByText('Open in linked app')).toBeInTheDocument();
+    });
+  });
+
   it('shows empty episodes state when no seasons', async () => {
     getTVShow.mockResolvedValueOnce({
       id: 'new-show',

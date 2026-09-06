@@ -47,13 +47,18 @@ export default function TVShowDetail() {
       setError(null);
       setJellyfinURL(null);
       try {
-        const item = await api.getTVShow(id);
+        // Fetch show data and the optional Jellyfin deep-link in parallel so the
+        // native "Play" button is never delayed by the linked-app handoff lookup.
+        // jellyfinPlayURL already swallows 404s (unlinked server) and returns null.
+        const [item, jf] = await Promise.all([
+          api.getTVShow(id),
+          api.jellyfinPlayURL(id),
+        ]);
         if (!cancelled) {
           setShow(item);
           setFav(isFavorite(item.id));
+          setJellyfinURL(jf);
         }
-        const jf = await api.jellyfinPlayURL(id);
-        if (!cancelled) setJellyfinURL(jf);
       } catch (err) {
         if (!cancelled) {
           setShow(null);

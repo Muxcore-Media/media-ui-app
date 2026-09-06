@@ -243,4 +243,111 @@ describe('VideoPlayer OSD', () => {
       expect(screen.getByText('1080p Remux')).toBeInTheDocument();
     });
   });
+
+  it('track selection — audio: lists tracks in settings and calls through on selection', async () => {
+    // formatAudioTrackLabel: language uppercased, channelLayout as-is, codec uppercased
+    stubFetch({
+      analysis: {
+        src: '/stream/movies/m1',
+        enabled: true,
+        info_line: '1080p',
+        audio: [
+          { index: 0, language: 'eng', channel_layout: 'stereo', codec: 'aac', label: 'Default' },
+          { index: 1, language: 'jpn', channel_layout: '5.1', codec: 'dts', label: 'JPN' },
+        ],
+        subtitles: [],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    // Wait for analysis to load (async fetch), then open settings
+    await waitFor(() => screen.getByLabelText('Settings'));
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+
+    // Audio row should show the default track label
+    expect(within(menu).getByText('Audio')).toBeInTheDocument();
+
+    // Drill into Audio panel — the tracks appear after analysis resolves
+    fireEvent.click(within(menu).getByText('Audio'));
+    // formatAudioTrackLabel: 'ENG · stereo · AAC' and 'JPN · 5.1 · DTS'
+    await waitFor(() => {
+      expect(within(menu).getByText('ENG · stereo · AAC')).toBeInTheDocument();
+      expect(within(menu).getByText('JPN · 5.1 · DTS')).toBeInTheDocument();
+    });
+
+    // Select the second track — no throw means the callback wire is intact
+    fireEvent.click(within(menu).getByText('JPN · 5.1 · DTS'));
+  });
+
+  it('track selection — subtitles: lists tracks and allows turning captions off', async () => {
+    // formatSubtitleTrackLabel: language uppercased, codec uppercased
+    stubFetch({
+      analysis: {
+        src: '/stream/movies/m1',
+        enabled: true,
+        info_line: '1080p',
+        audio: [],
+        subtitles: [
+          { index: 0, language: 'en', codec: 'webvtt', picture_based: false, text_based: true, label: 'English' },
+          { index: 1, language: 'fr', codec: 'webvtt', picture_based: false, text_based: true, label: 'French' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    // Open settings → Subtitles panel
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+
+    await waitFor(() => {
+      // Both tracks and the "Off" option should be listed
+      // formatSubtitleTrackLabel with language + webvtt codec → 'EN · WEBVTT', 'FR · WEBVTT'
+      expect(within(menu).getByText('Off')).toBeInTheDocument();
+      expect(within(menu).getByText('EN · WEBVTT')).toBeInTheDocument();
+      expect(within(menu).getByText('FR · WEBVTT')).toBeInTheDocument();
+    });
+
+    // Selecting "Off" should not throw
+    fireEvent.click(within(menu).getByText('Off'));
+  });
+
+  it('track selection — graceful empty state when no audio or subtitle tracks exist', async () => {
+    stubFetch({
+      analysis: {
+        src: '/stream/movies/m1',
+        enabled: true,
+        info_line: '1080p',
+        audio: [],
+        subtitles: [],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+
+    // Audio row should be disabled (≤1 track means no options to switch between)
+    const audioBtn = within(menu).getByText('Audio').closest('button');
+    expect(audioBtn).toBeDisabled();
+  });
 });

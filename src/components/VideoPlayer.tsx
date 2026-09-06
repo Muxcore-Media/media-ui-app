@@ -555,6 +555,11 @@ export default function VideoPlayer({
           pipSupported={chrome.pipSupported}
           pipActive={chrome.pipActive}
           onTogglePiP={chrome.togglePiP}
+          castSupported={chrome.castSupported}
+          castConnected={chrome.castConnected}
+          onToggleCast={chrome.toggleCast}
+          airPlaySupported={chrome.airPlaySupported}
+          onToggleAirPlay={chrome.toggleAirPlay}
           fullscreen={chrome.fullscreen}
           onToggleFullscreen={chrome.toggleFullscreen}
           quality={source.quality}

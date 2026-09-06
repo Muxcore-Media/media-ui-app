@@ -8,8 +8,21 @@ export type UsePlayerChromeOptions = {
   keepControlsVisible: boolean;
 };
 
-/** Fullscreen, theater mode, Picture-in-Picture, and the auto-hiding control
- * chrome timer shared by the top bar / bottom bar / center overlay. */
+/**
+ * Minimal interface for the W3C Remote Playback API (Chrome/Edge).
+ * Not yet in TypeScript's DOM lib at the time of writing.
+ */
+interface RemotePlayback extends EventTarget {
+  readonly state: 'connecting' | 'connected' | 'disconnected';
+  prompt(): Promise<void>;
+}
+
+type VideoWithRemote = HTMLVideoElement & { remote?: RemotePlayback };
+type VideoWithAirPlay = HTMLVideoElement & { webkitShowPlaybackTargetPicker?: () => void };
+
+/** Fullscreen, theater mode, Picture-in-Picture, Cast (Remote Playback API),
+ * AirPlay, and the auto-hiding control chrome timer shared by the top bar /
+ * bottom bar / center overlay. */
 export function usePlayerChrome({
   containerRef,
   videoRef,
@@ -20,11 +33,20 @@ export function usePlayerChrome({
   const [theaterMode, setTheaterMode] = useState(initialTheaterMode);
   const [pipActive, setPipActive] = useState(false);
   const [pipSupported, setPipSupported] = useState(false);
+  const [castSupported, setCastSupported] = useState(false);
+  const [castConnected, setCastConnected] = useState(false);
+  const [airPlaySupported, setAirPlaySupported] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const hideTimer = useRef<number | null>(null);
 
   useEffect(() => {
     setPipSupported(Boolean(document.pictureInPictureEnabled));
+    // Prototype-level detection so support flags are set even before the
+    // video element is mounted (avoids a flash of wrong button state).
+    if (typeof HTMLVideoElement !== 'undefined') {
+      setCastSupported('remote' in HTMLVideoElement.prototype);
+      setAirPlaySupported('webkitShowPlaybackTargetPicker' in HTMLVideoElement.prototype);
+    }
   }, []);
 
   useEffect(() => {
@@ -36,13 +58,32 @@ export function usePlayerChrome({
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+
     const onEnter = () => setPipActive(true);
     const onLeave = () => setPipActive(false);
     el.addEventListener('enterpictureinpicture', onEnter);
     el.addEventListener('leavepictureinpicture', onLeave);
+
+    // Track Remote Playback (Cast) connection state via API events.
+    const remote = (el as VideoWithRemote).remote;
+    const updateCastState = () => {
+      if (!remote) return;
+      setCastConnected(remote.state === 'connected' || remote.state === 'connecting');
+    };
+    if (remote) {
+      remote.addEventListener('connecting', updateCastState);
+      remote.addEventListener('connect', updateCastState);
+      remote.addEventListener('disconnect', updateCastState);
+    }
+
     return () => {
       el.removeEventListener('enterpictureinpicture', onEnter);
       el.removeEventListener('leavepictureinpicture', onLeave);
+      if (remote) {
+        remote.removeEventListener('connecting', updateCastState);
+        remote.removeEventListener('connect', updateCastState);
+        remote.removeEventListener('disconnect', updateCastState);
+      }
     };
   }, [videoRef]);
 
@@ -81,16 +122,34 @@ export function usePlayerChrome({
     else void el.requestPictureInPicture?.().catch(() => {});
   }, [videoRef]);
 
+  const toggleCast = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const remote = (el as VideoWithRemote).remote;
+    void remote?.prompt().catch(() => {});
+  }, [videoRef]);
+
+  const toggleAirPlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    (el as VideoWithAirPlay).webkitShowPlaybackTargetPicker?.();
+  }, [videoRef]);
+
   return {
     fullscreen,
     theaterMode,
     setTheaterMode,
     pipActive,
     pipSupported,
+    castSupported,
+    castConnected,
+    airPlaySupported,
     showControls,
     bumpControls,
     toggleFullscreen,
     toggleTheater,
     togglePiP,
+    toggleCast,
+    toggleAirPlay,
   };
 }

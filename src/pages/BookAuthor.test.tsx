@@ -9,6 +9,9 @@ const setMonitored = vi.fn();
 const importLibraryFile = vi.fn();
 const removeLibraryItem = vi.fn();
 const addBook = vi.fn();
+const listRoots = vi.fn();
+const pickRoot = vi.fn();
+const setRootFolder = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -20,6 +23,9 @@ vi.mock('../api/client', async () => {
       importLibraryFile: (...args: unknown[]) => importLibraryFile(...args),
       removeLibraryItem: (...args: unknown[]) => removeLibraryItem(...args),
       addBook: (...args: unknown[]) => addBook(...args),
+      listRoots: (...args: unknown[]) => listRoots(...args),
+      pickRoot: (...args: unknown[]) => pickRoot(...args),
+      setRootFolder: (...args: unknown[]) => setRootFolder(...args),
     },
   };
 });
@@ -36,6 +42,15 @@ describe('BookAuthor page', () => {
     removeLibraryItem.mockResolvedValue({ removed: true, delete_files: false });
     importLibraryFile.mockResolvedValue({ id: 'f2', stream_url: '/stream/books/f2' });
     addBook.mockResolvedValue({ added: true, item: { id: 'bk-new', title: 'The Dispossessed', year: 1974 } });
+    listRoots.mockReset();
+    pickRoot.mockReset();
+    setRootFolder.mockReset();
+    listRoots.mockResolvedValue({
+      available: true,
+      roots: [{ id: 'r-books', path: '/data/books', name: 'Books', mediaKind: 'books', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],
+    });
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    setRootFolder.mockResolvedValue({ root_folder_path: '/data/books' });
     getBookAuthor.mockResolvedValue({
       author: { id: 'auth1', name: 'Ursula K. Le Guin', monitored: true },
       books: [
@@ -142,5 +157,23 @@ describe('BookAuthor page', () => {
       });
     });
     expect(getBookAuthor).toHaveBeenCalledTimes(2);
+  });
+
+  it('assigns a root folder to the author', async () => {
+    render(
+      <MemoryRouter initialEntries={['/books/auth1']}>
+        <Routes>
+          <Route path="/books/:id" element={<BookAuthor />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.change(await screen.findByLabelText('Root folder'), { target: { value: '/data/books' } });
+    await waitFor(() => {
+      expect(setRootFolder).toHaveBeenCalledWith({
+        kind: 'author',
+        id: 'auth1',
+        rootFolderPath: '/data/books',
+      });
+    });
   });
 });

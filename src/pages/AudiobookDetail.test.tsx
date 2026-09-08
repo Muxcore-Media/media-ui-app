@@ -7,6 +7,9 @@ import { NowPlayingProvider } from '../lib/nowPlaying';
 const getAudiobook = vi.fn();
 const setMonitored = vi.fn();
 const removeLibraryItem = vi.fn();
+const listRoots = vi.fn();
+const pickRoot = vi.fn();
+const setRootFolder = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -16,6 +19,9 @@ vi.mock('../api/client', async () => {
       getAudiobook: (...args: unknown[]) => getAudiobook(...args),
       setMonitored: (...args: unknown[]) => setMonitored(...args),
       removeLibraryItem: (...args: unknown[]) => removeLibraryItem(...args),
+      listRoots: (...args: unknown[]) => listRoots(...args),
+      pickRoot: (...args: unknown[]) => pickRoot(...args),
+      setRootFolder: (...args: unknown[]) => setRootFolder(...args),
     },
   };
 });
@@ -39,6 +45,15 @@ describe('AudiobookDetail page', () => {
     removeLibraryItem.mockReset();
     setMonitored.mockResolvedValue({ monitored: false });
     removeLibraryItem.mockResolvedValue({ removed: true, delete_files: false });
+    listRoots.mockReset();
+    pickRoot.mockReset();
+    setRootFolder.mockReset();
+    listRoots.mockResolvedValue({
+      available: true,
+      roots: [{ id: 'r-ab', path: '/data/audiobooks', name: 'Audiobooks', mediaKind: 'audiobooks', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],
+    });
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    setRootFolder.mockResolvedValue({ root_folder_path: '/data/audiobooks' });
     getAudiobook.mockResolvedValue({
       author: { id: 'au1', name: 'Andy Weir' },
       audiobook: {
@@ -101,5 +116,17 @@ describe('AudiobookDetail page', () => {
       });
     });
     expect(await screen.findByText('Audiobooks list')).toBeInTheDocument();
+  });
+
+  it('assigns a root folder to the audiobook author', async () => {
+    renderDetail();
+    fireEvent.change(await screen.findByLabelText('Root folder'), { target: { value: '/data/audiobooks' } });
+    await waitFor(() => {
+      expect(setRootFolder).toHaveBeenCalledWith({
+        kind: 'audiobook',
+        id: 'ab1',
+        rootFolderPath: '/data/audiobooks',
+      });
+    });
   });
 });

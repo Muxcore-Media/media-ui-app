@@ -81,4 +81,23 @@ describe('RootFolderSelect', () => {
       });
     });
   });
+
+  it('assigns a books root to an author', async () => {
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    listRoots.mockResolvedValue({
+      available: true,
+      roots: [{ id: 'r3', path: '/data/books', name: 'Books', mediaKind: 'books', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],
+    });
+    setRootFolder.mockResolvedValue({ root_folder_path: '/data/books' });
+    render(<RootFolderSelect kind="author" id="au1" />);
+    fireEvent.change(await screen.findByLabelText('Root folder'), { target: { value: '/data/books' } });
+    await waitFor(() => {
+      expect(listRoots).toHaveBeenCalledWith('books');
+      expect(setRootFolder).toHaveBeenCalledWith({
+        kind: 'author',
+        id: 'au1',
+        rootFolderPath: '/data/books',
+      });
+    });
+  });
 });

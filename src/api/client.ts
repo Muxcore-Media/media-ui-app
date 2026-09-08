@@ -1415,7 +1415,7 @@ export const api = {
   },
 
   async setRootFolder(input: {
-    kind: 'movie' | 'tv' | 'artist';
+    kind: 'movie' | 'tv' | 'artist' | 'author' | 'audiobook';
     id: string;
     rootFolderPath: string;
   }): Promise<{ root_folder_path: string }> {
@@ -1424,7 +1424,11 @@ export const api = {
         ? `/api/movies/${encodeURIComponent(input.id)}`
         : input.kind === 'tv'
           ? `/api/tv/${encodeURIComponent(input.id)}`
-          : `/api/music/${encodeURIComponent(input.id)}`;
+          : input.kind === 'author'
+            ? `/api/books/${encodeURIComponent(input.id)}`
+            : input.kind === 'audiobook'
+              ? `/api/audiobooks/${encodeURIComponent(input.id)}`
+              : `/api/music/${encodeURIComponent(input.id)}`;
     return getJSON<{ root_folder_path: string }>(path, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

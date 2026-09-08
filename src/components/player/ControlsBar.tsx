@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../../lib/player/format';
 import SeekBar from './SeekBar';
-import SettingsMenu, { type SubtitleSearchMenuProps } from './SettingsMenu';
+import SettingsMenu, { type SkipPointsEditor, type SubtitleSearchMenuProps } from './SettingsMenu';
 import type { PlaybackChapter, PlaybackSegment } from '../../api/client';
 import type { AspectMode, PlayerTrackInfo, QualityOption } from '../../lib/player/types';
 import type { UserPreferences } from '../../lib/userdata';
@@ -65,12 +65,16 @@ type Props = {
   onAudio: (idx: number) => void;
   textTracks: PlayerTrackInfo[];
   pictureSubtitleTracks?: PlayerTrackInfo[];
+  burnedSubtitleStreamIndex?: number;
   textIdx: number;
   onText: (idx: number) => void;
+  onPicture?: (streamIndex: number) => void;
   rate: number;
   onRate: (r: number) => void;
   subtitlePrefs: UserPreferences['subtitles'];
   onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void;
+  audioOffsetMs: number;
+  onAudioOffset: (ms: number) => void;
   onSettingsOpenChange?: (open: boolean) => void;
   aspectMode: AspectMode;
   onAspectMode: (mode: AspectMode) => void;
@@ -78,6 +82,7 @@ type Props = {
   onPrevMarker?: () => void;
   onNextMarker?: () => void;
   subtitleSearch?: SubtitleSearchMenuProps;
+  skipPoints?: SkipPointsEditor;
 };
 
 export default function ControlsBar(props: Props) {
@@ -243,15 +248,20 @@ export default function ControlsBar(props: Props) {
                   onAudio={props.onAudio}
                   textTracks={props.textTracks}
                   pictureSubtitleTracks={props.pictureSubtitleTracks}
+                  burnedSubtitleStreamIndex={props.burnedSubtitleStreamIndex}
                   textIdx={props.textIdx}
                   onText={props.onText}
+                  onPicture={props.onPicture}
                   rate={props.rate}
                   onRate={props.onRate}
                   subtitlePrefs={props.subtitlePrefs}
                   onSubtitlePrefs={props.onSubtitlePrefs}
+                  audioOffsetMs={props.audioOffsetMs}
+                  onAudioOffset={props.onAudioOffset}
                   aspectMode={props.aspectMode}
                   onAspectMode={props.onAspectMode}
                   subtitleSearch={props.subtitleSearch}
+                  skipPoints={props.skipPoints}
                 />
               ) : null}
             </div>

@@ -35,6 +35,8 @@ vi.mock('../api/client', async () => {
       getTVShow: (...args: unknown[]) => getTVShow(...args),
       getMovie: (...args: unknown[]) => getMovie(...args),
       listCollections: (...args: unknown[]) => listCollections(...args),
+      listWatchHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
+      listSessions: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
       listComics: (...args: unknown[]) => listComics(...args),
     },
   };
@@ -128,13 +130,11 @@ describe('Home Comics shelf — populated', () => {
     expect(within(shelf).getByText('Image Comics')).toBeInTheDocument();
   });
 
-  it('comic tiles link to /comics', async () => {
+  it('comic tiles link to the series page', async () => {
     renderHome();
     const shelf = await screen.findByTestId('home-comics');
-    const links = within(shelf).getAllByRole('link');
-    for (const link of links) {
-      expect(link.getAttribute('href')).toBe('/comics');
-    }
+    expect(within(shelf).getByRole('link', { name: /Saga — Image Comics/i }).getAttribute('href')).toBe('/comics/comic-1');
+    expect(within(shelf).getByRole('link', { name: /^Sandman$/i }).getAttribute('href')).toBe('/comics/comic-2');
   });
 
   it('Comics shelf has a "See all" link pointing to /comics', async () => {

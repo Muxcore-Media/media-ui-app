@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Bookmark, ExternalLink, ListPlus, Play, Star, Tv } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
@@ -7,6 +7,27 @@ import CastSection from '../components/media/CastSection';
 import TrailerSection from '../components/media/TrailerSection';
 import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
 import RelatedShelf from '../components/media/RelatedShelf';
+import InteractiveSearch from '../components/media/InteractiveSearch';
+import { ReportIssueButton } from '../components/media/ReportIssueButton';
+import { OfflineDownloadButton } from '../components/media/OfflineDownloadButton';
+import { MonitorButton } from '../components/media/MonitorButton';
+import { AddWantedButton } from '../components/media/AddWantedButton';
+import { JellyfinLinkButton } from '../components/media/JellyfinLinkButton';
+import { QualityProfileSelect } from '../components/media/QualityProfileSelect';
+import { AlternateTitlesCard } from '../components/media/AlternateTitlesCard';
+import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
+import { ItemWatchStatsCard } from '../components/media/ItemWatchStatsCard';
+import { ArtworkCard } from '../components/media/ArtworkCard';
+import { SearchSubtitlesButton } from '../components/media/SearchSubtitlesButton';
+import { SubtitleFilesCard } from '../components/media/SubtitleFilesCard';
+import { ProtectTitleButton } from '../components/media/ProtectTitleButton';
+import { TagSelect } from '../components/media/TagSelect';
+import { RootFolderSelect } from '../components/media/RootFolderSelect';
+import { RefreshMetadataButton } from '../components/media/RefreshMetadataButton';
+import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
+import { SeriesOverrideCard } from '../components/media/SeriesOverrideCard';
+import { PreviewRename } from '../components/media/PreviewRename';
+import { DeleteEpisodeFileButton } from '../components/media/DeleteEpisodeFileButton';
 import { DetailHero } from '../components/media/DetailHero';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -32,7 +53,7 @@ import { getParentalState, isItemRestricted } from '../lib/parental';
 import { FixedWindowList } from '../components/ui/FixedWindowList';
 import type { DiscoverDetail, Episode, TVShow } from '../types';
 
-const EPISODE_ROW_HEIGHT = 72;
+const EPISODE_ROW_HEIGHT = 88;
 
 function firstPlayableStreamUrl(show: TVShow | null): string | undefined {
   if (!show) return undefined;
@@ -46,6 +67,7 @@ function firstPlayableStreamUrl(show: TVShow | null): string | undefined {
 
 export default function TVShowDetail() {
   const { id = '' } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [show, setShow] = useState<TVShow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,6 +225,7 @@ export default function TVShowDetail() {
             <span>{show.year || '—'}</span>
             {show.status ? <span>{show.status}</span> : null}
             {show.genres.length > 0 && <span>{show.genres.slice(0, 3).join(' · ')}</span>}
+            {show.monitored ? <Badge tone="accent">Monitoring</Badge> : <Badge tone="neutral">Unmonitored</Badge>}
           </>
         }
         actions={
@@ -226,6 +249,55 @@ export default function TVShowDetail() {
                 Play from beginning
               </Link>
             ) : null}
+            <MonitorButton
+              kind="tv"
+              id={show.id}
+              monitored={show.monitored}
+              onChange={(next) => setShow((cur) => (cur ? { ...cur, monitored: next } : cur))}
+            />
+            <AddWantedButton
+              itemType="tv"
+              itemId={show.id}
+              title={show.title}
+              year={show.year}
+              tmdbId={show.tmdb_id}
+              qualityProfileId={show.quality_profile_id}
+              seriesId={show.id}
+            />
+            <QualityProfileSelect
+              kind="tv"
+              id={show.id}
+              value={show.quality_profile_id}
+              onChange={(next) => setShow((cur) => (cur ? { ...cur, quality_profile_id: next } : cur))}
+            />
+            <TagSelect kind="tv" id={show.id} />
+            <AlternateTitlesCard kind="tv" id={show.id} />
+            <ItemHistoryCard kind="tv" id={show.id} />
+            <ItemWatchStatsCard id={show.id} />
+            <ArtworkCard kind="tv" id={show.id} />
+            <SubtitleFilesCard kind="tv" id={show.id} />
+            <SearchSubtitlesButton id={show.id} />
+            <ProtectTitleButton kind="tv" id={show.id} title={show.title} />
+            <RootFolderSelect
+              kind="tv"
+              id={show.id}
+              value={show.root_folder_path}
+              onChange={(next) => setShow((cur) => (cur ? { ...cur, root_folder_path: next } : cur))}
+            />
+            <RefreshMetadataButton
+              kind="tv"
+              id={show.id}
+              onRefreshed={() => {
+                void api.getTVShow(show.id).then(setShow).catch(() => undefined);
+              }}
+            />
+            <RemoveLibraryButton
+              kind="tv"
+              id={show.id}
+              title={show.title}
+              hasFile={show.has_file}
+              onRemoved={() => navigate('/tv')}
+            />
             <Button
               variant={fav ? 'primary' : 'secondary'}
               icon={
@@ -282,9 +354,38 @@ export default function TVShowDetail() {
                 Open in linked app
               </a>
             )}
+            <JellyfinLinkButton
+              muxId={show.id}
+              title={show.title}
+              mediaKind="tv"
+              tmdbId={show.tmdb_id}
+              path={show.root_folder_path}
+              linked={Boolean(jellyfinURL)}
+              onLinked={(url) => setJellyfinURL(url)}
+              onUnlinked={() => setJellyfinURL(null)}
+            />
+            <ReportIssueButton
+              title={show.title}
+              mediaType="tv"
+              mediaId={show.id}
+              tmdbId={show.tmdb_id}
+            />
           </>
         }
       />
+
+      <InteractiveSearch
+        itemType="tv"
+        itemId={show.id}
+        title={show.title}
+        year={show.year}
+        tmdbId={show.tmdb_id}
+        autoSearch={searchParams.get('search') === '1'}
+      />
+
+      <PreviewRename kind="tv" id={show.id} />
+
+      <SeriesOverrideCard seriesId={show.id} />
 
       {show.seasons && show.seasons.length > 0 ? (
         <section className="space-y-6" aria-labelledby="tv-episodes-heading">
@@ -296,18 +397,76 @@ export default function TVShowDetail() {
             const seasonHeadingId = `tv-season-${season.id}`;
             return (
               <div key={season.id} className="space-y-2" aria-labelledby={seasonHeadingId}>
-                <h3
-                  id={seasonHeadingId}
-                  className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]"
-                >
-                  {seasonLabel}
-                </h3>
+                <div className="flex items-center justify-between gap-3">
+                  <h3
+                    id={seasonHeadingId}
+                    className="text-sm font-semibold uppercase tracking-wide text-[var(--text-tertiary)]"
+                  >
+                    {seasonLabel}
+                  </h3>
+                  <MonitorButton
+                    compact
+                    kind="season"
+                    id={season.id}
+                    monitored={season.monitored}
+                    onChange={(next) =>
+                      setShow((cur) => {
+                        if (!cur?.seasons) return cur;
+                        return {
+                          ...cur,
+                          seasons: cur.seasons.map((s) =>
+                            s.id !== season.id
+                              ? s
+                              : {
+                                  ...s,
+                                  monitored: next,
+                                  episodes: s.episodes.map((e) => ({ ...e, monitored: next })),
+                                },
+                          ),
+                        };
+                      })
+                    }
+                  />
+                </div>
                 <FixedWindowList
                   items={season.episodes}
                   rowHeight={EPISODE_ROW_HEIGHT}
                   className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
                   getKey={(ep) => ep.id}
-                  renderRow={(ep) => <EpisodeRow show={show} ep={ep} />}
+                  renderRow={(ep) => (
+                    <EpisodeRow
+                      show={show}
+                      ep={ep}
+                      onMonitored={(next) =>
+                        setShow((cur) => {
+                          if (!cur?.seasons) return cur;
+                          return {
+                            ...cur,
+                            seasons: cur.seasons.map((s) => ({
+                              ...s,
+                              episodes: s.episodes.map((e) =>
+                                e.id === ep.id ? { ...e, monitored: next } : e,
+                              ),
+                            })),
+                          };
+                        })
+                      }
+                      onFileRemoved={() =>
+                        setShow((cur) => {
+                          if (!cur?.seasons) return cur;
+                          return {
+                            ...cur,
+                            seasons: cur.seasons.map((s) => ({
+                              ...s,
+                              episodes: s.episodes.map((e) =>
+                                e.id === ep.id ? { ...e, has_file: false, stream_url: '' } : e,
+                              ),
+                            })),
+                          };
+                        })
+                      }
+                    />
+                  )}
                 />
               </div>
             );
@@ -338,7 +497,17 @@ export default function TVShowDetail() {
   );
 }
 
-function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
+function EpisodeRow({
+  show,
+  ep,
+  onMonitored,
+  onFileRemoved,
+}: {
+  show: TVShow;
+  ep: Episode;
+  onMonitored?: (next: boolean) => void;
+  onFileRemoved?: () => void;
+}) {
   const epTitle = `${show.title} S${ep.season_number}E${ep.episode_number}`;
   const playTo = buildEpisodePlayerHref(show, ep);
 
@@ -352,6 +521,11 @@ function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
           </span>
           {ep.title ? <span className="text-[var(--text-secondary)]"> · {ep.title}</span> : null}
         </p>
+        {ep.quality || ep.filename ? (
+          <p className="truncate text-xs text-[var(--text-tertiary)]" data-testid="episode-file">
+            {[ep.quality, ep.filename].filter(Boolean).join(' · ')}
+          </p>
+        ) : null}
         {ep.overview && (
           <p className="line-clamp-1 text-xs text-[var(--text-tertiary)]">{ep.overview}</p>
         )}
@@ -366,6 +540,17 @@ function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
             <Play className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
             Play
           </Link>
+          <MonitorButton compact kind="episode" id={ep.id} monitored={ep.monitored} onChange={onMonitored} />
+          <DeleteEpisodeFileButton id={ep.id} onRemoved={onFileRemoved} />
+          <OfflineDownloadButton
+            compact
+            id={ep.id}
+            title={epTitle}
+            kind="episode"
+            src={ep.stream_url}
+            poster={show.poster_url}
+            href={`/tv/${show.id}`}
+          />
           <IconButton
             icon={<ListPlus className="h-4 w-4" aria-hidden="true" />}
             aria-label={`Add ${epTitle} to queue`}
@@ -383,7 +568,10 @@ function EpisodeRow({ show, ep }: { show: TVShow; ep: Episode }) {
           />
         </div>
       ) : (
-        <Badge tone="neutral">No file</Badge>
+        <div className="flex items-center gap-2">
+          <Badge tone="neutral">No file</Badge>
+          <MonitorButton compact kind="episode" id={ep.id} monitored={ep.monitored} onChange={onMonitored} />
+        </div>
       )}
     </div>
   );

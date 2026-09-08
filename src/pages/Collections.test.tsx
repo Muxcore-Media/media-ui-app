@@ -3,11 +3,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Collections from './Collections';
 import { updatePreferences } from '../lib/userdata';
+import { setCurrentRoles } from '../lib/session';
 import type { Movie } from '../types';
 
 const listMovies = vi.fn();
 const listCollections = vi.fn();
 const getCollection = vi.fn();
+const setCollectionMonitored = vi.fn();
+const syncCollection = vi.fn();
 
 function movie(partial: Partial<Movie> & Pick<Movie, 'id' | 'title'>): Movie {
   return {
@@ -38,6 +41,8 @@ vi.mock('../api/client', async () => {
       listMovies: (...args: unknown[]) => listMovies(...args),
       listCollections: (...args: unknown[]) => listCollections(...args),
       getCollection: (...args: unknown[]) => getCollection(...args),
+      setCollectionMonitored: (...args: unknown[]) => setCollectionMonitored(...args),
+      syncCollection: (...args: unknown[]) => syncCollection(...args),
     },
   };
 });
@@ -45,9 +50,14 @@ vi.mock('../api/client', async () => {
 describe('Collections page', () => {
   beforeEach(() => {
     localStorage.clear();
+    setCurrentRoles([]);
     listMovies.mockReset();
     listCollections.mockReset();
     getCollection.mockReset();
+    setCollectionMonitored.mockReset();
+    syncCollection.mockReset();
+    setCollectionMonitored.mockResolvedValue({ ok: true, monitored: true });
+    syncCollection.mockResolvedValue({ ok: true, added: 1, alreadyPresent: 1 });
     listMovies.mockResolvedValue({
       items: [
         movie({ id: '1', title: 'Action One', year: 2020, runtime: 0, vote_average: 0, stream_url: '' }),
@@ -91,6 +101,32 @@ describe('Collections page', () => {
       expect(screen.getByTestId('collection-shelf')).toBeInTheDocument();
     });
     expect(screen.getByText('Iron Man')).toBeInTheDocument();
+  });
+
+  it('monitors and syncs a household box set', async () => {
+    setCurrentRoles(['admin']);
+    getCollection.mockResolvedValue({
+      id: '10',
+      name: 'MCU',
+      movies: [movie({ id: 'm1', title: 'Iron Man', year: 2008, runtime: 126, vote_average: 7.9 })],
+      monitored: false,
+      searchOnAdd: true,
+    });
+    render(
+      <MemoryRouter>
+        <Collections />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Open MCU collection/i }));
+    expect(await screen.findByTestId('collection-ops')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Monitor collection' }));
+    await waitFor(() => {
+      expect(setCollectionMonitored).toHaveBeenCalledWith('10', { monitored: true });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sync missing' }));
+    await waitFor(() => {
+      expect(syncCollection).toHaveBeenCalledWith('10');
+    });
   });
 
   it('closes the shelf when the close button is clicked', async () => {
@@ -169,6 +205,7 @@ describe('Collections page', () => {
 describe('Collections accessibility', () => {
   beforeEach(() => {
     localStorage.clear();
+    setCurrentRoles([]);
     listMovies.mockReset();
     listCollections.mockReset();
     getCollection.mockReset();

@@ -10,13 +10,29 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { applyParentalFilter } from '../lib/parental';
+import { canManageLibrary } from '../lib/session';
 import type { Movie } from '../types';
 
 type Collection = { id: string; name: string; items: Movie[]; source: 'tmdb' | 'genre' };
-type ServerCol = { id: string; name: string; movie_count: number };
+type ServerCol = { id: string; name: string; movie_count: number; monitored?: boolean };
+type ServerDetail = { id: string; name: string; movies: Movie[]; monitored: boolean; searchOnAdd: boolean };
 
 /** A horizontal shelf for a named box-set / genre collection. */
-function CollectionShelf({ collection, onClose }: { collection: { id: string; name: string; movies: Movie[] }; onClose: () => void }) {
+function CollectionShelf({
+  collection,
+  onClose,
+  canEdit,
+  busy,
+  onMonitor,
+  onSync,
+}: {
+  collection: ServerDetail;
+  onClose: () => void;
+  canEdit: boolean;
+  busy: boolean;
+  onMonitor: (monitored: boolean) => void;
+  onSync: () => void;
+}) {
   const movies = applyParentalFilter(collection.movies);
   return (
     <section
@@ -41,6 +57,29 @@ function CollectionShelf({ collection, onClose }: { collection: { id: string; na
           Close
         </button>
       </div>
+      {canEdit ? (
+        <div className="flex flex-wrap items-center gap-2" data-testid="collection-ops">
+          <Badge tone={collection.monitored ? 'success' : 'neutral'}>
+            {collection.monitored ? 'Monitored' : 'Unmonitored'}
+          </Badge>
+          <button
+            type="button"
+            disabled={busy}
+            className="text-sm text-[var(--text-primary)]"
+            onClick={() => onMonitor(!collection.monitored)}
+          >
+            {collection.monitored ? 'Pause collection' : 'Monitor collection'}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            className="text-sm text-[var(--text-primary)]"
+            onClick={onSync}
+          >
+            Sync missing
+          </button>
+        </div>
+      ) : null}
       {movies.length > 0 ? (
         <Shelf title={collection.name} testId={`collection-shelf-items-${collection.id}`}>
           {movies.map((item) => (
@@ -60,7 +99,9 @@ function CollectionShelf({ collection, onClose }: { collection: { id: string; na
 export default function Collections() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [serverCols, setServerCols] = useState<ServerCol[]>([]);
-  const [detail, setDetail] = useState<{ id: string; name: string; movies: Movie[] } | null>(null);
+  const [detail, setDetail] = useState<ServerDetail | null>(null);
+  const [opsBusy, setOpsBusy] = useState(false);
+  const canEdit = canManageLibrary();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,7 +169,7 @@ export default function Collections() {
           Collections
         </h1>
         <p className="text-sm text-[var(--text-secondary)]">
-          Explore movie franchises, box sets, and genres.
+          Explore movie franchises, box sets, and genres. Admins can monitor a box set and sync missing titles like Radarr.
         </p>
       </header>
       {loading ? (
@@ -140,7 +181,36 @@ export default function Collections() {
       {error && <ErrorBanner message={error} />}
 
       {detail && (
-        <CollectionShelf collection={detail} onClose={() => setDetail(null)} />
+        <CollectionShelf
+          collection={detail}
+          onClose={() => setDetail(null)}
+          canEdit={canEdit}
+          busy={opsBusy}
+          onMonitor={(monitored) => {
+            setOpsBusy(true);
+            void api
+              .setCollectionMonitored(detail.id, { monitored })
+              .then((next) => {
+                setDetail((cur) => (cur ? { ...cur, monitored: next.monitored } : cur));
+                setServerCols((prev) =>
+                  prev.map((row) => (row.id === detail.id ? { ...row, monitored: next.monitored } : row)),
+                );
+              })
+              .catch((err) => setError(err instanceof Error ? err.message : 'Could not update collection'))
+              .finally(() => setOpsBusy(false));
+          }}
+          onSync={() => {
+            setOpsBusy(true);
+            void api
+              .syncCollection(detail.id)
+              .then(async () => {
+                const next = await api.getCollection(detail.id);
+                setDetail(next);
+              })
+              .catch((err) => setError(err instanceof Error ? err.message : 'Could not sync collection'))
+              .finally(() => setOpsBusy(false));
+          }}
+        />
       )}
 
       {!loading && serverCols.length > 0 && (
@@ -165,7 +235,9 @@ export default function Collections() {
                     {c.name}
                   </span>
                   <span className="flex items-center gap-1 text-[var(--text-tertiary)]">
-                    <Badge tone="neutral">{c.movie_count} titles</Badge>
+                    <Badge tone={c.monitored ? 'success' : 'neutral'}>
+                      {c.monitored ? `${c.movie_count} titles · monitored` : `${c.movie_count} titles`}
+                    </Badge>
                     <ChevronRight className="h-4 w-4" aria-hidden="true" />
                   </span>
                 </button>

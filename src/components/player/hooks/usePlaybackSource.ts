@@ -6,6 +6,8 @@ import {
   type PlaybackSubtitleTrack,
 } from '../../../api/client';
 import { QUALITY_OPTIONS } from '../../../lib/player/types';
+import { toHlsPlaySrc, transcodePlaySrc } from '../../../lib/player/hls';
+import { resolveOfflinePlaySrc } from '../../../lib/offline-library';
 
 export type PlaybackSourceState = {
   loading: boolean;
@@ -21,6 +23,10 @@ export type PlaybackSourceState = {
   trickplayEnabled: boolean;
   /** ffprobe container stream index used for the active transcode audio track. */
   audioStreamIndex: number;
+  /** ffprobe container stream index burned in during transcode (PGS/VobSub). */
+  subtitleStreamIndex: number;
+  /** Absolute seconds to seek after an HLS remount (quality / audio / burn-in). */
+  pendingSeekSec: number;
 };
 
 const INITIAL_STATE: PlaybackSourceState = {
@@ -35,6 +41,8 @@ const INITIAL_STATE: PlaybackSourceState = {
   maxBitrateMbps: '',
   trickplayEnabled: false,
   audioStreamIndex: -1,
+  subtitleStreamIndex: -1,
+  pendingSeekSec: 0,
 };
 
 function appendQuery(url: string, key: string, value: string | number) {
@@ -46,27 +54,70 @@ function appendQuery(url: string, key: string, value: string | number) {
  * Resolves a raw media src into a playable URL (direct or transcode-proxied),
  * loads sidecar subtitle tracks, and supports:
  *  - manual quality overrides (forces a transcode at a capped height)
- *  - seeking mid-transcode (restarts the ffmpeg pipe at a new offset, since a
- *    live-piped fragmented-mp4 has no server-side random access once sent)
+ *  - seeking mid-transcode (in-buffer HLS uses native currentTime; seek-ahead
+ *    remounts ffmpeg at start= so the new playlist begins at the scrub point)
  *  - audio stream selection during transcode (ffmpeg -map)
+ *  - image-subtitle burn-in during transcode (ffmpeg overlay, subtitle_index)
  *  - automatic retry with backoff on resolve failure
  */
 export function usePlaybackSource(src: string) {
   const [state, setState] = useState<PlaybackSourceState>(INITIAL_STATE);
   const qualityRef = useRef<string>('auto');
   const audioStreamIndexRef = useRef(-1);
+  const subtitleStreamIndexRef = useRef(-1);
   const retryTimerRef = useRef<number | null>(null);
+  const offlineBlobRef = useRef<string | null>(null);
+
+  const adoptOfflineBlob = (url: string | null) => {
+    if (offlineBlobRef.current && offlineBlobRef.current !== url) {
+      URL.revokeObjectURL(offlineBlobRef.current);
+    }
+    offlineBlobRef.current = url;
+  };
 
   const load = useCallback(
-    async (opts?: { seekToSec?: number; quality?: string; audioStreamIndex?: number }) => {
+    async (opts?: {
+      seekToSec?: number;
+      quality?: string;
+      audioStreamIndex?: number;
+      subtitleStreamIndex?: number;
+    }) => {
       if (!src) {
         setState(INITIAL_STATE);
         return;
       }
       if (opts?.quality !== undefined) qualityRef.current = opts.quality;
       if (opts?.audioStreamIndex !== undefined) audioStreamIndexRef.current = opts.audioStreamIndex;
+      if (opts?.subtitleStreamIndex !== undefined) {
+        subtitleStreamIndexRef.current = opts.subtitleStreamIndex;
+      }
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
+        const cached = await resolveOfflinePlaySrc(src);
+        if (cached) {
+          adoptOfflineBlob(cached);
+          const subs = await fetchPlaybackSubtitles(src).catch(() => ({
+            tracks: [] as PlaybackSubtitleTrack[],
+          }));
+          setState({
+            loading: false,
+            error: null,
+            playSrc: cached,
+            playMode: 'direct',
+            remoteTracks: subs.tracks ?? [],
+            transcoderAvailable: false,
+            transcodeOffsetSec: 0,
+            retryCount: 0,
+            maxBitrateMbps: '',
+            trickplayEnabled: false,
+            audioStreamIndex: audioStreamIndexRef.current,
+            subtitleStreamIndex: subtitleStreamIndexRef.current,
+            pendingSeekSec: 0,
+          });
+          return;
+        }
+        adoptOfflineBlob(null);
+
         const [resolved, subs] = await Promise.all([
           resolvePlayback(src),
           fetchPlaybackSubtitles(src).catch(() => ({ tracks: [] as PlaybackSubtitleTrack[] })),
@@ -74,24 +125,35 @@ export function usePlaybackSource(src: string) {
         let streamUrl = resolved.stream_url || src;
         let mode = resolved.mode || 'direct';
         let offset = 0;
+        let pendingSeek = 0;
 
         const quality = qualityRef.current;
         const qualityOpt = QUALITY_OPTIONS.find((q) => q.id === quality);
+        const burnSubs = subtitleStreamIndexRef.current >= 0 && resolved.transcoder_available;
         const forceTranscode =
-          quality !== 'auto' && qualityOpt?.maxHeight && resolved.transcoder_available;
+          (quality !== 'auto' && qualityOpt?.maxHeight && resolved.transcoder_available) || burnSubs;
 
-        if (forceTranscode && qualityOpt?.maxHeight) {
-          streamUrl = `/stream/transcode?src=${encodeURIComponent(src)}&max_height=${qualityOpt.maxHeight}`;
+        if (forceTranscode && qualityOpt?.maxHeight && quality !== 'auto') {
+          streamUrl = transcodePlaySrc(src, { maxHeight: qualityOpt.maxHeight });
           mode = 'transcode';
+        } else if (burnSubs) {
+          streamUrl = transcodePlaySrc(src);
+          mode = 'transcode';
+        } else if (mode === 'transcode') {
+          streamUrl = toHlsPlaySrc(streamUrl);
         }
 
         if (mode === 'transcode') {
           if (audioStreamIndexRef.current >= 0) {
             streamUrl = appendQuery(streamUrl, 'audio_index', audioStreamIndexRef.current);
           }
+          if (subtitleStreamIndexRef.current >= 0) {
+            streamUrl = appendQuery(streamUrl, 'subtitle_index', subtitleStreamIndexRef.current);
+          }
           if (opts?.seekToSec != null && opts.seekToSec > 0) {
             streamUrl = appendQuery(streamUrl, 'start', opts.seekToSec.toFixed(2));
             offset = opts.seekToSec;
+            pendingSeek = 0;
           }
         }
 
@@ -107,6 +169,8 @@ export function usePlaybackSource(src: string) {
           maxBitrateMbps: resolved.max_bitrate_mbps || '',
           trickplayEnabled: Boolean(resolved.trickplay_enabled),
           audioStreamIndex: audioStreamIndexRef.current,
+          subtitleStreamIndex: subtitleStreamIndexRef.current,
+          pendingSeekSec: pendingSeek,
         });
       } catch (err) {
         setState((s) => ({
@@ -123,9 +187,14 @@ export function usePlaybackSource(src: string) {
 
   useEffect(() => {
     audioStreamIndexRef.current = -1;
+    subtitleStreamIndexRef.current = -1;
     void load();
     return () => {
       if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
+      if (offlineBlobRef.current) {
+        URL.revokeObjectURL(offlineBlobRef.current);
+        offlineBlobRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
@@ -141,8 +210,8 @@ export function usePlaybackSource(src: string) {
   );
 
   const setQuality = useCallback(
-    (quality: string) => {
-      void load({ quality });
+    (quality: string, seekToSec?: number) => {
+      void load({ quality, seekToSec });
     },
     [load],
   );
@@ -150,6 +219,13 @@ export function usePlaybackSource(src: string) {
   const setAudioStreamIndex = useCallback(
     (streamIndex: number, seekToSec?: number) => {
       void load({ audioStreamIndex: streamIndex, seekToSec });
+    },
+    [load],
+  );
+
+  const setSubtitleStreamIndex = useCallback(
+    (streamIndex: number, seekToSec?: number) => {
+      void load({ subtitleStreamIndex: streamIndex, seekToSec });
     },
     [load],
   );
@@ -175,6 +251,7 @@ export function usePlaybackSource(src: string) {
     seekWithinTranscode,
     setQuality,
     setAudioStreamIndex,
+    setSubtitleStreamIndex,
     retry,
     scheduleRetry,
   };

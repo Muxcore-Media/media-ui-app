@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PlayerTrackInfo } from '../../../lib/player/types';
+import { attachHls, isHlsPlaySrc } from '../../../lib/player/hls';
 
 type UseVideoElementOptions = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -62,7 +63,8 @@ export function useVideoElement({
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !playSrc) return;
-    el.load();
+    const detach = isHlsPlaySrc(playSrc) ? attachHls(el, playSrc) : undefined;
+    if (!detach) el.load();
     setState((s) => ({
       ...s,
       current: 0,
@@ -71,6 +73,9 @@ export function useVideoElement({
       buffering: false,
       fatalError: null,
     }));
+    return () => {
+      detach?.();
+    };
   }, [videoRef, playSrc]);
 
   useEffect(() => {
@@ -242,6 +247,10 @@ export function useVideoElement({
     else el.pause();
   }, [videoRef]);
 
+  const pause = useCallback(() => {
+    videoRef.current?.pause();
+  }, [videoRef]);
+
   /** Seeks within the currently loaded media element (relative time, not absolute). */
   const seekRelative = useCallback(
     (value: number) => {
@@ -258,6 +267,7 @@ export function useVideoElement({
     /** Absolute position across transcode restarts, for UI/segment logic. */
     absoluteCurrent: state.current + transcodeOffsetSec,
     togglePlay,
+    pause,
     seekRelative,
     setVolume: (v: number) => setState((s) => ({ ...s, volume: Math.min(1, Math.max(0, v)) })),
     setMuted: (m: boolean) => setState((s) => ({ ...s, muted: m })),

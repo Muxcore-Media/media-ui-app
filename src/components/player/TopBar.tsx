@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Info, Keyboard, ListVideo } from 'lucide-react';
+import { ArrowLeft, Info, Keyboard, ListVideo, Users } from 'lucide-react';
+import { ReportIssueButton } from '../media/ReportIssueButton';
 
 type Props = {
   href: string;
@@ -12,6 +13,11 @@ type Props = {
   onToggleStats: () => void;
   onShowShortcuts: () => void;
   visible: boolean;
+  mediaId?: string;
+  mediaType?: string;
+  watchTogetherActive?: boolean;
+  watchTogetherCopied?: boolean;
+  onWatchTogether?: () => void;
 };
 
 export default function TopBar({
@@ -25,6 +31,11 @@ export default function TopBar({
   onToggleStats,
   onShowShortcuts,
   visible,
+  mediaId,
+  mediaType = 'movie',
+  watchTogetherActive = false,
+  watchTogetherCopied = false,
+  onWatchTogether,
 }: Props) {
   return (
     <div
@@ -45,6 +56,19 @@ export default function TopBar({
           </h1>
           {metaLine ? <p className="text-xs text-[var(--player-fg-muted)]">{metaLine}</p> : null}
         </div>
+        <ReportIssueButton variant="icon" title={title} mediaType={mediaType} mediaId={mediaId} />
+        {onWatchTogether ? (
+          <button
+            type="button"
+            aria-label={watchTogetherCopied ? 'Watch Together link copied' : 'Watch Together'}
+            aria-pressed={watchTogetherActive}
+            data-testid="player-watch-together"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${watchTogetherActive ? 'text-[var(--accent-color)]' : 'text-[var(--player-fg)]'}`}
+            onClick={onWatchTogether}
+          >
+            <Users className="h-4.5 w-4.5" aria-hidden="true" />
+          </button>
+        ) : null}
         <button
           type="button"
           aria-label="Keyboard shortcuts"

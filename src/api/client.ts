@@ -1,5 +1,6 @@
 import type {
   Episode,
+  AudiobookDetail,
   LibraryListResponse,
   LibraryRow,
   ListResponse,
@@ -8,14 +9,261 @@ import type {
   MusicArtistDetail,
   PersonDetail,
   RelatedItem,
+  ActivityResponse,
+  ActivityRetryResult,
+  CalendarResponse,
+  CutoffUnmetResponse,
+  ReleaseBlockResult,
+  ReleaseGrabResult,
+  ReleaseSearchResponse,
+  SearchNowResult,
+  WantedResponse,
   RelatedResponse,
   SearchResult,
   DiscoverDetail,
+  MediaIssue,
   Season,
   TVShow,
 } from '../types';
 import type { Capabilities, FeatureKey, LibraryKey } from '../lib/capabilities';
 import { DEFAULT_CAPABILITIES } from '../lib/capabilities';
+import {
+  normalizeAcquisitionStatus,
+  normalizeIndexers,
+  type AcquisitionStatus,
+  type IndexersResponse,
+} from '../lib/acquisition-status';
+import { normalizeWatchTogether, type WatchTogetherRoom } from '../lib/watch-together';
+import {
+  customFormatWriteBody,
+  normalizeFormatScore,
+  normalizeFormatsCatalog,
+  normalizeParsedQuality,
+  normalizeQualityFormat,
+  normalizeQualityProfile,
+  normalizeReleaseProfile,
+  qualityProfileWriteBody,
+  releaseProfileWriteBody,
+  type FormatScorePreview,
+  type FormatsCatalog,
+  type ParsedQuality,
+  type QualityFormat,
+  type QualityProfile,
+  type ReleaseProfile,
+} from '../lib/formats';
+import {
+  normalizeLibraryRoot,
+  normalizeRootBrowse,
+  normalizeRootPick,
+  normalizeRootProbe,
+  normalizeRootsCatalog,
+  rootWriteBody,
+  type LibraryRoot,
+  type RootBrowseListing,
+  type RootPick,
+  type RootProbe,
+  type RootsCatalog,
+} from '../lib/roots';
+import {
+  normalizeLibraryScanResult,
+  normalizeLibraryScanStatus,
+  normalizeWatchDir,
+  normalizeWatchDirs,
+  type LibraryScanResult,
+  type LibraryScanStatus,
+  type WatchDir,
+  type WatchDirsResponse,
+} from '../lib/library-scan';
+import {
+  normalizeRenamePreview,
+  normalizeRenameResult,
+  renameQuery,
+  type RenamePreview,
+  type RenameResult,
+} from '../lib/rename';
+import {
+  normalizeNamingTemplate,
+  normalizeNamingTemplates,
+  type NamingTemplate,
+  type NamingTemplatesResponse,
+} from '../lib/naming-templates';
+import { normalizeOrganize, type OrganizeResult } from '../lib/organize';
+import { normalizeSessions, type SessionsResponse } from '../lib/sessions';
+import {
+  normalizeDuplicates,
+  normalizeHistoryImport,
+  normalizeItemWatchStats,
+  normalizeStaleLibrary,
+  normalizeStorage,
+  normalizeStorageHistory,
+  normalizeTautulliImport,
+  normalizeWatchCharts,
+  normalizeWatchStats,
+  type DuplicatesResponse,
+  type WatchChartsResponse,
+  type HistoryImportResult,
+  type ItemWatchStats,
+  type StaleLibraryResponse,
+  type StorageHistoryResponse,
+  type StorageResponse,
+  type TautulliImportResult,
+  type WatchStatsResponse,
+} from '../lib/watch-stats';
+import { normalizeWatchHistory, type WatchHistoryResponse } from '../lib/watch-history';
+import { normalizeMissing, type MissingResponse } from '../lib/missing';
+import { normalizeSkipMedia, type SkipMediaResponse } from '../lib/skip-media';
+import {
+  normalizeJellyfinRefresh,
+  normalizeJellyfinStatus,
+  normalizeJellyfinSync,
+  type JellyfinRefreshResult,
+  type JellyfinStatus,
+  type JellyfinSyncResult,
+} from '../lib/jellyfin-sync';
+import { normalizeJellyfinLink, type JellyfinLink } from '../lib/jellyfin-link';
+import { normalizePlexSyncLists, type PlexSyncListsResponse } from '../lib/plex-sync';
+import {
+  normalizeAutoTagCatalog,
+  normalizeAutoTagClassify,
+  type AutoTag,
+  type AutoTagCatalog,
+  type AutoTagClassifyResult,
+  type AutoTagRule,
+} from '../lib/auto-tags';
+import { normalizeGuardCatalog, normalizeGuardRule, type GuardCatalog, type GuardRule, type GuardTrust } from '../lib/guard';
+import {
+  normalizeWatchNotifyCatalog,
+  normalizeWatchNotifyDestination,
+  normalizeWatchNotifyRule,
+  type WatchNotifyCatalog,
+  type WatchNotifyDestination,
+  type WatchNotifyFilters,
+  type WatchNotifyRule,
+} from '../lib/watch-notify';
+import { normalizeBlocklist, type BlocklistResponse } from '../lib/blocklist';
+import { normalizeDelayProfiles, type DelayProfile, type DelayProfilesResponse } from '../lib/delay-profiles';
+import { normalizeInvite, normalizeInvites, type HouseholdInvite, type InvitesResponse } from '../lib/invites';
+import { normalizeHouseholdUser, normalizeUsers, type HouseholdUser, type UsersResponse } from '../lib/users';
+import { normalizeTOTP, type HouseholdTOTP } from '../lib/totp';
+import {
+  normalizePasskeyBegin,
+  normalizePasskeys,
+  type PasskeyBegin,
+  type PasskeysResponse,
+} from '../lib/passkeys';
+import {
+  normalizePasswordResets,
+  type PasswordResetsResponse,
+} from '../lib/password-resets';
+import {
+  keyWriteBody,
+  normalizeCreatedAPIKey,
+  normalizeKeys,
+  type CreatedAPIKey,
+  type HouseholdAPIKey,
+  type KeysResponse,
+} from '../lib/keys';
+import {
+  listSourceUpdateBody,
+  listSourceWriteBody,
+  normalizeListSource,
+  normalizeListSources,
+  normalizeListSyncHistory,
+  normalizeListSyncItems,
+  type ListSource,
+  type ListSourcesResponse,
+  type ListSyncHistoryResponse,
+  type ListSyncItemsResponse,
+} from '../lib/list-sources';
+import {
+  migrateWriteBody,
+  normalizeMigrateResult,
+  type MigrateResult,
+} from '../lib/arr-migrate';
+import {
+  notifyWriteBody,
+  normalizeNotifications,
+  type NotificationsStatus,
+} from '../lib/notifications';
+import { normalizeLibraryTag, normalizeTags, tagWriteBody, type LibraryTag, type TagsResponse } from '../lib/tags';
+import {
+  normalizeAlternateTitle,
+  normalizeAlternateTitles,
+  titlesPath,
+  type AlternateTitle,
+  type AlternateTitlesResponse,
+} from '../lib/alternate-titles';
+import { historyPath, normalizeItemHistory, type ItemHistoryResponse } from '../lib/item-history';
+import {
+  householdCollectionBody,
+  householdExclusionBody,
+  householdProtectionBody,
+  householdRuleBody,
+  normalizeMaintainerCandidate,
+  normalizeMaintainerCollection,
+  normalizeMaintainerExclusion,
+  normalizeMaintainerProtection,
+  normalizeMaintainerRule,
+  normalizeMaintainerRun,
+  normalizeMaintainerStatus,
+  type HouseholdCollectionInput,
+  type HouseholdExclusionInput,
+  type HouseholdRuleInput,
+  type MaintainerCandidate,
+  type MaintainerCollection,
+  type MaintainerExclusion,
+  type MaintainerProtection,
+  type MaintainerRule,
+  type MaintainerRun,
+  type MaintainerStatus,
+} from '../lib/maintainer';
+import {
+  artworkPath,
+  normalizeItemArtwork,
+  normalizeItemArtworkList,
+  replaceArtworkBody,
+  type ItemArtwork,
+  type ItemArtworkResponse,
+} from '../lib/item-artwork';
+import {
+  itemSubtitlesPath,
+  normalizeItemSubtitle,
+  normalizeItemSubtitles,
+  uploadSubtitleBody,
+  type ItemSubtitleFile,
+  type ItemSubtitlesResponse,
+} from '../lib/item-subtitles';
+import { normalizeMovieFiles, type MovieFilesResponse } from '../lib/item-files';
+import { normalizeBackups, normalizeHouseholdBackup, type BackupsStatus, type HouseholdBackup } from '../lib/backups';
+import {
+  massEditSubtitleBody,
+  normalizeSubtitleBlacklist,
+  normalizeSubtitleHistory,
+  normalizeSubtitleLanguages,
+  normalizeSubtitleLibrary,
+  normalizeSubtitleProfiles,
+  normalizeSubtitleProviders,
+  normalizeSubtitleProfile,
+  normalizeWanted,
+  normalizeWantedItem,
+  wantedWriteBody,
+  type SubtitleBlacklistResponse,
+  type SubtitleHistoryResponse,
+  type SubtitleLanguagesResponse,
+  type SubtitleLibraryResponse,
+  type SubtitleProfile,
+  type SubtitleProfilesResponse,
+  type SubtitleProvidersResponse,
+  type SubtitleWantedItem,
+  type SubtitleWantedResponse,
+} from '../lib/subtitle-ops';
+import { normalizeSeriesOverride, type SeriesOverrideResponse } from '../lib/series-override';
+import {
+  normalizeImportCandidates,
+  normalizeImportResult,
+  type ImportCandidatesResponse,
+  type ImportPathResult,
+} from '../lib/manual-import';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
 
@@ -180,6 +428,11 @@ function normalizeMovie(raw: Record<string, unknown>): Movie {
         ? String(raw.library_type ?? raw.libraryType)
         : undefined,
     studio: extractStudio(raw),
+    monitored: raw.monitored === true,
+    quality_profile_id:
+      raw.quality_profile_id != null || raw.qualityProfileId != null
+        ? String(raw.quality_profile_id ?? raw.qualityProfileId)
+        : undefined,
   };
 }
 
@@ -199,6 +452,10 @@ function normalizeEpisode(raw: Record<string, unknown>): Episode {
     ),
     air_date:
       raw.air_date != null || raw.airDate != null ? String(raw.air_date ?? raw.airDate) : undefined,
+    monitored: raw.monitored === true,
+    quality: raw.quality != null && String(raw.quality).trim() ? String(raw.quality) : undefined,
+    filename: raw.filename != null && String(raw.filename).trim() ? String(raw.filename) : undefined,
+    file_id: raw.file_id != null || raw.fileId != null ? String(raw.file_id ?? raw.fileId) : undefined,
   };
 }
 
@@ -213,6 +470,7 @@ function normalizeSeason(raw: Record<string, unknown>): Season {
     episode_count: Number(raw.episode_count ?? raw.episodeCount ?? eps.length),
     poster_url: posterURL(String(raw.poster_url ?? raw.posterUrl ?? raw.poster_path ?? ''), 'tv'),
     episodes: eps,
+    monitored: raw.monitored === true,
   };
 }
 
@@ -256,6 +514,15 @@ function normalizeTV(raw: Record<string, unknown>): TVShow {
         : undefined,
     network: extractNetwork(raw),
     studio: extractStudio(raw),
+    monitored: raw.monitored === true,
+    quality_profile_id:
+      raw.quality_profile_id != null || raw.qualityProfileId != null
+        ? String(raw.quality_profile_id ?? raw.qualityProfileId)
+        : undefined,
+    root_folder_path:
+      raw.root_folder_path != null || raw.rootFolderPath != null
+        ? String(raw.root_folder_path ?? raw.rootFolderPath)
+        : undefined,
   };
 }
 
@@ -279,6 +546,14 @@ function normalizeRequest(raw: Record<string, unknown>): MediaRequest {
       statusDetail != null && String(statusDetail) !== '' ? String(statusDetail) : undefined,
     statusLabel:
       statusLabel != null && String(statusLabel) !== '' ? String(statusLabel) : undefined,
+    qualityProfileId:
+      raw.qualityProfileId != null || raw.quality_profile_id != null
+        ? String(raw.qualityProfileId ?? raw.quality_profile_id)
+        : undefined,
+    seasonNumber:
+      raw.seasonNumber != null || raw.season_number != null
+        ? Number(raw.seasonNumber ?? raw.season_number)
+        : undefined,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
     updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
   };
@@ -328,6 +603,345 @@ export const api = {
     return mergeCapabilities(await getJSON('/api/capabilities'));
   },
 
+  async getAcquisition(): Promise<AcquisitionStatus> {
+    return normalizeAcquisitionStatus(await getJSON<Record<string, unknown>>('/api/acquisition'));
+  },
+
+  async listIndexers(): Promise<IndexersResponse> {
+    return normalizeIndexers(await getJSON<unknown>('/api/indexers'));
+  },
+
+  async listSessions(): Promise<SessionsResponse> {
+    return normalizeSessions(await getJSON<Record<string, unknown>>('/api/sessions'));
+  },
+
+  async listSkipMedia(): Promise<SkipMediaResponse> {
+    return normalizeSkipMedia(await getJSON<Record<string, unknown>>('/api/playback/segments/media'));
+  },
+
+  async getWatchStats(days = 30): Promise<WatchStatsResponse> {
+    return normalizeWatchStats(
+      await getJSON<Record<string, unknown>>(`/api/watch-stats?days=${encodeURIComponent(String(days))}`),
+    );
+  },
+
+  async getItemWatchStats(id: string, runtimeMinutes?: number): Promise<ItemWatchStats> {
+    const q = new URLSearchParams({ id });
+    if (runtimeMinutes && runtimeMinutes > 0) q.set('runtime', String(Math.round(runtimeMinutes)));
+    return normalizeItemWatchStats(await getJSON<Record<string, unknown>>(`/api/watch-stats/item?${q}`));
+  },
+
+  async getStaleLibrary(staleDays = 90): Promise<StaleLibraryResponse> {
+    return normalizeStaleLibrary(
+      await getJSON<Record<string, unknown>>(
+        `/api/watch-stats/stale?stale_days=${encodeURIComponent(String(staleDays))}&limit=40`,
+      ),
+    );
+  },
+
+  async importTautulliHistory(input: {
+    tautulliUrl?: string;
+    apiKey?: string;
+    recordsJson?: string;
+    dryRun: boolean;
+  }): Promise<TautulliImportResult> {
+    return normalizeTautulliImport(
+      await getJSON<Record<string, unknown>>('/api/watch-stats/import-tautulli', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tautulli_url: input.tautulliUrl ?? '',
+          api_key: input.apiKey ?? '',
+          records_json: input.recordsJson ?? '',
+          dry_run: input.dryRun,
+        }),
+      }),
+    );
+  },
+
+  async importJellystatHistory(input: {
+    backupJson: string;
+    dryRun: boolean;
+  }): Promise<HistoryImportResult> {
+    return normalizeHistoryImport(
+      await getJSON<Record<string, unknown>>('/api/watch-stats/import-jellystat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          backup_json: input.backupJson,
+          dry_run: input.dryRun,
+        }),
+      }),
+    );
+  },
+
+  async getLibraryDuplicates(): Promise<DuplicatesResponse> {
+    return normalizeDuplicates(await getJSON<Record<string, unknown>>('/api/watch-stats/duplicates?limit=20'));
+  },
+
+  async getLibraryStorage(): Promise<StorageResponse> {
+    return normalizeStorage(await getJSON<Record<string, unknown>>('/api/watch-stats/storage'));
+  },
+
+  async getLibraryStorageHistory(days = 90): Promise<StorageHistoryResponse> {
+    return normalizeStorageHistory(
+      await getJSON<Record<string, unknown>>(`/api/watch-stats/storage-history?days=${encodeURIComponent(String(days))}`),
+    );
+  },
+
+  async getWatchCharts(days = 30): Promise<WatchChartsResponse> {
+    return normalizeWatchCharts(
+      await getJSON<Record<string, unknown>>(`/api/watch-stats/charts?days=${encodeURIComponent(String(days))}`),
+    );
+  },
+
+  async stopSession(id: string): Promise<{ stopped: boolean; serverType?: string }> {
+    return getJSON<{ stopped: boolean; serverType?: string }>(
+      `/api/sessions/${encodeURIComponent(id)}/stop`,
+      { method: 'POST' },
+    );
+  },
+
+  async listWatchHistory(
+    limit = 100,
+    filter?: { userId?: string; q?: string },
+  ): Promise<WatchHistoryResponse> {
+    const q = new URLSearchParams({ limit: String(limit) });
+    if (filter?.userId) q.set('userId', filter.userId);
+    if (filter?.q) q.set('q', filter.q);
+    return normalizeWatchHistory(await getJSON<Record<string, unknown>>(`/api/history?${q}`));
+  },
+
+  async getSeriesOverride(id: string): Promise<SeriesOverrideResponse> {
+    return normalizeSeriesOverride(
+      await getJSON<Record<string, unknown>>(`/api/tv/${encodeURIComponent(id)}/override`),
+    );
+  },
+
+  async upsertSeriesOverride(input: {
+    id: string;
+    delayMinutes: number;
+    preferredGroups: string[];
+    ignoredGroups: string[];
+  }): Promise<SeriesOverrideResponse> {
+    return normalizeSeriesOverride(
+      await getJSON<Record<string, unknown>>(`/api/tv/${encodeURIComponent(input.id)}/override`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delay_minutes: input.delayMinutes,
+          preferred_groups: input.preferredGroups,
+          ignored_groups: input.ignoredGroups,
+        }),
+      }),
+    );
+  },
+
+  async deleteSeriesOverride(id: string): Promise<{ removed: boolean }> {
+    return getJSON<{ removed: boolean }>(`/api/tv/${encodeURIComponent(id)}/override`, { method: 'DELETE' });
+  },
+
+  async listImportCandidates(): Promise<ImportCandidatesResponse> {
+    return normalizeImportCandidates(await getJSON<Record<string, unknown>>('/api/import/candidates'));
+  },
+
+  async importPath(body: {
+    path: string;
+    title?: string;
+    media_type?: string;
+    year?: number;
+    season_number?: number;
+    episode_number?: number;
+  }): Promise<ImportPathResult> {
+    return normalizeImportResult(
+      await getJSON<Record<string, unknown>>('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async getFormats(): Promise<FormatsCatalog> {
+    return normalizeFormatsCatalog(await getJSON<Record<string, unknown>>('/api/formats'));
+  },
+
+  async syncTrashGuides(input?: {
+    scoreSet?: string;
+    importProfiles?: boolean;
+    services?: string[];
+    official?: boolean;
+  }): Promise<FormatsCatalog> {
+    return normalizeFormatsCatalog(
+      await getJSON<Record<string, unknown>>('/api/formats/sync-trash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input ?? { importProfiles: true, services: ['radarr', 'sonarr'] }),
+      }),
+    );
+  },
+
+  async scoreRelease(title: string, profileId?: string): Promise<FormatScorePreview> {
+    return normalizeFormatScore(
+      await getJSON<Record<string, unknown>>('/api/formats/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, profileId }),
+      }),
+    );
+  },
+
+  async parseQuality(title: string): Promise<ParsedQuality> {
+    return normalizeParsedQuality(
+      await getJSON<Record<string, unknown>>('/api/formats/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      }),
+    );
+  },
+
+  async createQualityProfile(
+    input: Pick<
+      QualityProfile,
+      'name' | 'minScore' | 'cutoffScore' | 'upgradeAllowed' | 'upgradeDelayMinutes' | 'formatScores'
+    >,
+  ): Promise<QualityProfile> {
+    const raw = await getJSON<{ profile?: unknown }>('/api/formats/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(qualityProfileWriteBody(input)),
+    });
+    return normalizeQualityProfile(raw.profile);
+  },
+
+  async updateQualityProfile(
+    id: string,
+    input: Pick<
+      QualityProfile,
+      'name' | 'minScore' | 'cutoffScore' | 'upgradeAllowed' | 'upgradeDelayMinutes' | 'formatScores'
+    >,
+  ): Promise<QualityProfile> {
+    const raw = await getJSON<{ profile?: unknown }>(`/api/formats/profiles/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(qualityProfileWriteBody(input)),
+    });
+    return normalizeQualityProfile(raw.profile);
+  },
+
+  async deleteQualityProfile(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/formats/profiles/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async createCustomFormat(input: Pick<QualityFormat, 'name' | 'score' | 'rules'>): Promise<QualityFormat> {
+    const raw = await getJSON<{ format?: unknown }>('/api/formats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customFormatWriteBody(input)),
+    });
+    return normalizeQualityFormat(raw.format);
+  },
+
+  async updateCustomFormat(
+    id: string,
+    input: Pick<QualityFormat, 'name' | 'score' | 'rules'>,
+  ): Promise<QualityFormat> {
+    const raw = await getJSON<{ format?: unknown }>(`/api/formats/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customFormatWriteBody(input)),
+    });
+    return normalizeQualityFormat(raw.format);
+  },
+
+  async createReleaseProfile(input: {
+    name: string;
+    preferred?: string[];
+    mustContain?: string[];
+    mustNotContain?: string[];
+    preferredScore?: number;
+    enabled?: boolean;
+  }): Promise<ReleaseProfile> {
+    const raw = await getJSON<{ profile?: unknown }>('/api/formats/release-profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(releaseProfileWriteBody(input)),
+    });
+    return normalizeReleaseProfile(raw.profile);
+  },
+
+  async updateReleaseProfile(
+    id: string,
+    input: {
+      name: string;
+      preferred?: string[];
+      mustContain?: string[];
+      mustNotContain?: string[];
+      preferredScore?: number;
+      enabled?: boolean;
+    },
+  ): Promise<ReleaseProfile> {
+    const raw = await getJSON<{ profile?: unknown }>(`/api/formats/release-profiles/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(releaseProfileWriteBody(input)),
+    });
+    return normalizeReleaseProfile(raw.profile);
+  },
+
+  async deleteReleaseProfile(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/formats/release-profiles/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async deleteCustomFormat(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/formats/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async createWatchTogether(input: {
+    mediaId?: string;
+    src: string;
+    title?: string;
+    positionSeconds?: number;
+    playing?: boolean;
+  }): Promise<WatchTogetherRoom> {
+    return normalizeWatchTogether(
+      await getJSON<Record<string, unknown>>('/api/watch-together', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+    );
+  },
+
+  async getWatchTogether(id: string): Promise<WatchTogetherRoom> {
+    return normalizeWatchTogether(
+      await getJSON<Record<string, unknown>>(`/api/watch-together/${encodeURIComponent(id)}`),
+    );
+  },
+
+  async syncWatchTogether(
+    id: string,
+    input: { positionSeconds: number; playing: boolean },
+    hostToken?: string,
+  ): Promise<WatchTogetherRoom> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (hostToken) headers['X-Watch-Together-Host'] = hostToken;
+    return normalizeWatchTogether(
+      await getJSON<Record<string, unknown>>(`/api/watch-together/${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(input),
+      }),
+    );
+  },
+
   async listMovies(
     page = 1,
     pageSize = 48,
@@ -361,6 +975,463 @@ export const api = {
     return normalizeTV(row);
   },
 
+  async setMonitored(input: {
+    kind: 'movie' | 'tv' | 'season' | 'episode' | 'artist' | 'album' | 'author' | 'book' | 'series' | 'issue' | 'audiobook';
+    id: string;
+    monitored: boolean;
+  }): Promise<{ monitored: boolean }> {
+    const path =
+      input.kind === 'movie'
+        ? `/api/movies/${encodeURIComponent(input.id)}`
+        : input.kind === 'tv'
+          ? `/api/tv/${encodeURIComponent(input.id)}`
+          : input.kind === 'season'
+            ? `/api/tv/seasons/${encodeURIComponent(input.id)}`
+            : input.kind === 'artist'
+              ? `/api/music/${encodeURIComponent(input.id)}`
+              : input.kind === 'album'
+                ? `/api/music/albums/${encodeURIComponent(input.id)}`
+                : input.kind === 'author'
+                  ? `/api/books/${encodeURIComponent(input.id)}`
+                  : input.kind === 'book'
+                    ? `/api/books/works/${encodeURIComponent(input.id)}`
+                    : input.kind === 'series'
+                      ? `/api/comics/${encodeURIComponent(input.id)}`
+                      : input.kind === 'issue'
+                        ? `/api/comics/issues/${encodeURIComponent(input.id)}`
+                        : input.kind === 'audiobook'
+                          ? `/api/audiobooks/${encodeURIComponent(input.id)}`
+                          : `/api/episodes/${encodeURIComponent(input.id)}`;
+    return getJSON<{ monitored: boolean }>(path, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ monitored: input.monitored }),
+    });
+  },
+
+  async removeLibraryItem(input: {
+    kind: 'movie' | 'tv' | 'artist' | 'author' | 'book' | 'series' | 'issue' | 'audiobook';
+    id: string;
+    deleteFiles?: boolean;
+  }): Promise<{ removed: boolean; delete_files: boolean }> {
+    const path =
+      input.kind === 'movie'
+        ? `/api/movies/${encodeURIComponent(input.id)}`
+        : input.kind === 'tv'
+          ? `/api/tv/${encodeURIComponent(input.id)}`
+          : input.kind === 'artist'
+            ? `/api/music/${encodeURIComponent(input.id)}`
+            : input.kind === 'author'
+              ? `/api/books/${encodeURIComponent(input.id)}`
+              : input.kind === 'book'
+                ? `/api/books/works/${encodeURIComponent(input.id)}`
+                : input.kind === 'series'
+                  ? `/api/comics/${encodeURIComponent(input.id)}`
+                  : input.kind === 'issue'
+                    ? `/api/comics/issues/${encodeURIComponent(input.id)}`
+                    : `/api/audiobooks/${encodeURIComponent(input.id)}`;
+    const q = input.deleteFiles ? '?delete_files=1' : '';
+    return getJSON<{ removed: boolean; delete_files: boolean }>(`${path}${q}`, { method: 'DELETE' });
+  },
+
+  async refreshLibraryItem(input: {
+    kind: 'movie' | 'tv' | 'artist';
+    id: string;
+  }): Promise<{ refreshed: boolean }> {
+    const path =
+      input.kind === 'movie'
+        ? `/api/movies/${encodeURIComponent(input.id)}/refresh`
+        : input.kind === 'tv'
+          ? `/api/tv/${encodeURIComponent(input.id)}/refresh`
+          : `/api/music/${encodeURIComponent(input.id)}/refresh`;
+    return getJSON<{ refreshed: boolean }>(path, { method: 'POST' });
+  },
+
+  async getEpisodeFile(id: string): Promise<{
+    available: boolean;
+    id: string;
+    file_id?: string;
+    filename?: string;
+    quality?: string;
+  }> {
+    return getJSON(`/api/episodes/${encodeURIComponent(id)}/file`);
+  },
+
+  async removeEpisodeFile(input: {
+    id: string;
+    deleteFiles?: boolean;
+  }): Promise<{ removed: boolean; delete_files: boolean }> {
+    const q = input.deleteFiles ? '?delete_files=1' : '';
+    return getJSON<{ removed: boolean; delete_files: boolean }>(
+      `/api/episodes/${encodeURIComponent(input.id)}/file${q}`,
+      { method: 'DELETE' },
+    );
+  },
+
+  async removeMovieFile(input: {
+    id: string;
+    deleteFiles?: boolean;
+  }): Promise<{ removed: boolean; delete_files: boolean; files: number }> {
+    const q = input.deleteFiles ? '?delete_files=1' : '';
+    return getJSON<{ removed: boolean; delete_files: boolean; files: number }>(
+      `/api/movies/${encodeURIComponent(input.id)}/file${q}`,
+      { method: 'DELETE' },
+    );
+  },
+
+  async setQualityProfile(input: {
+    kind: 'movie' | 'tv' | 'artist';
+    id: string;
+    qualityProfileId: string;
+  }): Promise<{ quality_profile_id: string }> {
+    const path =
+      input.kind === 'movie'
+        ? `/api/movies/${encodeURIComponent(input.id)}`
+        : input.kind === 'tv'
+          ? `/api/tv/${encodeURIComponent(input.id)}`
+          : `/api/music/${encodeURIComponent(input.id)}`;
+    return getJSON<{ quality_profile_id: string }>(path, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quality_profile_id: input.qualityProfileId }),
+    });
+  },
+
+  async addMusicAlbum(input: {
+    artistId: string;
+    title: string;
+    year?: number;
+  }): Promise<{ added: boolean; album: { id: string; title: string; year?: number; monitored?: boolean } }> {
+    return getJSON(`/api/music/${encodeURIComponent(input.artistId)}/albums`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: input.title, year: input.year, monitored: true }),
+    });
+  },
+
+  async addAudiobook(input: {
+    author: string;
+    title: string;
+    year?: number;
+  }): Promise<{ added: boolean; item: { id: string; title: string; year?: number } }> {
+    return getJSON('/api/audiobooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        author: input.author,
+        title: input.title,
+        year: input.year,
+        monitored: true,
+      }),
+    });
+  },
+
+  async addBookAuthor(input: {
+    name: string;
+  }): Promise<{ added: boolean; item: { id: string; name: string } }> {
+    return getJSON('/api/books', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: input.name, monitored: true }),
+    });
+  },
+
+  async addComicSeries(input: {
+    title: string;
+    publisher?: string;
+  }): Promise<{ added: boolean; item: { id: string; title: string; publisher?: string } }> {
+    return getJSON('/api/comics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: input.title, publisher: input.publisher, monitored: true }),
+    });
+  },
+
+  async addComicIssue(input: {
+    seriesId: string;
+    title: string;
+    number?: string;
+    year?: number;
+  }): Promise<{ added: boolean; item: { id: string; title: string; number?: string; year?: number } }> {
+    return getJSON(`/api/comics/${encodeURIComponent(input.seriesId)}/issues`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: input.title,
+        number: input.number,
+        year: input.year,
+        monitored: true,
+      }),
+    });
+  },
+
+  async addBook(input: {
+    authorId: string;
+    title: string;
+    year?: number;
+  }): Promise<{ added: boolean; item: { id: string; title: string; year?: number; monitored?: boolean } }> {
+    return getJSON(`/api/books/${encodeURIComponent(input.authorId)}/books`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: input.title, year: input.year, monitored: true }),
+    });
+  },
+
+  async addMusicArtist(input: {
+    name: string;
+  }): Promise<{ added: boolean; artist: { id: string; name: string; monitored?: boolean } }> {
+    return getJSON('/api/music', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: input.name, monitored: true }),
+    });
+  },
+
+  async previewRename(input: { movieId?: string; tvId?: string; episodeId?: string }): Promise<RenamePreview> {
+    const q = renameQuery(input);
+    return normalizeRenamePreview(await getJSON<unknown>(`/api/rename/preview${q ? `?${q}` : ''}`));
+  },
+
+  async applyRename(input: { movieId?: string; tvId?: string; episodeId?: string }): Promise<RenameResult> {
+    return normalizeRenameResult(
+      await getJSON<unknown>('/api/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          movie_id: input.movieId || undefined,
+          tv_id: input.tvId || undefined,
+          episode_id: input.episodeId || undefined,
+        }),
+      }),
+    );
+  },
+
+  async listNamingTemplates(mediaType?: string): Promise<NamingTemplatesResponse> {
+    const q = mediaType ? `?media_type=${encodeURIComponent(mediaType)}` : '';
+    return normalizeNamingTemplates(await getJSON<unknown>(`/api/rename/templates${q}`));
+  },
+
+  async createNamingTemplate(input: {
+    name: string;
+    mediaType?: string;
+    pattern: string;
+    isDefault?: boolean;
+  }): Promise<NamingTemplate> {
+    const raw = await getJSON<{ template?: unknown }>('/api/rename/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: input.name,
+        media_type: input.mediaType,
+        pattern: input.pattern,
+        is_default: input.isDefault,
+      }),
+    });
+    return normalizeNamingTemplate(raw.template);
+  },
+
+  async updateNamingTemplate(
+    id: string,
+    input: { name: string; pattern: string; isDefault?: boolean },
+  ): Promise<NamingTemplate> {
+    const raw = await getJSON<{ template?: unknown }>(`/api/rename/templates/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: input.name,
+        pattern: input.pattern,
+        is_default: input.isDefault,
+      }),
+    });
+    return normalizeNamingTemplate(raw.template);
+  },
+
+  async deleteNamingTemplate(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/rename/templates/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async organizeLibrary(input: {
+    directory: string;
+    mediaType?: string;
+    dryRun?: boolean;
+    importMode?: string;
+  }): Promise<OrganizeResult> {
+    return normalizeOrganize(
+      await getJSON<unknown>('/api/rename/organize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          directory: input.directory,
+          media_type: input.mediaType,
+          dry_run: input.dryRun,
+          import_mode: input.importMode,
+        }),
+      }),
+    );
+  },
+
+  async listRoots(kind?: 'movies' | 'tv' | 'music' | 'books' | 'audiobooks'): Promise<RootsCatalog> {
+    const q = kind ? `?kind=${encodeURIComponent(kind)}` : '';
+    return normalizeRootsCatalog(await getJSON<unknown>(`/api/roots${q}`));
+  },
+
+  async pickRoot(kind: 'movies' | 'tv' | 'music' | 'books' | 'audiobooks'): Promise<RootPick> {
+    return normalizeRootPick(await getJSON<unknown>(`/api/roots/pick?kind=${encodeURIComponent(kind)}`));
+  },
+
+  async browseRoots(path = ''): Promise<RootBrowseListing> {
+    const q = path ? `?path=${encodeURIComponent(path)}` : '';
+    return normalizeRootBrowse(await getJSON<unknown>(`/api/roots/browse${q}`));
+  },
+
+  async probeRoot(path: string): Promise<RootProbe> {
+    return normalizeRootProbe(
+      await getJSON<unknown>('/api/roots/probe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      }),
+    );
+  },
+
+  async createRoot(input: {
+    path: string;
+    name?: string;
+    mediaKind?: string;
+    isDefault?: boolean;
+  }): Promise<LibraryRoot> {
+    const data = await getJSON<Record<string, unknown>>('/api/roots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path: input.path,
+        name: input.name || undefined,
+        media_kind: input.mediaKind || undefined,
+        is_default: input.isDefault === true,
+      }),
+    });
+    const root = normalizeLibraryRoot(data.root ?? data);
+    if (!root) {
+      throw new Error('root create returned no path');
+    }
+    return root;
+  },
+
+  async getLibraryScan(): Promise<LibraryScanStatus> {
+    return normalizeLibraryScanStatus(await getJSON<unknown>('/api/scan'));
+  },
+
+  async listWatchDirs(): Promise<WatchDirsResponse> {
+    return normalizeWatchDirs(await getJSON<unknown>('/api/scan/watch-dirs'));
+  },
+
+  async createWatchDir(input: {
+    path: string;
+    mediaType?: string;
+    libraryPath?: string;
+  }): Promise<WatchDir> {
+    return normalizeWatchDir(
+      await getJSON<unknown>('/api/scan/watch-dirs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: input.path,
+          media_type: input.mediaType,
+          library_path: input.libraryPath,
+        }),
+      }),
+    );
+  },
+
+  async deleteWatchDir(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/scan/watch-dirs/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async updateWatchDir(
+    id: string,
+    input: {
+      enabled?: boolean;
+      path?: string;
+      mediaType?: string;
+      libraryPath?: string;
+      tvLibraryPath?: string;
+      musicLibraryPath?: string;
+    },
+  ): Promise<WatchDir> {
+    const body: Record<string, unknown> = {};
+    if (input.enabled !== undefined) body.enabled = input.enabled;
+    if (input.path !== undefined) body.path = input.path;
+    if (input.mediaType !== undefined) body.media_type = input.mediaType;
+    if (input.libraryPath !== undefined) body.library_path = input.libraryPath;
+    if (input.tvLibraryPath !== undefined) body.tv_library_path = input.tvLibraryPath;
+    if (input.musicLibraryPath !== undefined) body.music_library_path = input.musicLibraryPath;
+    return normalizeWatchDir(
+      await getJSON<unknown>(`/api/scan/watch-dirs/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async runLibraryScan(input?: { type?: 'watch' | 'library_roots'; path?: string; mediaType?: string }): Promise<LibraryScanResult> {
+    return normalizeLibraryScanResult(
+      await getJSON<unknown>('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: input?.type ?? 'watch',
+          path: input?.path,
+          media_type: input?.mediaType,
+        }),
+      }),
+    );
+  },
+
+  async updateRoot(
+    id: string,
+    input: { name?: string; mediaKind?: string; isDefault?: boolean },
+  ): Promise<LibraryRoot> {
+    const data = await getJSON<Record<string, unknown>>(`/api/roots/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rootWriteBody(input)),
+    });
+    const root = normalizeLibraryRoot(data.root ?? data);
+    if (!root) {
+      throw new Error('root update returned no path');
+    }
+    return root;
+  },
+
+  async deleteRoot(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/roots/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async setRootFolder(input: {
+    kind: 'movie' | 'tv' | 'artist';
+    id: string;
+    rootFolderPath: string;
+  }): Promise<{ root_folder_path: string }> {
+    const path =
+      input.kind === 'movie'
+        ? `/api/movies/${encodeURIComponent(input.id)}`
+        : input.kind === 'tv'
+          ? `/api/tv/${encodeURIComponent(input.id)}`
+          : `/api/music/${encodeURIComponent(input.id)}`;
+    return getJSON<{ root_folder_path: string }>(path, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ root_folder_path: input.rootFolderPath }),
+      });
+    },
+
   async search(
     query: string,
     opts?: { type?: 'movie' | 'tv' | 'music' | 'music_album' | 'music_track' },
@@ -379,6 +1450,7 @@ export const api = {
       ...data,
       mediaType: data.mediaType === 'tv' ? 'tv' : 'movie',
       genres: Array.isArray(data.genres) ? data.genres : [],
+      seasons: Array.isArray(data.seasons) ? data.seasons : undefined,
     };
   },
 
@@ -479,6 +1551,915 @@ export const api = {
     return (data.items || []).map(normalizeSearchResult);
   },
 
+  async listListSources(): Promise<ListSourcesResponse> {
+    return normalizeListSources(await getJSON<unknown>('/api/lists'));
+  },
+
+  async createListSource(input: {
+    name: string;
+    type?: string;
+    username?: string;
+    clientId?: string;
+    listUrl?: string;
+    syncIntervalMinutes?: number;
+    baseUrl?: string;
+    apiKey?: string;
+    qualityProfileId?: string;
+    rootFolderPath?: string;
+  }): Promise<ListSource> {
+    const raw = await getJSON<{ source?: unknown }>('/api/lists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(listSourceWriteBody(input)),
+    });
+    return normalizeListSource(raw.source);
+  },
+
+  async deleteListSource(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/lists/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async updateListSource(
+    id: string,
+    input: {
+      enabled?: boolean;
+      name?: string;
+      username?: string;
+      clientId?: string;
+      listUrl?: string;
+      syncIntervalMinutes?: number;
+      baseUrl?: string;
+      apiKey?: string;
+      qualityProfileId?: string;
+      rootFolderPath?: string;
+    },
+  ): Promise<ListSource> {
+    const raw = await getJSON<{ source?: unknown }>(`/api/lists/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(listSourceUpdateBody(input)),
+    });
+    return normalizeListSource(raw.source);
+  },
+
+  async syncListSources(): Promise<{ started: boolean; itemsFound: number; itemsNew: number }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/lists/sync', { method: 'POST' });
+    return {
+      started: raw.started === true,
+      itemsFound: Number(raw.items_found ?? raw.itemsFound) || 0,
+      itemsNew: Number(raw.items_new ?? raw.itemsNew) || 0,
+    };
+  },
+
+  async syncListSource(id: string): Promise<{ started: boolean; id: string; itemsFound: number; itemsNew: number }> {
+    const raw = await getJSON<Record<string, unknown>>(`/api/lists/${encodeURIComponent(id)}/sync`, {
+      method: 'POST',
+    });
+    return {
+      started: raw.started === true,
+      id: String(raw.id ?? id),
+      itemsFound: Number(raw.items_found ?? raw.itemsFound) || 0,
+      itemsNew: Number(raw.items_new ?? raw.itemsNew) || 0,
+    };
+  },
+
+  async testListSource(id: string): Promise<{ ok: boolean; id: string; message: string; itemsFound: number }> {
+    const raw = await getJSON<Record<string, unknown>>(`/api/lists/${encodeURIComponent(id)}/test`, {
+      method: 'POST',
+    });
+    return {
+      ok: raw.ok === true,
+      id: String(raw.id ?? id),
+      message: String(raw.message ?? ''),
+      itemsFound: Number(raw.items_found ?? raw.itemsFound) || 0,
+    };
+  },
+
+  async listListHistory(): Promise<ListSyncHistoryResponse> {
+    return normalizeListSyncHistory(await getJSON<unknown>('/api/lists/history'));
+  },
+
+  async listListItems(opts?: { sourceId?: string; mediaType?: string }): Promise<ListSyncItemsResponse> {
+    const q = new URLSearchParams();
+    if (opts?.sourceId) q.set('source_id', opts.sourceId);
+    if (opts?.mediaType) q.set('media_type', opts.mediaType);
+    const suffix = q.toString() ? `?${q}` : '';
+    return normalizeListSyncItems(await getJSON<unknown>(`/api/lists/items${suffix}`));
+  },
+
+  async migrateArrLibrary(input: {
+    service: string;
+    baseUrl: string;
+    apiKey: string;
+    dryRun: boolean;
+    remapFrom?: string;
+    remapTo?: string;
+  }): Promise<MigrateResult> {
+    return normalizeMigrateResult(
+      await getJSON<unknown>('/api/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(migrateWriteBody(input)),
+      }),
+    );
+  },
+
+  async getJellyfinStatus(): Promise<JellyfinStatus> {
+    return normalizeJellyfinStatus(await getJSON<Record<string, unknown>>('/api/jellyfin/status'));
+  },
+
+  async syncJellyfinLibrary(input: { direction?: string; dryRun: boolean }): Promise<JellyfinSyncResult> {
+    return normalizeJellyfinSync(
+      await getJSON<Record<string, unknown>>('/api/jellyfin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          direction: input.direction ?? 'both',
+          dry_run: input.dryRun,
+        }),
+      }),
+    );
+  },
+
+  async refreshJellyfinLibrary(itemId = ''): Promise<JellyfinRefreshResult> {
+    return normalizeJellyfinRefresh(
+      await getJSON<Record<string, unknown>>('/api/jellyfin/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId }),
+      }),
+    );
+  },
+
+  async getJellyfinLink(muxId: string): Promise<JellyfinLink> {
+    return normalizeJellyfinLink(
+      await getJSON<Record<string, unknown>>(`/api/jellyfin/link?mux_id=${encodeURIComponent(muxId)}`),
+    );
+  },
+
+  async matchJellyfinItem(input: {
+    muxId: string;
+    title?: string;
+    mediaKind?: string;
+    tmdbId?: number;
+    path?: string;
+  }): Promise<JellyfinLink> {
+    return normalizeJellyfinLink(
+      await getJSON<Record<string, unknown>>('/api/jellyfin/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mux_id: input.muxId,
+          title: input.title ?? '',
+          media_kind: input.mediaKind ?? 'movie',
+          tmdb_id: input.tmdbId ?? 0,
+          path: input.path ?? '',
+        }),
+      }),
+    );
+  },
+
+  async unlinkJellyfinItem(muxId: string): Promise<{ ok: boolean; muxId: string }> {
+    return getJSON<{ ok: boolean; muxId: string }>(
+      `/api/jellyfin/link?mux_id=${encodeURIComponent(muxId)}`,
+      { method: 'DELETE' },
+    );
+  },
+
+  async listPlexSyncLists(opts?: { refresh?: boolean; userId?: string; clientId?: string }): Promise<PlexSyncListsResponse> {
+    const q = new URLSearchParams();
+    if (opts?.refresh) q.set('refresh', '1');
+    if (opts?.userId) q.set('userId', opts.userId);
+    if (opts?.clientId) q.set('clientId', opts.clientId);
+    const suffix = q.toString() ? `?${q}` : '';
+    return normalizePlexSyncLists(await getJSON<Record<string, unknown>>(`/api/plex/sync-lists${suffix}`));
+  },
+
+  async listTags(media?: string): Promise<TagsResponse> {
+    const q = media ? `?media=${encodeURIComponent(media)}` : '';
+    return normalizeTags(await getJSON<unknown>(`/api/tags${q}`));
+  },
+
+  async createTag(input: { label: string; media?: string }): Promise<LibraryTag> {
+    const raw = await getJSON<{ tag?: unknown }>('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tagWriteBody(input)),
+    });
+    return normalizeLibraryTag(raw.tag);
+  },
+
+  async deleteTag(id: string, media?: string): Promise<{ removed: boolean; id: string }> {
+    const q = media ? `?media=${encodeURIComponent(media)}` : '';
+    return getJSON<{ removed: boolean; id: string }>(`/api/tags/${encodeURIComponent(id)}${q}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getItemTags(kind: 'movie' | 'tv', id: string): Promise<TagsResponse> {
+    const path = kind === 'tv' ? `/api/tv/${encodeURIComponent(id)}/tags` : `/api/movies/${encodeURIComponent(id)}/tags`;
+    return normalizeTags(await getJSON<unknown>(path));
+  },
+
+  async listAlternateTitles(kind: 'movie' | 'tv', id: string): Promise<AlternateTitlesResponse> {
+    return normalizeAlternateTitles(await getJSON<unknown>(titlesPath(kind, id)));
+  },
+
+  async addAlternateTitle(kind: 'movie' | 'tv', id: string, title: string): Promise<AlternateTitle> {
+    const raw = await getJSON<{ title?: unknown }>(titlesPath(kind, id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title }),
+    });
+    return normalizeAlternateTitle(raw.title);
+  },
+
+  async deleteAlternateTitle(kind: 'movie' | 'tv', id: string, titleId: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`${titlesPath(kind, id)}/${encodeURIComponent(titleId)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async listItemHistory(kind: 'movie' | 'tv', id: string, event?: string): Promise<ItemHistoryResponse> {
+    const q = event ? `?event=${encodeURIComponent(event)}` : '';
+    return normalizeItemHistory(await getJSON<unknown>(`${historyPath(kind, id)}${q}`));
+  },
+
+  async listMovieFiles(id: string): Promise<MovieFilesResponse> {
+    return normalizeMovieFiles(await getJSON<unknown>(`/api/movies/${encodeURIComponent(id)}/files`));
+  },
+
+  async deleteMovieFile(id: string, fileId: string): Promise<{ removed: boolean; id: string; delete_files?: boolean }> {
+    return getJSON<{ removed: boolean; id: string; delete_files?: boolean }>(
+      `/api/movies/${encodeURIComponent(id)}/files/${encodeURIComponent(fileId)}?delete_files=1`,
+      { method: 'DELETE' },
+    );
+  },
+
+  async listTrackFiles(
+    id: string,
+    albumId?: string,
+  ): Promise<{
+    available: boolean;
+    items: Array<{
+      id: string;
+      artist_id?: string;
+      album_id?: string;
+      title?: string;
+      filename?: string;
+      quality?: string;
+      size_bytes?: number;
+    }>;
+  }> {
+    const q = albumId ? `?album_id=${encodeURIComponent(albumId)}` : '';
+    return getJSON(`/api/music/${encodeURIComponent(id)}/files${q}`);
+  },
+
+  async deleteTrackFile(
+    id: string,
+    fileId: string,
+  ): Promise<{ removed: boolean; id: string; delete_files?: boolean }> {
+    return getJSON<{ removed: boolean; id: string; delete_files?: boolean }>(
+      `/api/music/${encodeURIComponent(id)}/files/${encodeURIComponent(fileId)}?delete_files=1`,
+      { method: 'DELETE' },
+    );
+  },
+
+  async listItemArtwork(kind: 'movie' | 'tv', id: string): Promise<ItemArtworkResponse> {
+    return normalizeItemArtworkList(await getJSON<unknown>(artworkPath(kind, id)));
+  },
+
+  async listItemSubtitles(kind: 'movie' | 'tv', id: string): Promise<ItemSubtitlesResponse> {
+    return normalizeItemSubtitles(await getJSON<unknown>(itemSubtitlesPath(kind, id)));
+  },
+
+  async uploadItemSubtitle(
+    kind: 'movie' | 'tv',
+    id: string,
+    input: { language: string; filename: string; data: string; mediaFileId?: string },
+  ): Promise<ItemSubtitleFile> {
+    const raw = await getJSON<{ subtitle?: unknown }>(itemSubtitlesPath(kind, id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(uploadSubtitleBody(input)),
+    });
+    return normalizeItemSubtitle(raw.subtitle);
+  },
+
+  async deleteItemSubtitle(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/subtitles/files/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async replaceItemArtwork(
+    kind: 'movie' | 'tv',
+    id: string,
+    input: { type: string; filename: string; data: string },
+  ): Promise<ItemArtwork> {
+    const raw = await getJSON<{ artwork?: unknown }>(artworkPath(kind, id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(replaceArtworkBody(input)),
+    });
+    return normalizeItemArtwork(raw.artwork);
+  },
+
+  async setItemTags(kind: 'movie' | 'tv', id: string, tagIds: string[]): Promise<{ ok: boolean; tag_ids: string[] }> {
+    const path = kind === 'tv' ? `/api/tv/${encodeURIComponent(id)}/tags` : `/api/movies/${encodeURIComponent(id)}/tags`;
+    const raw = await getJSON<Record<string, unknown>>(path, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag_ids: tagIds }),
+    });
+    const ids = Array.isArray(raw.tag_ids) ? raw.tag_ids.map(String) : tagIds;
+    return { ok: raw.ok === true, tag_ids: ids };
+  },
+
+  async getTagging(): Promise<AutoTagCatalog> {
+    return normalizeAutoTagCatalog(await getJSON<Record<string, unknown>>('/api/tagging'));
+  },
+
+  async createTaggingTag(input: { name: string; category?: string; color?: string }): Promise<AutoTag> {
+    const raw = await getJSON<Record<string, unknown>>('/api/tagging/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: input.name, category: input.category ?? '', color: input.color ?? '' }),
+    });
+    return {
+      id: String(raw.id ?? ''),
+      name: String(raw.name ?? ''),
+      category: String(raw.category ?? ''),
+      color: String(raw.color ?? ''),
+    };
+  },
+
+  async deleteTaggingTag(id: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/tagging/tags/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  async upsertTaggingRule(input: {
+    id?: string;
+    tagId: string;
+    field: string;
+    match: string;
+    pattern: string;
+    enabled: boolean;
+  }): Promise<AutoTagRule> {
+    const raw = await getJSON<Record<string, unknown>>('/api/tagging/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: input.id ?? '',
+        tag_id: input.tagId,
+        field: input.field,
+        match: input.match,
+        pattern: input.pattern,
+        enabled: input.enabled,
+      }),
+    });
+    return {
+      id: String(raw.id ?? ''),
+      tagId: String(raw.tagId ?? raw.tag_id ?? ''),
+      field: String(raw.field ?? ''),
+      match: String(raw.match ?? ''),
+      pattern: String(raw.pattern ?? ''),
+      enabled: raw.enabled !== false,
+    };
+  },
+
+  async deleteTaggingRule(id: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/tagging/rules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  async classifyTagging(input: {
+    mediaId: string;
+    title?: string;
+    path?: string;
+    mediaType?: string;
+    genres?: string[];
+    merge?: boolean;
+  }): Promise<AutoTagClassifyResult> {
+    return normalizeAutoTagClassify(
+      await getJSON<Record<string, unknown>>('/api/tagging/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaId: input.mediaId,
+          title: input.title ?? '',
+          path: input.path ?? '',
+          mediaType: input.mediaType ?? '',
+          genres: input.genres ?? [],
+          merge: input.merge !== false,
+        }),
+      }),
+    );
+  },
+
+  async getGuard(): Promise<GuardCatalog> {
+    return normalizeGuardCatalog(await getJSON<Record<string, unknown>>('/api/guard'));
+  },
+
+  async upsertGuardRule(input: {
+    id?: string;
+    type: string;
+    name: string;
+    enabled: boolean;
+    params?: Record<string, string>;
+  }): Promise<GuardRule> {
+    return normalizeGuardRule(
+      await getJSON<unknown>('/api/guard/rules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: input.id ?? '',
+          type: input.type,
+          name: input.name,
+          enabled: input.enabled,
+          params: input.params ?? {},
+        }),
+      }),
+    );
+  },
+
+  async deleteGuardRule(id: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/guard/rules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  async ackGuardViolations(ids: string[]): Promise<{ updated: number }> {
+    return getJSON<{ updated: number }>('/api/guard/violations/ack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+  },
+
+  async mergeGuardUsers(input: {
+    sourceUserId?: string;
+    sourceUserName?: string;
+    targetUserId?: string;
+    targetUserName?: string;
+  }): Promise<{ violationsUpdated: number; aliasesCreated: number; sessionsUpdated: number }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/guard/users/merge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source_user_id: input.sourceUserId ?? '',
+        source_user_name: input.sourceUserName ?? '',
+        target_user_id: input.targetUserId ?? '',
+        target_user_name: input.targetUserName ?? '',
+      }),
+    });
+    return {
+      violationsUpdated: Number(raw.violationsUpdated ?? raw.violations_updated) || 0,
+      aliasesCreated: Number(raw.aliasesCreated ?? raw.aliases_created) || 0,
+      sessionsUpdated: Number(raw.sessionsUpdated ?? raw.sessions_updated) || 0,
+    };
+  },
+
+  async resetGuardTrust(input: { userId?: string; userName?: string }): Promise<GuardTrust> {
+    const raw = await getJSON<Record<string, unknown>>('/api/guard/trust/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: input.userId ?? '', user_name: input.userName ?? '' }),
+    });
+    return {
+      userId: String(raw.userId ?? raw.user_id ?? ''),
+      userName: String(raw.userName ?? raw.user_name ?? ''),
+      score: Number(raw.score) || 0,
+      updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
+    };
+  },
+
+  async getMaintainer(): Promise<MaintainerStatus> {
+    return normalizeMaintainerStatus(await getJSON<unknown>('/api/maintainer'));
+  },
+
+  async scanMaintainer(input?: { dryRun?: boolean }): Promise<{ ok: boolean; dryRun: boolean; candidatesFound: number; run: MaintainerRun }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/maintainer/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: input?.dryRun ?? true }),
+    });
+    return {
+      ok: raw.ok === true,
+      dryRun: raw.dry_run === true || raw.dryRun === true,
+      candidatesFound: Number(raw.candidates_found ?? raw.candidatesFound ?? 0),
+      run: normalizeMaintainerRun(raw.run),
+    };
+  },
+
+  async actMaintainer(input?: { dryRun?: boolean; freeUp?: boolean; targetFreePercent?: number }): Promise<{ ok: boolean; actionsTaken: number; run: MaintainerRun }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/maintainer/act', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dry_run: input?.dryRun === true,
+        free_up: input?.freeUp === true,
+        target_free_percent: input?.targetFreePercent,
+      }),
+    });
+    return {
+      ok: raw.ok === true,
+      actionsTaken: Number(raw.actions_taken ?? raw.actionsTaken ?? 0),
+      run: normalizeMaintainerRun(raw.run),
+    };
+  },
+
+  async upsertMaintainerRule(input: HouseholdRuleInput): Promise<MaintainerRule> {
+    const raw = await getJSON<{ rule?: unknown }>('/api/maintainer/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(householdRuleBody(input)),
+    });
+    return normalizeMaintainerRule(raw.rule);
+  },
+
+  async previewMaintainerRule(input: HouseholdRuleInput): Promise<{ total: number; matches: MaintainerCandidate[] }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/maintainer/rules/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(householdRuleBody(input)),
+    });
+    const matches = Array.isArray(raw.matches) ? raw.matches : [];
+    return {
+      total: Number(raw.total ?? 0),
+      matches: matches.map(normalizeMaintainerCandidate).filter((row) => row.id || row.title),
+    };
+  },
+
+  async toggleMaintainerRule(id: string): Promise<MaintainerRule> {
+    const raw = await getJSON<{ rule?: unknown }>(`/api/maintainer/rules/${encodeURIComponent(id)}/toggle`, {
+      method: 'POST',
+    });
+    return normalizeMaintainerRule(raw.rule);
+  },
+
+  async upsertMaintainerProtection(input: {
+    itemId: string;
+    title: string;
+    scope: 'movie' | 'series';
+    reason?: string;
+  }): Promise<MaintainerProtection> {
+    const raw = await getJSON<{ protection?: unknown }>('/api/maintainer/protections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(householdProtectionBody(input)),
+    });
+    return normalizeMaintainerProtection(raw.protection);
+  },
+
+  async deleteMaintainerProtection(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/maintainer/protections/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async deleteMaintainerRule(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/maintainer/rules/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async upsertMaintainerCollection(input: HouseholdCollectionInput): Promise<MaintainerCollection> {
+    const raw = await getJSON<{ collection?: unknown }>('/api/maintainer/collections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(householdCollectionBody(input)),
+    });
+    return normalizeMaintainerCollection(raw.collection);
+  },
+
+  async deleteMaintainerCollection(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/maintainer/collections/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async upsertMaintainerExclusion(input: HouseholdExclusionInput): Promise<MaintainerExclusion> {
+    const raw = await getJSON<{ exclusion?: unknown }>('/api/maintainer/exclusions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(householdExclusionBody(input)),
+    });
+    return normalizeMaintainerExclusion(raw.exclusion);
+  },
+
+  async deleteMaintainerExclusion(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/maintainer/exclusions/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async syncMaintainerExclusions(): Promise<{ listsSynced: number; idsLoaded: number }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/maintainer/exclusions/sync', { method: 'POST' });
+    return {
+      listsSynced: Number(raw.lists_synced ?? raw.listsSynced ?? 0),
+      idsLoaded: Number(raw.ids_loaded ?? raw.idsLoaded ?? 0),
+    };
+  },
+
+  async exportMaintainerRules(): Promise<{ rulesJson: string; rulesYaml: string }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/maintainer/rules/export');
+    return {
+      rulesJson: String(raw.rules_json ?? raw.rulesJson ?? ''),
+      rulesYaml: String(raw.rules_yaml ?? raw.rulesYaml ?? ''),
+    };
+  },
+
+  async importMaintainerRules(input: { rulesYaml?: string; rulesJson?: string; replace?: boolean }): Promise<{ imported: number }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/maintainer/rules/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rules_yaml: input.rulesYaml ?? '',
+        rules_json: input.rulesJson ?? '',
+        replace: input.replace === true,
+      }),
+    });
+    return { imported: Number(raw.imported ?? 0) };
+  },
+
+  async maintainerCandidateAction(
+    id: string,
+    action: 'approve' | 'postpone' | 'cancel',
+    days?: number,
+  ): Promise<MaintainerCandidate> {
+    const raw = await getJSON<{ candidate?: unknown }>(`/api/maintainer/candidates/${encodeURIComponent(id)}/${action}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days }),
+    });
+    return normalizeMaintainerCandidate(raw.candidate);
+  },
+
+  async listBackups(): Promise<BackupsStatus> {
+    return normalizeBackups(await getJSON<unknown>('/api/backups'));
+  },
+
+  async createBackup(): Promise<HouseholdBackup> {
+    const raw = await getJSON<{ backup?: unknown }>('/api/backups', { method: 'POST' });
+    return normalizeHouseholdBackup(raw.backup);
+  },
+
+  async deleteBackup(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/backups/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async restoreBackup(id: string): Promise<{ ok: boolean; id: string; filesRestored: number; restoreDir: string }> {
+    const raw = await getJSON<Record<string, unknown>>(`/api/backups/${encodeURIComponent(id)}/restore`, {
+      method: 'POST',
+    });
+    return {
+      ok: raw.ok === true,
+      id: String(raw.id ?? id),
+      filesRestored: Number(raw.files_restored ?? raw.filesRestored ?? 0),
+      restoreDir: String(raw.restore_dir ?? raw.restoreDir ?? ''),
+    };
+  },
+
+  async listSubtitleWanted(): Promise<SubtitleWantedResponse> {
+    return normalizeWanted(await getJSON<unknown>('/api/subtitles/wanted'));
+  },
+
+  async createSubtitleWanted(input: { title: string; language?: string; mediaType?: string }): Promise<SubtitleWantedItem> {
+    const raw = await getJSON<{ item?: unknown }>('/api/subtitles/wanted', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(wantedWriteBody(input)),
+    });
+    return normalizeWantedItem(raw.item);
+  },
+
+  async deleteSubtitleWanted(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/subtitles/wanted/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async searchSubtitleWanted(input?: { mediaIds?: string[]; limit?: number }): Promise<{ searched: number; downloaded: number }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/subtitles/wanted/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ media_ids: input?.mediaIds, limit: input?.limit }),
+    });
+    return { searched: Number(raw.searched ?? 0), downloaded: Number(raw.downloaded ?? 0) };
+  },
+
+  async listSubtitleProviders(): Promise<SubtitleProvidersResponse> {
+    return normalizeSubtitleProviders(await getJSON<unknown>('/api/subtitles/providers'));
+  },
+
+  async setSubtitleProvider(id: string, enabled: boolean): Promise<{ ok: boolean; id: string; enabled: boolean }> {
+    const raw = await getJSON<Record<string, unknown>>(`/api/subtitles/providers/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    });
+    const provider = raw.provider && typeof raw.provider === 'object' ? (raw.provider as Record<string, unknown>) : {};
+    return {
+      ok: raw.ok === true,
+      id: String(provider.id ?? id),
+      enabled: provider.enabled !== false,
+    };
+  },
+
+  async listSubtitleHistory(): Promise<SubtitleHistoryResponse> {
+    return normalizeSubtitleHistory(await getJSON<unknown>('/api/subtitles/history'));
+  },
+
+  async clearSubtitleHistory(): Promise<{ cleared: boolean }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/subtitles/history/clear', { method: 'POST' });
+    return { cleared: raw.cleared === true };
+  },
+
+  async listSubtitleProfiles(): Promise<SubtitleProfilesResponse> {
+    return normalizeSubtitleProfiles(await getJSON<unknown>('/api/subtitles/profiles'));
+  },
+
+  async listSubtitleLanguages(): Promise<SubtitleLanguagesResponse> {
+    return normalizeSubtitleLanguages(await getJSON<unknown>('/api/subtitles/languages'));
+  },
+
+  async listSubtitleBlacklist(): Promise<SubtitleBlacklistResponse> {
+    return normalizeSubtitleBlacklist(await getJSON<unknown>('/api/subtitles/blacklist'));
+  },
+
+  async removeSubtitleBlacklist(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/subtitles/blacklist/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async listSubtitleMedia(): Promise<SubtitleLibraryResponse> {
+    return normalizeSubtitleLibrary(await getJSON<unknown>('/api/subtitles/media'));
+  },
+
+  async setSubtitleMedia(
+    id: string,
+    input: { languageProfileId?: string; monitored?: boolean },
+  ): Promise<{ ok: boolean; id: string }> {
+    const raw = await getJSON<Record<string, unknown>>(`/api/subtitles/media/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language_profile_id: input.languageProfileId,
+        monitored: input.monitored,
+      }),
+    });
+    return { ok: raw.ok === true, id: String(raw.id ?? id) };
+  },
+
+  async massEditSubtitleMedia(input: {
+    mediaIds: string[];
+    languageProfileId?: string;
+    setMonitored?: boolean;
+    monitored?: boolean;
+  }): Promise<{ ok: boolean; updated: number }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/subtitles/media/mass-edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(massEditSubtitleBody(input)),
+    });
+    return { ok: raw.ok === true, updated: Number(raw.updated ?? 0) };
+  },
+
+  async upsertSubtitleProfile(input: { name: string; languages: string; isDefault?: boolean }): Promise<SubtitleProfile> {
+    const raw = await getJSON<{ profile?: unknown }>('/api/subtitles/profiles', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: input.name, languages: input.languages, is_default: input.isDefault === true }),
+    });
+    return normalizeSubtitleProfile(raw.profile);
+  },
+
+  async getWatchNotify(): Promise<WatchNotifyCatalog> {
+    return normalizeWatchNotifyCatalog(await getJSON<Record<string, unknown>>('/api/watch-notify'));
+  },
+
+  async upsertWatchNotifyRule(input: {
+    id?: string;
+    name: string;
+    enabled: boolean;
+    eventType: string;
+    titleTemplate?: string;
+    messageTemplate?: string;
+    severity?: string;
+    destinationIds?: string[];
+    filters?: Partial<WatchNotifyFilters>;
+  }): Promise<WatchNotifyRule> {
+    return normalizeWatchNotifyRule(
+      await getJSON<unknown>('/api/watch-notify/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: input.id ?? '',
+          name: input.name,
+          enabled: input.enabled,
+          eventType: input.eventType,
+          titleTemplate: input.titleTemplate ?? '',
+          messageTemplate: input.messageTemplate ?? '',
+          severity: input.severity ?? 'info',
+          destinationIds: input.destinationIds ?? [],
+          filters: {
+            userIds: input.filters?.userIds ?? [],
+            platforms: input.filters?.platforms ?? [],
+            mediaTypes: input.filters?.mediaTypes ?? [],
+            transcodeOnly: input.filters?.transcodeOnly === true,
+            minDurationSec: input.filters?.minDurationSec ?? 0,
+          },
+        }),
+      }),
+    );
+  },
+
+  async deleteWatchNotifyRule(id: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/watch-notify/rules/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async upsertWatchNotifyDestination(input: {
+    id?: string;
+    name: string;
+    type: string;
+    enabled: boolean;
+    events: string[];
+    config?: Record<string, string>;
+  }): Promise<WatchNotifyDestination> {
+    return normalizeWatchNotifyDestination(
+      await getJSON<unknown>('/api/watch-notify/destinations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: input.id ?? '',
+          name: input.name,
+          type: input.type,
+          enabled: input.enabled,
+          events: input.events,
+          config: input.config ?? {},
+        }),
+      }),
+    );
+  },
+
+  async deleteWatchNotifyDestination(id: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/watch-notify/destinations/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async testWatchNotifyDestination(id: string): Promise<{ ok: boolean; id: string }> {
+    const raw = await getJSON<Record<string, unknown>>(
+      `/api/watch-notify/destinations/${encodeURIComponent(id)}/test`,
+      { method: 'POST' },
+    );
+    return { ok: raw.ok === true, id: String(raw.id ?? id) };
+  },
+
+  async getNotifications(): Promise<NotificationsStatus> {
+    return normalizeNotifications(await getJSON<unknown>('/api/notifications'));
+  },
+
+  async configureNotification(input: {
+    channel: string;
+    webhookUrl?: string;
+    smtpHost?: string;
+    smtpPort?: string;
+    smtpUser?: string;
+    smtpPass?: string;
+    smtpFrom?: string;
+    to?: string;
+    enabled?: boolean;
+  }): Promise<{ configured: boolean; channel: string }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/notifications', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(notifyWriteBody(input)),
+    });
+    return {
+      configured: raw.configured === true,
+      channel: String(raw.channel ?? input.channel),
+    };
+  },
+
+  async testNotification(channel: string): Promise<{ ok: boolean; channel: string; error?: string }> {
+    const raw = await getJSON<Record<string, unknown>>('/api/notifications/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel }),
+    });
+    return {
+      ok: raw.ok === true,
+      channel: String(raw.channel ?? channel),
+      error: raw.error ? String(raw.error) : undefined,
+    };
+  },
+
   async requestTitle(input: {
     tmdbId?: number;
     musicbrainzId?: string;
@@ -491,6 +2472,8 @@ export const api = {
     overview?: string;
     poster?: string;
     mediaType: 'movie' | 'tv' | 'music' | 'music_album' | 'music_track';
+    qualityProfile?: 'hd' | '4k' | string;
+    seasonNumber?: number;
   }): Promise<{
     requestId: string;
     movieId?: string;
@@ -522,6 +2505,12 @@ export const api = {
       body.tmdbId = input.tmdbId ?? 0;
       body.year = input.year ?? 0;
     }
+    if (input.qualityProfile) {
+      body.qualityProfile = input.qualityProfile;
+    }
+    if (input.seasonNumber != null && input.seasonNumber > 0) {
+      body.seasonNumber = input.seasonNumber;
+    }
     return getJSON('/api/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -547,6 +2536,61 @@ export const api = {
     const data = await getJSON<unknown>('/api/requests');
     const rows = Array.isArray(data) ? data : [];
     return rows.map((row) => normalizeRequest(row as Record<string, unknown>));
+  },
+
+  async getRequestPolicy(): Promise<RequestPolicy> {
+    return normalizeRequestPolicy(await getJSON<Record<string, unknown>>('/api/request-policy'));
+  },
+
+  async updateRequestPolicy(input: {
+    maxPendingPerUser?: number;
+    maxPerWeek?: number;
+    autoApproveUsers?: string[];
+    autoApproveUsersCsv?: string;
+  }): Promise<RequestPolicy> {
+    return normalizeRequestPolicy(
+      await getJSON<Record<string, unknown>>('/api/request-policy', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+    );
+  },
+
+  async listIssues(): Promise<MediaIssue[]> {
+    const data = await getJSON<{ items?: MediaIssue[] }>('/api/media-issues');
+    return data.items || [];
+  },
+
+  async reportIssue(input: {
+    kind: string;
+    mediaType: string;
+    mediaId?: string;
+    tmdbId?: number;
+    title: string;
+    message?: string;
+  }): Promise<MediaIssue> {
+    return getJSON('/api/media-issues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+  },
+
+  async approveRequest(requestId: string): Promise<{ status?: string }> {
+    return getJSON(`/api/requests/${encodeURIComponent(requestId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+  },
+
+  async denyRequest(requestId: string, reason = ''): Promise<{ status?: string }> {
+    return getJSON(`/api/requests/${encodeURIComponent(requestId)}/deny`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
   },
 
   /** Jellyfin web deep-link for a MuxCore library id (404 when unlinked). */
@@ -582,8 +2626,414 @@ export const api = {
   async listComics(): Promise<LibraryListResponse> {
     return getLibraryList('/api/comics');
   },
+  async getComicSeries(id: string): Promise<{
+    series: { id: string; title: string; publisher?: string; monitored?: boolean };
+    issues: Array<{
+      id: string;
+      series_id?: string;
+      title: string;
+      number?: string;
+      year?: number;
+      has_file?: boolean;
+      stream_url?: string;
+    }>;
+  }> {
+    return getJSON(`/api/comics/${encodeURIComponent(id)}`);
+  },
+  async importLibraryFile(input: {
+    kind: 'book' | 'issue' | 'audiobook' | 'album';
+    id: string;
+    path: string;
+  }): Promise<{ id?: string; stream_url?: string; imported?: boolean }> {
+    const path =
+      input.kind === 'book'
+        ? `/api/books/works/${encodeURIComponent(input.id)}/import`
+        : input.kind === 'issue'
+          ? `/api/comics/issues/${encodeURIComponent(input.id)}/import`
+          : input.kind === 'album'
+            ? `/api/music/albums/${encodeURIComponent(input.id)}/import`
+            : `/api/audiobooks/${encodeURIComponent(input.id)}/import`;
+    return getJSON(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: input.path }),
+    });
+  },
+  async searchReleases(opts: {
+    q: string;
+    type: 'movie' | 'tv';
+    year?: number;
+    tmdbId?: number;
+    season?: number;
+    episode?: number;
+  }): Promise<ReleaseSearchResponse> {
+    const q = new URLSearchParams({
+      q: opts.q,
+      type: opts.type,
+    });
+    if (opts.year) q.set('year', String(opts.year));
+    if (opts.tmdbId) q.set('tmdb_id', String(opts.tmdbId));
+    if (opts.season) q.set('season', String(opts.season));
+    if (opts.episode) q.set('episode', String(opts.episode));
+    const raw = await getJSON<ReleaseSearchResponse>(`/api/releases/search?${q}`);
+    return {
+      ...raw,
+      items: (raw.items || []).map((item) => ({
+        ...item,
+        quality: item.quality ? normalizeParsedQuality(item.quality) : undefined,
+      })),
+    };
+  },
+  async grabRelease(body: {
+    guid: string;
+    title: string;
+    download_url?: string;
+    download_protocol?: string;
+    size?: number;
+    score?: number;
+    indexer_name?: string;
+    item_type: 'movie' | 'tv';
+    item_id: string;
+    tmdb_id?: number;
+  }): Promise<ReleaseGrabResult> {
+    return getJSON<ReleaseGrabResult>('/api/releases/grab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  },
+  async listUpgrades(page = 1, pageSize = 50): Promise<CutoffUnmetResponse> {
+    const q = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+    });
+    return getJSON<CutoffUnmetResponse>(`/api/releases/upgrades?${q}`);
+  },
+  async searchNow(body?: {
+    queue_id?: string;
+    item_type?: string;
+    item_id?: string;
+  }): Promise<SearchNowResult> {
+    return getJSON<SearchNowResult>('/api/releases/search-now', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    });
+  },
+  async listBlocklist(): Promise<BlocklistResponse> {
+    return normalizeBlocklist(await getJSON<Record<string, unknown>>('/api/blocklist'));
+  },
+
+  async listInvites(): Promise<InvitesResponse> {
+    return normalizeInvites(await getJSON<Record<string, unknown>>('/api/invites'));
+  },
+
+  async createInvite(input: {
+    role?: string;
+    maxUses?: number;
+    ttlHours?: number;
+  }): Promise<HouseholdInvite> {
+    const raw = await getJSON<{ invite?: unknown }>('/api/invites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: input.role,
+        max_uses: input.maxUses,
+        ttl_hours: input.ttlHours,
+      }),
+    });
+    return normalizeInvite(raw.invite);
+  },
+
+  async revokeInvite(id: string): Promise<{ revoked: boolean }> {
+    return getJSON<{ revoked: boolean }>(`/api/invites/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async listUsers(): Promise<UsersResponse> {
+    return normalizeUsers(await getJSON<unknown>('/api/users'));
+  },
+
+  async createUser(input: { username: string; password: string; role?: string }): Promise<HouseholdUser> {
+    const raw = await getJSON<{ user?: unknown }>('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: input.username,
+        password: input.password,
+        role: input.role || 'user',
+      }),
+    });
+    return normalizeHouseholdUser(raw.user);
+  },
+
+  async setUserPassword(id: string, password: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/users/${encodeURIComponent(id)}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  async setUserRole(id: string, role: string): Promise<HouseholdUser> {
+    const raw = await getJSON<{ user?: unknown }>(`/api/users/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    return normalizeHouseholdUser(raw.user);
+  },
+
+  async deleteUser(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/users/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getTOTP(): Promise<HouseholdTOTP> {
+    try {
+      return normalizeTOTP(await getJSON<unknown>('/api/totp'));
+    } catch {
+      return normalizeTOTP({ available: false, enabled: false });
+    }
+  },
+
+  async enableTOTP(): Promise<HouseholdTOTP> {
+    return normalizeTOTP(await getJSON<unknown>('/api/totp', { method: 'POST' }));
+  },
+
+  async verifyTOTP(code: string): Promise<HouseholdTOTP> {
+    return normalizeTOTP(
+      await getJSON<unknown>('/api/totp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      }),
+    );
+  },
+
+  async disableTOTP(): Promise<HouseholdTOTP> {
+    return normalizeTOTP(await getJSON<unknown>('/api/totp', { method: 'DELETE' }));
+  },
+
+  async listPasskeys(): Promise<PasskeysResponse> {
+    try {
+      return normalizePasskeys(await getJSON<unknown>('/api/passkeys'));
+    } catch {
+      return normalizePasskeys({ available: false, passkeys: [] });
+    }
+  },
+
+  async beginPasskeyRegister(): Promise<PasskeyBegin> {
+    return normalizePasskeyBegin(await getJSON<unknown>('/api/passkeys/register/begin', { method: 'POST' }));
+  },
+
+  async completePasskeyRegister(challenge: string, credential: unknown): Promise<{ registered: boolean }> {
+    return getJSON<{ registered: boolean }>(
+      `/api/passkeys/register/complete?challenge=${encodeURIComponent(challenge)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credential),
+      },
+    );
+  },
+
+  async deletePasskey(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/passkeys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async listPasswordResets(): Promise<PasswordResetsResponse> {
+    return normalizePasswordResets(await getJSON<unknown>('/api/password-reset'));
+  },
+
+  async dismissPasswordReset(id: string): Promise<{ ok: boolean; id: string }> {
+    return getJSON<{ ok: boolean; id: string }>(`/api/password-reset/${encodeURIComponent(id)}/dismiss`, {
+      method: 'POST',
+    });
+  },
+
+  async setPasswordReset(id: string, password: string): Promise<{ ok: boolean; id: string; user_id?: string }> {
+    return getJSON<{ ok: boolean; id: string; user_id?: string }>(
+      `/api/password-reset/${encodeURIComponent(id)}/password`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      },
+    );
+  },
+
+  async listAPIKeys(): Promise<KeysResponse> {
+    return normalizeKeys(await getJSON<unknown>('/api/keys'));
+  },
+
+  async createAPIKey(input: { name: string; userId?: string; scopes?: string[] }): Promise<CreatedAPIKey> {
+    return normalizeCreatedAPIKey(
+      await getJSON<unknown>('/api/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(keyWriteBody(input)),
+      }),
+    );
+  },
+
+  async rotateAPIKey(id: string): Promise<CreatedAPIKey> {
+    return normalizeCreatedAPIKey(
+      await getJSON<unknown>(`/api/keys/${encodeURIComponent(id)}/rotate`, { method: 'POST' }),
+    );
+  },
+
+  async deleteAPIKey(id: string): Promise<{ removed: boolean; id: string }> {
+    return getJSON<{ removed: boolean; id: string }>(`/api/keys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async listDelayProfiles(): Promise<DelayProfilesResponse> {
+    return normalizeDelayProfiles(await getJSON<Record<string, unknown>>('/api/delay-profiles'));
+  },
+
+  async upsertDelayProfile(input: {
+    protocol: string;
+    waitMinutes: number;
+  }): Promise<DelayProfile> {
+    const raw = await getJSON<Record<string, unknown>>('/api/delay-profiles', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        protocol: input.protocol,
+        wait_minutes: input.waitMinutes,
+      }),
+    });
+    return normalizeDelayProfiles({ available: true, profiles: [raw] }).profiles[0] ?? {
+      protocol: input.protocol,
+      waitMinutes: input.waitMinutes,
+    };
+  },
+
+  async clearBlocklist(input: {
+    clearAll?: boolean;
+    wantedItemId?: string;
+    guid?: string;
+  }): Promise<{ removed: number }> {
+    return getJSON<{ removed: number }>('/api/blocklist/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clear_all: Boolean(input.clearAll),
+        wanted_item_id: input.wantedItemId || '',
+        guid: input.guid || '',
+      }),
+    });
+  },
+
+  async blockRelease(body: {
+    guid: string;
+    item_id: string;
+    wanted_item_id?: string;
+    reason?: string;
+  }): Promise<ReleaseBlockResult> {
+    return getJSON<ReleaseBlockResult>('/api/releases/block', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  },
+  async listActivity(opts?: { page?: number; pageSize?: number; status?: string }): Promise<ActivityResponse> {
+    const q = new URLSearchParams();
+    q.set('page', String(opts?.page ?? 1));
+    q.set('page_size', String(opts?.pageSize ?? 50));
+    if (opts?.status) q.set('status', opts.status);
+    return getJSON<ActivityResponse>(`/api/activity?${q}`);
+  },
+  async retryImport(historyId?: string): Promise<ActivityRetryResult> {
+    return getJSON<ActivityRetryResult>('/api/activity/retry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history_id: historyId || '' }),
+    });
+  },
+  async listWanted(opts?: {
+    page?: number;
+    pageSize?: number;
+    missing?: boolean;
+    monitored?: boolean;
+    type?: string;
+  }): Promise<WantedResponse> {
+    const q = new URLSearchParams();
+    q.set('page', String(opts?.page ?? 1));
+    q.set('page_size', String(opts?.pageSize ?? 50));
+    if (opts?.missing) q.set('missing', '1');
+    if (opts?.monitored) q.set('monitored', '1');
+    if (opts?.type) q.set('type', opts.type);
+    return getJSON<WantedResponse>(`/api/wanted?${q}`);
+  },
+  async listCalendar(opts?: {
+    start?: string;
+    end?: string;
+    unmonitored?: boolean;
+  }): Promise<CalendarResponse> {
+    const q = new URLSearchParams();
+    if (opts?.start) q.set('start', opts.start);
+    if (opts?.end) q.set('end', opts.end);
+    if (opts?.unmonitored) q.set('unmonitored', '1');
+    const qs = q.toString();
+    return getJSON<CalendarResponse>(`/api/calendar${qs ? `?${qs}` : ''}`);
+  },
+  async listMissing(opts?: { type?: string; page?: number; pageSize?: number; seriesId?: string }): Promise<MissingResponse> {
+    const q = new URLSearchParams();
+    if (opts?.type) q.set('type', opts.type);
+    if (opts?.page) q.set('page', String(opts.page));
+    if (opts?.pageSize) q.set('page_size', String(opts.pageSize));
+    if (opts?.seriesId) q.set('series_id', opts.seriesId);
+    const qs = q.toString();
+    return normalizeMissing(await getJSON<Record<string, unknown>>(`/api/missing${qs ? `?${qs}` : ''}`));
+  },
+  async removeWanted(queueId: string): Promise<{ removed: boolean; queue_id: string }> {
+    return getJSON('/api/wanted/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queue_id: queueId }),
+    });
+  },
+  async addWanted(input: {
+    itemType: string;
+    itemId: string;
+    title?: string;
+    year?: number;
+    tmdbId?: number;
+    qualityProfileId?: string;
+    seasonNumber?: number;
+    episodeNumber?: number;
+    seriesId?: string;
+    seriesType?: string;
+  }): Promise<{ added: boolean; queue_id: string }> {
+    return getJSON('/api/wanted', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_type: input.itemType,
+        item_id: input.itemId,
+        title: input.title ?? '',
+        year: input.year ?? 0,
+        tmdb_id: input.tmdbId ?? 0,
+        quality_profile_id: input.qualityProfileId ?? '',
+        season_number: input.seasonNumber ?? 0,
+        episode_number: input.episodeNumber ?? 0,
+        series_id: input.seriesId ?? '',
+        series_type: input.seriesType ?? '',
+      }),
+    });
+  },
   async listAudiobooks(): Promise<LibraryListResponse> {
     return getLibraryList('/api/audiobooks');
+  },
+  async getAudiobook(id: string): Promise<AudiobookDetail> {
+    return getJSON<AudiobookDetail>(`/api/audiobooks/${encodeURIComponent(id)}`);
   },
 
   async getMusicArtist(id: string): Promise<MusicArtistDetail> {
@@ -647,21 +3097,60 @@ export const api = {
     });
   },
 
-  async listCollections(): Promise<{ items: { id: string; name: string; movie_count: number }[] }> {
+  async listCollections(): Promise<{ items: { id: string; name: string; movie_count: number; monitored?: boolean }[] }> {
     return getJSON('/api/collections');
   },
 
   async getCollection(
     id: string,
-  ): Promise<{ id: string; name: string; movies: import('../types').Movie[] }> {
-    const raw = await getJSON<{ id: string; name: string; movies: Record<string, unknown>[] }>(
-      `/api/collections/${encodeURIComponent(id)}`,
-    );
+  ): Promise<{
+    id: string;
+    name: string;
+    movies: import('../types').Movie[];
+    monitored: boolean;
+    searchOnAdd: boolean;
+  }> {
+    const raw = await getJSON<{
+      id: string;
+      name: string;
+      movies: Record<string, unknown>[];
+      monitored?: boolean;
+      search_on_add?: boolean;
+    }>(`/api/collections/${encodeURIComponent(id)}`);
     return {
       id: raw.id,
       name: raw.name,
       movies: (raw.movies || []).map((m) => normalizeMovie(m)),
+      monitored: raw.monitored === true,
+      searchOnAdd: raw.search_on_add !== false,
     };
+  },
+
+  async setCollectionMonitored(
+    id: string,
+    input: { monitored: boolean; searchOnAdd?: boolean },
+  ): Promise<{ ok: boolean; monitored: boolean }> {
+    const raw = await getJSON<{ ok?: boolean; monitored?: boolean }>(`/api/collections/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        monitored: input.monitored,
+        search_on_add: input.searchOnAdd,
+      }),
+    });
+    return { ok: raw.ok === true, monitored: raw.monitored === true };
+  },
+
+  async syncCollection(id: string, addMissing = true): Promise<{ ok: boolean; added: number; alreadyPresent: number }> {
+    const raw = await getJSON<{ ok?: boolean; added?: number; already_present?: number }>(
+      `/api/collections/${encodeURIComponent(id)}/sync`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ add_missing: addMissing }),
+      },
+    );
+    return { ok: raw.ok === true, added: Number(raw.added || 0), alreadyPresent: Number(raw.already_present || 0) };
   },
 
   async approveQuickConnect(code: string): Promise<{ ok: boolean; message?: string }> {
@@ -734,6 +3223,78 @@ export async function resolvePlayback(src: string): Promise<PlaybackResolve> {
   return getJSON<PlaybackResolve>(`/api/playback/resolve?${q}`);
 }
 
+export type RequestPolicy = {
+  maxPendingPerUser: number;
+  maxPerWeek: number;
+  autoApproveUsers: string[];
+  pendingUsed: number;
+  weekUsed: number;
+  remainingPending: number;
+  remainingWeek: number;
+  canRequest: boolean;
+  autoApprove: boolean;
+  canEdit: boolean;
+  code: string;
+  reason: string;
+};
+
+function asNumber(v: unknown, fallback = 0): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+export function normalizeRequestPolicy(raw: Record<string, unknown> = {}): RequestPolicy {
+  const users = raw.autoApproveUsers ?? raw.auto_approve_users;
+  return {
+    maxPendingPerUser: asNumber(raw.maxPendingPerUser ?? raw.max_pending_per_user),
+    maxPerWeek: asNumber(raw.maxPerWeek ?? raw.max_per_week),
+    autoApproveUsers: Array.isArray(users) ? users.map((u) => String(u)).filter(Boolean) : [],
+    pendingUsed: asNumber(raw.pendingUsed ?? raw.pending_used),
+    weekUsed: asNumber(raw.weekUsed ?? raw.week_used),
+    remainingPending: asNumber(raw.remainingPending ?? raw.remaining_pending, -1),
+    remainingWeek: asNumber(raw.remainingWeek ?? raw.remaining_week, -1),
+    canRequest: raw.canRequest !== false && raw.can_request !== false,
+    autoApprove: raw.autoApprove === true || raw.auto_approve === true,
+    canEdit: raw.canEdit === true || raw.can_edit === true,
+    code: raw.code != null ? String(raw.code) : '',
+    reason: raw.reason != null ? String(raw.reason) : '',
+  };
+}
+
+export type PlaybackSessionEventType = 'started' | 'progress' | 'stopped';
+
+export type PlaybackSessionInput = {
+  event_type: PlaybackSessionEventType;
+  session_id: string;
+  media_id: string;
+  title?: string;
+  media_type?: string;
+  position_seconds?: number;
+  duration_seconds?: number;
+  is_paused?: boolean;
+  is_transcode?: boolean;
+  player?: string;
+  platform?: string;
+};
+
+export type PlaybackSessionResult = {
+  accepted: boolean;
+  forwarded: boolean;
+  stopped?: boolean;
+  session_id?: string;
+};
+
+/** Fire-and-forget native play → playback-monitor ingest via the BFF. */
+export async function reportPlaybackSession(
+  input: PlaybackSessionInput,
+): Promise<PlaybackSessionResult> {
+  return getJSON<PlaybackSessionResult>('/api/playback/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
 /** User-facing copy for mediauiprox playback resolve failures ({error, code}). */
 export function friendlyPlaybackError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err ?? 'Playback failed');
@@ -786,6 +3347,26 @@ export async function fetchPlaybackSegments(
   if (durationSeconds && durationSeconds > 0)
     q.set('duration', String(Math.round(durationSeconds)));
   return getJSON(`/api/playback/segments?${q}`);
+}
+
+/** Replace skip points for a title (SetSegments). Admin/manager. */
+export async function setPlaybackSegments(
+  mediaId: string,
+  segments: PlaybackSegment[],
+): Promise<{ media_id: string; segments: PlaybackSegment[]; enabled: boolean }> {
+  return getJSON('/api/playback/segments', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ media_id: mediaId, segments }),
+  });
+}
+
+/** Clear skip points for a title (DeleteSegments). Admin/manager. */
+export async function deletePlaybackSegments(
+  mediaId: string,
+): Promise<{ media_id: string; segments: PlaybackSegment[]; enabled: boolean }> {
+  const q = new URLSearchParams({ media_id: mediaId });
+  return getJSON(`/api/playback/segments?${q}`, { method: 'DELETE' });
 }
 
 /** Embedded container chapter marker from ffprobe (MKV/MP4 chapter tracks). */

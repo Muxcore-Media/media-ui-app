@@ -2,7 +2,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
-import { upsertProgress } from '../lib/userdata';
+import { updatePreferences, upsertProgress } from '../lib/userdata';
+import { setCurrentRoles } from '../lib/session';
 
 const RESOLVED_STREAM_URL = '/stream/movies/m1';
 
@@ -18,8 +19,9 @@ function mockJSON(body: unknown, ok = true) {
 function stubFetch(overrides: Record<string, unknown> = {}) {
   vi.stubGlobal(
     'fetch',
-    vi.fn((input: RequestInfo | URL) => {
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      const method = String(init?.method || 'GET').toUpperCase();
       if (url.includes('/api/playback/subtitles')) {
         return mockJSON(overrides.subtitles ?? { tracks: [] });
       }
@@ -33,6 +35,17 @@ function stubFetch(overrides: Record<string, unknown> = {}) {
         );
       }
       if (url.includes('/api/playback/segments')) {
+        if (method === 'PUT') {
+          const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
+          return mockJSON({
+            media_id: body.media_id ?? 'm1',
+            segments: body.segments ?? [],
+            enabled: true,
+          });
+        }
+        if (method === 'DELETE') {
+          return mockJSON({ media_id: 'm1', segments: [], enabled: true });
+        }
         return mockJSON(overrides.segments ?? { media_id: 'm1', segments: [], enabled: true });
       }
       if (url.includes('/api/playback/resolve')) {
@@ -103,6 +116,7 @@ describe('VideoPlayer OSD', () => {
     expect(screen.getByTestId('player-osd')).toBeInTheDocument();
     expect(screen.getByTestId('player-seek')).toBeInTheDocument();
     expect(screen.getByTestId('player-top-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('player-watch-together')).toBeInTheDocument();
   });
 
   it('opens the settings menu with quality, audio, subtitles and speed entries', async () => {
@@ -199,6 +213,40 @@ describe('VideoPlayer OSD', () => {
 
     await waitFor(() => expect(screen.getByTestId('player-skip-segment')).toBeInTheDocument());
     expect(screen.getByText('Skip Intro')).toBeInTheDocument();
+  });
+
+  it('auto-skips a detected intro when the preference is on', async () => {
+    updatePreferences({
+      playback: {
+        autoplayNext: false,
+        rememberPosition: true,
+        skipIntroSec: 0,
+        autoSkipIntro: true,
+        autoSkipCredits: false,
+      },
+    });
+    stubFetch({
+      segments: {
+        media_id: 'm1',
+        enabled: true,
+        segments: [
+          { kind: 'intro', start_seconds: 0, end_seconds: 30, confidence: 0.9, source: 'test' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo();
+    fireLoadedMetadata(video, 1200);
+    Object.defineProperty(video, 'currentTime', { value: 5, configurable: true, writable: true });
+    fireEvent(video, new Event('timeupdate'));
+    await waitFor(() => {
+      expect(video.currentTime).toBeGreaterThanOrEqual(30);
+    });
   });
 
   it('toggles the keyboard shortcuts help overlay with "?" and closes it with Escape', async () => {
@@ -325,6 +373,31 @@ describe('VideoPlayer OSD', () => {
     fireEvent.click(within(menu).getByText('Off'));
   });
 
+  it('nudges subtitle sync offset from appearance and G/H', async () => {
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByText('Appearance…'));
+    fireEvent.click(within(menu).getByLabelText('Subtitle color Yellow'));
+    expect(within(menu).getByLabelText('Subtitle color Yellow')).toHaveAttribute('aria-pressed', 'true');
+    expect(within(menu).getByTestId('subtitle-offset-value')).toHaveTextContent('In sync');
+    fireEvent.click(within(menu).getByLabelText('Shift subtitles later'));
+    expect(within(menu).getByTestId('subtitle-offset-value')).toHaveTextContent('+0.25s');
+    fireEvent.click(within(menu).getByLabelText('Close settings'));
+
+    fireEvent.keyDown(window, { code: 'KeyH' });
+    expect(screen.getByTestId('subtitle-offset-toast')).toHaveTextContent('Subtitles +0.50s');
+    fireEvent.keyDown(window, { code: 'KeyG' });
+    expect(screen.getByTestId('subtitle-offset-toast')).toHaveTextContent('Subtitles +0.25s');
+  });
+
   it('track selection — graceful empty state when no audio or subtitle tracks exist', async () => {
     stubFetch({
       analysis: {
@@ -346,9 +419,13 @@ describe('VideoPlayer OSD', () => {
     fireEvent.click(screen.getByLabelText('Settings'));
     const menu = screen.getByTestId('player-settings-menu');
 
-    // Audio row should be disabled (≤1 track means no options to switch between)
-    const audioBtn = within(menu).getByText('Audio').closest('button');
-    expect(audioBtn).toBeDisabled();
+    fireEvent.click(within(menu).getByText('Audio'));
+    expect(within(menu).getByTestId('audio-offset-value')).toHaveTextContent('In sync');
+    fireEvent.click(within(menu).getByLabelText('Shift audio later'));
+    expect(within(menu).getByTestId('audio-offset-value')).toHaveTextContent('+0.25s');
+    fireEvent.click(within(menu).getByLabelText('Close settings'));
+    fireEvent.keyDown(window, { code: 'BracketRight' });
+    expect(screen.getByTestId('subtitle-offset-toast')).toHaveTextContent('Audio +0.50s');
   });
 });
 
@@ -993,5 +1070,35 @@ describe('VideoPlayer Cast and AirPlay controls', () => {
     expect(airPlayBtn).not.toBeDisabled();
     fireEvent.click(airPlayBtn);
     expect(picker).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('VideoPlayer skip-point editor', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setCurrentRoles(['admin']);
+    stubFetch();
+  });
+
+  it('lets a manager mark intro end at the current position', async () => {
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo();
+    fireLoadedMetadata(video, 3600);
+    Object.defineProperty(video, 'currentTime', { value: 85, configurable: true });
+    fireEvent(video, new Event('timeupdate'));
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    fireEvent.click(screen.getByText('Skip points'));
+    fireEvent.click(screen.getByTestId('player-mark-intro'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('player-skip-points-summary')).toHaveTextContent('Intro 0:00–1:25');
+    });
+    const fetchMock = vi.mocked(fetch);
+    expect(fetchMock.mock.calls.some((call) => String(call[1]?.method || '').toUpperCase() === 'PUT')).toBe(true);
   });
 });

@@ -36,6 +36,8 @@ vi.mock('../api/client', async () => {
       getTVShow: (...args: unknown[]) => getTVShow(...args),
       getMovie: (...args: unknown[]) => getMovie(...args),
       listCollections: (...args: unknown[]) => listCollections(...args),
+      listWatchHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
+      listSessions: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
       listBooks: (...args: unknown[]) => listBooks(...args),
       listAudiobooks: (...args: unknown[]) => listAudiobooks(...args),
     },
@@ -195,13 +197,13 @@ describe('Home Audiobooks shelf — populated', () => {
     expect(within(shelf).getByText('Scott Brick')).toBeInTheDocument();
   });
 
-  it('audiobook tiles link to /audiobooks', async () => {
+  it('audiobook tiles link to /audiobooks/:id', async () => {
     renderHome();
     const shelf = await screen.findByTestId('home-audiobooks');
-    const links = within(shelf).getAllByRole('link');
-    for (const link of links) {
-      expect(link.getAttribute('href')).toBe('/audiobooks');
-    }
+    const dune = within(shelf).getByRole('link', { name: /Dune narrated by Scott Brick/i });
+    expect(dune.getAttribute('href')).toBe('/audiobooks/ab-1');
+    const foundation = within(shelf).getByRole('link', { name: /^Foundation$/i });
+    expect(foundation.getAttribute('href')).toBe('/audiobooks/ab-2');
   });
 
   it('Audiobooks shelf has a "See all" link pointing to /audiobooks', async () => {

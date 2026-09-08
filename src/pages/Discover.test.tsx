@@ -13,6 +13,14 @@ vi.mock('../api/client', async () => {
       ...actual.api,
       discoverBrowse: (...args: unknown[]) => discoverBrowse(...args),
       requestTitle: vi.fn(),
+      getRequestPolicy: async () => ({ canRequest: true, maxPerWeek: 0, maxPendingPerUser: 0 }),
+      getAcquisition: async () => ({
+        ready: true,
+        hasIndexer: true,
+        hasDownloader: true,
+        peers: [],
+        message: '',
+      }),
     },
   };
 });

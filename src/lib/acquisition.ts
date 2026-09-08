@@ -41,9 +41,10 @@ export function requestStatusLabel(status: string): string {
       return 'In library';
     case 'requested':
       return 'Requested';
-    case 'workflow':
     case 'pending':
       return 'Pending approval';
+    case 'workflow':
+      return 'Starting acquisition';
     case 'import_failed':
       return 'Import failed';
     case 'failed':
@@ -96,9 +97,9 @@ export function requestPhase(
       return 'downloading';
     case 'searching':
     case 'queued':
+    case 'workflow':
       return 'searching';
     case 'pending':
-    case 'workflow':
       return 'pending';
     default:
       return 'requested';

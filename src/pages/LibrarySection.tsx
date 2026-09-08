@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Clock, Library } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
@@ -16,6 +16,7 @@ type Props = {
   secondaryLabel?: (row: LibraryRow) => string;
   emptyReadyMessage: string;
   rowHref?: (row: LibraryRow) => string;
+  addSlot?: (reload: () => Promise<void>) => ReactNode;
 };
 
 export default function LibrarySection({
@@ -26,6 +27,7 @@ export default function LibrarySection({
   secondaryLabel,
   emptyReadyMessage,
   rowHref,
+  addSlot,
 }: Props) {
   const listHeadingId = useId();
   const [items, setItems] = useState<LibraryRow[]>([]);
@@ -34,6 +36,15 @@ export default function LibrarySection({
   const [comingSoon, setComingSoon] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function reload() {
+    const list = await load();
+    setItems(list.items);
+    setAvailable(list.available !== false);
+    setComingSoon(Boolean(list.coming_soon) || list.available === false);
+    setMessage(list.message || null);
+    setError(null);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +81,7 @@ export default function LibrarySection({
       </div>
 
       {error ? <ErrorBanner message={error} testId="library-error" /> : null}
+      {!loading && available && !comingSoon ? addSlot?.(() => reload()) : null}
 
       {loading ? (
         <div aria-busy="true" data-testid="library-loading">

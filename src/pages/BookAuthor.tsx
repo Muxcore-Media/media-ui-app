@@ -1,7 +1,11 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import { AddAlbumField } from '../components/media/AddAlbumField';
+import { ImportFileField } from '../components/media/ImportFileField';
+import { MonitorButton } from '../components/media/MonitorButton';
+import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
 import Spinner from '../components/Spinner';
 import { Badge } from '../components/ui/Badge';
 
@@ -11,10 +15,11 @@ type Book = {
   title: string;
   year?: number;
   isbn?: string;
+  monitored?: boolean;
   files?: BookFile[];
 };
 type AuthorDetail = {
-  author: { id: string; name: string; path?: string };
+  author: { id: string; name: string; path?: string; monitored?: boolean };
   books: Book[];
 };
 
@@ -27,6 +32,7 @@ function bookViewerKind(file: BookFile): 'pdf' | 'epub' | 'other' {
 
 export default function BookAuthor() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const [detail, setDetail] = useState<AuthorDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +89,27 @@ export default function BookAuthor() {
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Books
         </Link>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--text-primary)]">
-          {author.name}
-        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+            {author.name}
+          </h1>
+          <MonitorButton
+            kind="author"
+            id={author.id}
+            monitored={author.monitored}
+            compact
+            onChange={(next) =>
+              setDetail((cur) => (cur ? { ...cur, author: { ...cur.author, monitored: next } } : cur))
+            }
+          />
+          <RemoveLibraryButton
+            kind="author"
+            id={author.id}
+            title={author.name}
+            hasFile={books.some((b) => (b.files || []).some((f) => Boolean(f.path || f.stream_url)))}
+            onRemoved={() => navigate('/books')}
+          />
+        </div>
         <p className="text-sm text-[var(--text-secondary)]">
           {books.length} book{books.length === 1 ? '' : 's'}
         </p>
@@ -142,6 +166,17 @@ export default function BookAuthor() {
         </section>
       ) : null}
 
+      <AddAlbumField
+        titleLabel="Book title"
+        submitLabel="Add book"
+        testId="add-book"
+        titlePlaceholder="The Dispossessed"
+        onAdd={async ({ title, year }) => {
+          await api.addBook({ authorId: author.id, title, year });
+          setDetail(await api.getBookAuthor(id));
+        }}
+      />
+
       {books.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No books for this author yet.</p>
       ) : (
@@ -149,7 +184,7 @@ export default function BookAuthor() {
           {books.map((b) => (
             <li key={b.id} className="space-y-2 px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="font-medium text-[var(--text-primary)]">{b.title}</span>
                   {b.year ? (
                     <span className="text-sm text-[var(--text-tertiary)]"> · {b.year}</span>
@@ -157,10 +192,35 @@ export default function BookAuthor() {
                   {b.isbn ? (
                     <span className="text-xs text-[var(--text-tertiary)]"> · ISBN {b.isbn}</span>
                   ) : null}
+                  <MonitorButton
+                    kind="book"
+                    id={b.id}
+                    monitored={b.monitored}
+                    compact
+                    onChange={(next) =>
+                      setDetail((cur) =>
+                        cur
+                          ? {
+                              ...cur,
+                              books: cur.books.map((row) => (row.id === b.id ? { ...row, monitored: next } : row)),
+                            }
+                          : cur,
+                      )
+                    }
+                  />
                 </div>
               </div>
               {(b.files || []).length === 0 ? (
-                <p className="text-xs text-[var(--text-tertiary)]">Not available yet.</p>
+                <div className="space-y-2">
+                  <p className="text-xs text-[var(--text-tertiary)]">Not available yet.</p>
+                  <ImportFileField
+                    onImport={async (path) => {
+                      await api.importLibraryFile({ kind: 'book', id: b.id, path });
+                      const next = await api.getBookAuthor(id);
+                      setDetail(next);
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {(b.files || []).map((f) =>

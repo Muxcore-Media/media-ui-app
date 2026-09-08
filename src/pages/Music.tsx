@@ -2,11 +2,12 @@ import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Music2, Pause, Play } from 'lucide-react';
 import { api } from '../api/client';
-import AudioPlayerBar from '../components/media/AudioPlayerBar';
+import { AddArtistField } from '../components/media/AddArtistField';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { ShelfSkeleton } from '../components/ui/Skeleton';
+import { useNowPlaying } from '../lib/nowPlaying';
 import type { LibraryRow } from '../types';
 
 type FlatTrack = {
@@ -27,38 +28,45 @@ export default function Music() {
   const [available, setAvailable] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [playing, setPlaying] = useState<string | null>(null);
+  const nowPlaying = useNowPlaying();
+  const playing = nowPlaying.playing ? nowPlaying.track?.id ?? null : null;
+
+  async function loadLibrary(cancelled?: () => boolean) {
+    const list = await api.listMusic();
+    if (cancelled?.()) return;
+    setItems(list.items);
+    setAvailable(list.available !== false);
+    setMessage(list.message || null);
+    const flat: FlatTrack[] = [];
+    for (const a of list.items.slice(0, 40)) {
+      if (cancelled?.()) return;
+      try {
+        const d = await api.getMusicArtist(a.id);
+        for (const al of d.albums || []) {
+          for (const t of al.tracks || []) {
+            flat.push({
+              id: t.id,
+              title: t.title,
+              artistId: a.id,
+              artistName: String(a.name || d.artist?.name || ''),
+              albumTitle: al.title,
+              stream_url: t.stream_url,
+            });
+          }
+        }
+      } catch {
+        /* skip artist */
+      }
+    }
+    if (cancelled?.()) return;
+    setTracks(flat);
+  }
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const list = await api.listMusic();
-        if (cancelled) return;
-        setItems(list.items);
-        setAvailable(list.available !== false);
-        setMessage(list.message || null);
-        const flat: FlatTrack[] = [];
-        for (const a of list.items.slice(0, 40)) {
-          try {
-            const d = await api.getMusicArtist(a.id);
-            for (const al of d.albums || []) {
-              for (const t of al.tracks || []) {
-                flat.push({
-                  id: t.id,
-                  title: t.title,
-                  artistId: a.id,
-                  artistName: String(a.name || d.artist?.name || ''),
-                  albumTitle: al.title,
-                  stream_url: t.stream_url,
-                });
-              }
-            }
-          } catch {
-            /* skip artist */
-          }
-        }
-        if (!cancelled) setTracks(flat);
+        await loadLibrary(() => cancelled);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load music');
@@ -155,11 +163,17 @@ export default function Music() {
               >
                 Artists ({items.length})
               </h2>
+              <AddArtistField
+                onAdd={async ({ name }) => {
+                  await api.addMusicArtist({ name });
+                  await loadLibrary();
+                }}
+              />
               {items.length === 0 ? (
                 <EmptyState
                   icon={Music2}
                   title="No artists yet"
-                  message="Artists will appear here once your music library is scanned."
+                  message="Add an artist or scan your music library to get started."
                   testId="music-artists-empty"
                 />
               ) : (
@@ -227,7 +241,27 @@ export default function Music() {
                             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
                             aria-label={playing === t.id ? `Pause ${t.title}` : `Play ${t.title}`}
                             aria-pressed={playing === t.id}
-                            onClick={() => setPlaying(playing === t.id ? null : t.id)}
+                            onClick={() => {
+                              const queue = filteredTracks
+                                .filter((x) => x.stream_url)
+                                .map((x) => ({
+                                  id: x.id,
+                                  src: x.stream_url || '',
+                                  title: x.title,
+                                  artistName: x.artistName,
+                                  href: `/music/${x.artistId}`,
+                                }));
+                              nowPlaying.toggle(
+                                {
+                                  id: t.id,
+                                  src: t.stream_url || '',
+                                  title: t.title,
+                                  artistName: t.artistName,
+                                  href: `/music/${t.artistId}`,
+                                },
+                                queue,
+                              );
+                            }}
                           >
                             {playing === t.id ? (
                               <Pause className="h-4 w-4 fill-current" aria-hidden="true" />
@@ -241,18 +275,6 @@ export default function Music() {
                       </li>
                     ))}
                   </ul>
-                  {playing &&
-                    (() => {
-                      const t = filteredTracks.find((x) => x.id === playing);
-                      return t?.stream_url ? (
-                        <AudioPlayerBar
-                          src={t.stream_url}
-                          title={`${t.title} · ${t.artistName}`}
-                          playing={playing === t.id}
-                          onPlayingChange={(on) => setPlaying(on ? t.id : null)}
-                        />
-                      ) : null;
-                    })()}
                 </>
               )}
             </section>

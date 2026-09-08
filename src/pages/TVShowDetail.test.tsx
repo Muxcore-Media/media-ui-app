@@ -19,6 +19,37 @@ vi.mock('../api/client', async () => {
       jellyfinPlayURL: (...args: unknown[]) => jellyfinPlayURL(...args),
       getRelated: (...args: unknown[]) => getRelated(...args),
       getDiscoverDetail: (...args: unknown[]) => getDiscoverDetail(...args),
+      setMonitored: vi.fn().mockResolvedValue({ monitored: true }),
+      addWanted: vi.fn().mockResolvedValue({ added: true, queue_id: 'w_tv_s1' }),
+      setQualityProfile: vi.fn().mockResolvedValue({ quality_profile_id: 'qp_hd' }),
+      getFormats: vi.fn().mockResolvedValue({ available: false, formats: [], profiles: [] }),
+      listTags: vi.fn().mockResolvedValue({ available: false, tags: [] }),
+      getItemTags: vi.fn().mockResolvedValue({ available: false, tags: [] }),
+      listAlternateTitles: vi.fn().mockResolvedValue({ available: false, titles: [] }),
+      listItemHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
+      getItemWatchStats: vi.fn().mockResolvedValue({ available: false, itemId: '', playCount: 0 }),
+      listItemArtwork: vi.fn().mockResolvedValue({ available: false, items: [] }),
+      replaceItemArtwork: vi.fn(),
+      listItemSubtitles: vi.fn().mockResolvedValue({ available: false, items: [], files: [] }),
+      uploadItemSubtitle: vi.fn(),
+      deleteItemSubtitle: vi.fn(),
+      searchSubtitleWanted: vi.fn().mockResolvedValue({ searched: 0, downloaded: 0 }),
+      upsertMaintainerProtection: vi.fn(),
+      addAlternateTitle: vi.fn(),
+      deleteAlternateTitle: vi.fn(),
+      setItemTags: vi.fn().mockResolvedValue({ ok: true, tag_ids: [] }),
+      listRoots: vi.fn().mockResolvedValue({ available: false, roots: [] }),
+      previewRename: vi.fn().mockResolvedValue({ available: false, items: [] }),
+      applyRename: vi.fn().mockResolvedValue({ available: false, items: [], renamed: 0, errors: 0 }),
+      setRootFolder: vi.fn().mockResolvedValue({ root_folder_path: '/data/tv' }),
+      removeLibraryItem: vi.fn().mockResolvedValue({ removed: true, delete_files: false }),
+      refreshLibraryItem: vi.fn().mockResolvedValue({ refreshed: true }),
+      removeEpisodeFile: vi.fn().mockResolvedValue({ removed: true, delete_files: true }),
+      getSeriesOverride: vi.fn().mockResolvedValue({
+        available: false,
+        found: false,
+        override: { seriesId: '', delayMinutes: 0, preferredGroups: [], ignoredGroups: [] },
+      }),
     },
   };
 });
@@ -47,6 +78,8 @@ const showWithEpisodes = {
           overview: 'First episode',
           has_file: true,
           stream_url: '/stream/tv/bb/1/1',
+          quality: 'WEBDL-1080p',
+          filename: 'Breaking.Bad.S01E01.mkv',
         },
       ],
     },
@@ -82,8 +115,10 @@ describe('TVShowDetail page', () => {
     expect(await screen.findByTestId('tv-detail-page')).toBeInTheDocument();
     expect(screen.getByText('Breaking Bad')).toBeInTheDocument();
     expect(screen.getByText(/Pilot/)).toBeInTheDocument();
+    expect(screen.getByTestId('episode-file')).toHaveTextContent('WEBDL-1080p · Breaking.Bad.S01E01.mkv');
     expect(screen.getByRole('link', { name: /Play Breaking Bad/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Play Pilot/i })).toBeInTheDocument();
+    expect(screen.getByTestId('offline-download')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText('1080p · H264')).toBeInTheDocument();
     });

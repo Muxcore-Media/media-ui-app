@@ -13,6 +13,14 @@ vi.mock('../api/client', async () => {
     api: {
       getDiscoverDetail: (...args: unknown[]) => getDiscoverDetail(...args),
       requestTitle: (...args: unknown[]) => requestTitle(...args),
+      getRequestPolicy: async () => ({ canRequest: true, maxPerWeek: 0, maxPendingPerUser: 0 }),
+      getAcquisition: async () => ({
+        ready: true,
+        hasIndexer: true,
+        hasDownloader: true,
+        peers: [],
+        message: '',
+      }),
     },
   };
 });
@@ -111,10 +119,84 @@ describe('DiscoverDetail', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Request movie/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Request HD/i }));
     await waitFor(() => {
       expect(requestTitle).toHaveBeenCalledWith(
-        expect.objectContaining({ tmdbId: 550, title: 'Fight Club', mediaType: 'movie' }),
+        expect.objectContaining({
+          tmdbId: 550,
+          title: 'Fight Club',
+          mediaType: 'movie',
+          qualityProfile: 'hd',
+        }),
+      );
+    });
+  });
+
+  it('requests a specific TV season', async () => {
+    getDiscoverDetail.mockResolvedValueOnce({
+      id: 1396,
+      title: 'Breaking Bad',
+      year: 2008,
+      overview: 'chemist',
+      genres: [],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 9.5,
+      mediaType: 'tv',
+      seasons: [
+        { seasonNumber: 1, name: 'Season 1', episodeCount: 7 },
+        { seasonNumber: 2, name: 'Season 2', episodeCount: 13 },
+      ],
+    });
+    requestTitle.mockResolvedValueOnce({ status: 'requested' });
+
+    render(
+      <MemoryRouter initialEntries={['/discover/tv/1396']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(await screen.findByTestId('discover-season'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: /Request HD/i }));
+    await waitFor(() => {
+      expect(requestTitle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mediaType: 'tv',
+          seasonNumber: 2,
+          qualityProfile: 'hd',
+        }),
+      );
+    });
+  });
+
+  it('submits a 4K request from the detail page', async () => {
+    getDiscoverDetail.mockResolvedValueOnce({
+      id: 550,
+      title: 'Fight Club',
+      year: 1999,
+      overview: 'soap',
+      genres: [],
+      poster: '/p.jpg',
+      backdrop: '/b.jpg',
+      voteAvg: 8.4,
+      mediaType: 'movie',
+    });
+    requestTitle.mockResolvedValueOnce({ status: 'requested' });
+
+    render(
+      <MemoryRouter initialEntries={['/discover/movie/550']}>
+        <Routes>
+          <Route path="/discover/:type/:id" element={<DiscoverDetail />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Request 4K/i }));
+    await waitFor(() => {
+      expect(requestTitle).toHaveBeenCalledWith(
+        expect.objectContaining({ qualityProfile: '4k', mediaType: 'movie' }),
       );
     });
   });

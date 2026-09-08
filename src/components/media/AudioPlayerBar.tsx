@@ -7,10 +7,11 @@ type Props = {
   title: string;
   playing: boolean;
   onPlayingChange: (playing: boolean) => void;
+  onEnded?: () => void;
 };
 
 /** Custom audio bar (play/pause, seek, time, volume) — matches video OSD conventions. */
-export default function AudioPlayerBar({ src, title, playing, onPlayingChange }: Props) {
+export default function AudioPlayerBar({ src, title, playing, onPlayingChange, onEnded }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -50,7 +51,10 @@ export default function AudioPlayerBar({ src, title, playing, onPlayingChange }:
         preload="metadata"
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
         onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
-        onEnded={() => onPlayingChange(false)}
+        onEnded={() => {
+          onPlayingChange(false);
+          onEnded?.();
+        }}
       />
       <p className="truncate text-sm font-medium text-[var(--text-primary)]">{title}</p>
       <div className="flex flex-wrap items-center gap-3">

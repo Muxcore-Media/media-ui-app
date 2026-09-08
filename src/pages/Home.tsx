@@ -30,6 +30,13 @@ import { formatAddedRelative, formatTimeRemaining, formatWatchedRelative } from 
 import { prefetchPosterDetailRoute } from '../lib/routePreload';
 import { mergeInProgressEntries } from '../lib/acquisition';
 import {
+  inProgressOnly,
+  inProgressSessions,
+  mergeWatchProgress,
+  progressFromMonitor,
+  watchedOnly,
+} from '../lib/watch-history';
+import {
   applyParentalFilter,
   applyUserdataParentalFilter,
   expandLibraryRatingsForUserdata,
@@ -191,10 +198,18 @@ function BookAuthorTile({ id, name }: { id: string; name: string }) {
 }
 
 /** Compact tile for a single audiobook on the home "Audiobooks" shelf. */
-function AudiobookTile({ title, narrator }: { title: string; narrator?: string }) {
+function AudiobookTile({
+  id,
+  title,
+  narrator,
+}: {
+  id: string;
+  title: string;
+  narrator?: string;
+}) {
   return (
     <Link
-      to="/audiobooks"
+      to={`/audiobooks/${encodeURIComponent(id)}`}
       className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
       aria-label={narrator ? `${title} narrated by ${narrator}` : title}
     >
@@ -208,10 +223,10 @@ function AudiobookTile({ title, narrator }: { title: string; narrator?: string }
 }
 
 /** Compact tile for a comic series/title on the home "Comics" shelf. */
-function ComicsTile({ title, publisher }: { title: string; publisher?: string }) {
+function ComicsTile({ id, title, publisher }: { id: string; title: string; publisher?: string }) {
   return (
     <Link
-      to="/comics"
+      to={`/comics/${encodeURIComponent(id)}`}
       className="flex h-full flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-4 text-center transition hover:border-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
       aria-label={publisher ? `${title} — ${publisher}` : title}
     >
@@ -242,14 +257,31 @@ function formatUpcomingAirDate(airIso: string): string {
   return isPast ? `Aired ${formatted}` : formatted;
 }
 
-/** Card for a single upcoming / recently-aired episode on the home rail. */
-function UpcomingCard({ show, episode, air }: UpcomingEpisodeRow) {
+/** Card for a single upcoming / recently-aired episode or movie release on the home rail. */
+function UpcomingCard({ kind, show, episode, air }: UpcomingEpisodeRow) {
   const [imgError, setImgError] = useState(false);
+  const isMovie = kind === 'movie';
   const epCode = `S${String(episode.season_number).padStart(2, '0')}E${String(episode.episode_number).padStart(2, '0')}`;
-  const epLabel = episode.title ? `${epCode} · ${episode.title}` : epCode;
+  const epLabel = isMovie
+    ? episode.title && episode.title !== 'Release'
+      ? episode.title
+      : 'Movie'
+    : episode.title
+      ? `${epCode} · ${episode.title}`
+      : epCode;
   const airLabel = formatUpcomingAirDate(air);
-  const playerHref = buildEpisodePlayerHref(show, episode);
-  const href = playerHref ?? `/tv/${show.id}`;
+  const playerHref = isMovie
+    ? show.has_file && show.stream_url
+      ? buildMoviePlayerHref({
+          id: show.id,
+          title: show.title,
+          stream_url: show.stream_url,
+          poster_url: show.poster_url,
+          content_rating: show.content_rating,
+        })
+      : null
+    : buildEpisodePlayerHref(show, episode);
+  const href = playerHref ?? (isMovie ? `/movies/${show.id}` : `/tv/${show.id}`);
 
   return (
     <Link
@@ -336,7 +368,7 @@ export default function Home() {
   const recentlyAdded = useRecentlyAdded(allMovies, allShows, recentlyAddedExcludeIds);
 
   // Upcoming / On The Air rail — deduplicates against Continue Watching + Next Up.
-  const upcoming = useUpcomingEpisodes(allShows, becauseExcludeIds);
+  const upcoming = useUpcomingEpisodes(allShows, becauseExcludeIds, allMovies);
 
   // Recently Watched rail — deduplicates against Continue Watching + Next Up.
   const recentlyWatchedItems = useRecentlyWatched(recentlyWatchedRaw, becauseExcludeIds);
@@ -387,8 +419,23 @@ export default function Home() {
         // Prefer server progress for continue-watching / next-up before painting rows.
         await pullUserdataFromServer();
         if (cancelled) return;
-        const progressRaw = continueWatching(16);
-        const recentlyWatchedFetch = recentlyWatched(16);
+        const [remoteHistory, remoteSessions] = await Promise.all([
+          api.listWatchHistory(100).catch(() => ({ available: false, items: [], total: 0 })),
+          api.listSessions().catch(() => ({ available: false, items: [], total: 0 })),
+        ]);
+        if (cancelled) return;
+        const remoteProgress = mergeWatchProgress(
+          progressFromMonitor(remoteHistory),
+          inProgressSessions(remoteSessions),
+        );
+        const progressRaw = mergeWatchProgress(continueWatching(16), inProgressOnly(remoteProgress)).slice(
+          0,
+          16,
+        );
+        const recentlyWatchedFetch = mergeWatchProgress(
+          recentlyWatched(16),
+          watchedOnly(remoteProgress),
+        ).slice(0, 16);
         const favoritesRaw = listFavorites().slice(0, 16);
         const wantToWatchRaw = listWantToWatch().slice(0, 16);
         setPlaylists(listPlaylists());
@@ -625,7 +672,7 @@ export default function Home() {
         <Shelf title="Upcoming / On The Air" seeAllHref="/upcoming" testId="home-upcoming">
           {upcoming.rows.map((row) => (
             <ShelfItem key={`${row.show.id}-${row.episode.id}`}>
-              <UpcomingCard show={row.show} episode={row.episode} air={row.air} />
+              <UpcomingCard {...row} />
             </ShelfItem>
           ))}
         </Shelf>
@@ -805,6 +852,7 @@ export default function Home() {
           {booksShelves.audiobooks.map((ab) => (
             <ShelfItem key={ab.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
               <AudiobookTile
+                id={ab.id}
                 title={String(ab.title || ab.name || ab.id)}
                 narrator={ab.narrator as string | undefined}
               />
@@ -818,6 +866,7 @@ export default function Home() {
           {comicsShelves.comics.map((c) => (
             <ShelfItem key={c.id} className="w-[42%] shrink-0 sm:w-[30%] md:w-[22%] lg:w-[17%] xl:w-[14%]">
               <ComicsTile
+                id={c.id}
                 title={String(c.title || c.name || c.id)}
                 publisher={c.publisher as string | undefined}
               />

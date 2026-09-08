@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QUALITY_OPTIONS, type AspectMode } from '../lib/player/types';
+import { shouldAutoSkipSegment } from '../lib/player/auto-skip';
 import {
   getPreferences,
   getProgress,
@@ -8,6 +9,14 @@ import {
   type MediaKind,
   type UserPreferences,
 } from '../lib/userdata';
+import {
+  clampSubtitleOffsetMs,
+  formatSubtitleOffset,
+  normalizeSubtitleTextColor,
+  subtitleLookupTime,
+} from '../lib/subtitle-offset';
+import { clampAudioOffsetMs, formatAudioOffset } from '../lib/audio-offset';
+import { useAudioDelay } from './player/hooks/useAudioDelay';
 import { usePlaybackSource } from './player/hooks/usePlaybackSource';
 import { useVideoElement } from './player/hooks/useVideoElement';
 import { usePlaybackSegments } from './player/hooks/usePlaybackSegments';
@@ -22,6 +31,7 @@ import { usePlayerChrome } from './player/hooks/usePlayerChrome';
 import { useKeyboardShortcuts } from './player/hooks/useKeyboardShortcuts';
 import { useGestures } from './player/hooks/useGestures';
 import { useStats } from './player/hooks/useStats';
+import { useWatchTogether } from '../hooks/useWatchTogether';
 import TopBar from './player/TopBar';
 import ControlsBar from './player/ControlsBar';
 import CenterOverlay from './player/CenterOverlay';
@@ -35,14 +45,21 @@ import ShortcutsHelp from './player/ShortcutsHelp';
 import ErrorScreen from './player/ErrorScreen';
 import PlayerEpisodeDrawer from './player/PlayerEpisodeDrawer';
 import { LoadingStatus } from './ui/LoadingStatus';
+import { finitePlaybackDuration, hlsSeekIsBuffered, isHlsPlaySrc } from '../lib/player/hls';
 import {
   audioTracksFromAnalysis,
   mergeAudioTracks,
   mergeTextTracks,
   subtitleTracksFromAnalysis,
 } from '../lib/player/tracks';
-import type { PlaybackSubtitleTrack } from '../api/client';
+import {
+  deletePlaybackSegments,
+  setPlaybackSegments,
+  type PlaybackSubtitleTrack,
+} from '../api/client';
 import type { PlayerTrackInfo } from '../lib/player/types';
+import { canManageLibrary } from '../lib/session';
+import { persistedSkipSegments, upsertSegmentKind } from '../lib/playback-segments';
 
 /** Show the "Next Episode" button this many seconds before the end of an episode. */
 const NEAR_END_SEC = 120;
@@ -77,6 +94,8 @@ type Props = {
   startOver?: boolean;
   /** Content rating from the player URL, persisted onto progress for resume gating. */
   contentRating?: string;
+  /** Household SyncPlay room id (`?together=`). */
+  togetherId?: string;
 };
 
 export default function VideoPlayer({
@@ -93,6 +112,7 @@ export default function VideoPlayer({
   subtitleTracks = [],
   startOver = false,
   contentRating,
+  togetherId,
 }: Props) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -106,15 +126,21 @@ export default function VideoPlayer({
   const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
   const [savedPositionSec, setSavedPositionSec] = useState(0);
   const [subtitlePrefs, setSubtitlePrefs] = useState<UserPreferences['subtitles']>(prefs.subtitles);
+  const [audioOffsetMs, setAudioOffsetMs] = useState(prefs.playback.audioOffsetMs ?? 0);
   const [seekBubble, setSeekBubble] = useState<number | null>(null);
+  const [offsetToast, setOffsetToast] = useState<string | null>(null);
   const [aspectMode, setAspectMode] = useState<AspectMode>(prefs.player.aspectMode);
   const [downloadedTracks, setDownloadedTracks] = useState<PlaybackSubtitleTrack[]>([]);
+  const [skipBusy, setSkipBusy] = useState(false);
+  const [skipError, setSkipError] = useState<string | null>(null);
 
   const resumeCheckedSrcRef = useRef<string | null>(null);
   const autoSubtitleAppliedRef = useRef(false);
   const outroTriggeredRef = useRef(false);
+  const autoSkippedRef = useRef('');
   const resumePlayRef = useRef(false);
   const seekBubbleTimerRef = useRef<number | null>(null);
+  const offsetToastTimerRef = useRef<number | null>(null);
 
   const source = usePlaybackSource(src);
 
@@ -139,11 +165,20 @@ export default function VideoPlayer({
   const handleStalled = useCallback(() => sourceRef.current.scheduleRetry(0), []);
   const handleFatalError = useCallback(() => sourceRef.current.scheduleRetry(0), []);
   const handleLoadedMetadata = useCallback(() => {
+    const resumeAt = sourceRef.current.pendingSeekSec;
+    if (resumeAt > 0) {
+      const el = videoRef.current;
+      if (el) el.currentTime = resumeAt;
+    }
     if (resumePlayRef.current) {
       resumePlayRef.current = false;
       videoRef.current?.play()?.catch?.(() => {});
     }
   }, []);
+
+  const probe = usePlaybackAnalysis(src);
+
+  useAudioDelay(videoRef, source.playSrc, audioOffsetMs, !source.loading);
 
   const videoEl = useVideoElement({
     videoRef,
@@ -155,8 +190,12 @@ export default function VideoPlayer({
     onLoadedMetadata: handleLoadedMetadata,
   });
 
-  const absoluteDurationSec =
-    videoEl.duration > 0 ? source.transcodeOffsetSec + videoEl.duration : 0;
+  const fromElement = finitePlaybackDuration(videoEl.duration);
+  const fromProbe = finitePlaybackDuration(probe.analysis?.duration_seconds ?? 0);
+  const absoluteDurationSec = Math.max(
+    fromElement > 0 ? source.transcodeOffsetSec + fromElement : 0,
+    fromProbe,
+  );
 
   const segments = usePlaybackSegments({
     mediaId,
@@ -164,7 +203,6 @@ export default function VideoPlayer({
     legacyIntroSkipSec: prefs.playback.skipIntroSec,
   });
   const chapters = usePlaybackChapters({ src, durationSec: absoluteDurationSec });
-  const probe = usePlaybackAnalysis(src);
 
   const probeAudio = audioTracksFromAnalysis(probe.analysis?.audio ?? []);
   const probeSubs = subtitleTracksFromAnalysis(probe.analysis?.subtitles ?? []);
@@ -222,12 +260,14 @@ export default function VideoPlayer({
     durationSec: absoluteDurationSec,
     suppress: resumeDialogOpen,
     contentRating,
+    isTranscode: source.playMode === 'transcode',
+    onRemoteStop: () => videoEl.pause(),
   });
 
   // Resume-vs-start-over prompt: once per title, the first time metadata is ready.
   useEffect(() => {
     if (!src || resumeCheckedSrcRef.current === src) return;
-    if (startOver || !mediaId || !prefs.playback.rememberPosition) {
+    if (startOver || togetherId || !mediaId || !prefs.playback.rememberPosition) {
       resumeCheckedSrcRef.current = src;
       return;
     }
@@ -244,6 +284,7 @@ export default function VideoPlayer({
   useEffect(() => {
     autoSubtitleAppliedRef.current = false;
     outroTriggeredRef.current = false;
+    autoSkippedRef.current = '';
     setDownloadedTracks([]);
     subtitleSearch.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -265,6 +306,16 @@ export default function VideoPlayer({
 
   const activeSegment = segments.activeSegmentAt(videoEl.absoluteCurrent);
 
+  useEffect(() => {
+    if (!activeSegment || !shouldAutoSkipSegment(activeSegment.kind, prefs.playback)) return;
+    const key = `${mediaId}:${activeSegment.kind}:${activeSegment.start_seconds}`;
+    if (autoSkippedRef.current === key) return;
+    autoSkippedRef.current = key;
+    seekAbsolute(activeSegment.end_seconds + 0.1);
+    // seekAbsolute is recreated each render; skip key is the latch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSegment, mediaId, prefs.playback.autoSkipIntro, prefs.playback.autoSkipCredits]);
+
   // Trigger the Up Next overlay a little early, once we enter the outro/credits window.
   useEffect(() => {
     if (outroTriggeredRef.current) return;
@@ -277,13 +328,34 @@ export default function VideoPlayer({
 
   function seekAbsolute(sec: number) {
     const target = Math.max(0, absoluteDurationSec > 0 ? Math.min(absoluteDurationSec, sec) : sec);
-    if (source.playMode === 'transcode') {
-      resumePlayRef.current = videoEl.playing;
-      source.seekWithinTranscode(target);
-    } else {
-      videoEl.seekRelative(target);
+    const relative = target - source.transcodeOffsetSec;
+    if (isHlsPlaySrc(source.playSrc)) {
+      const el = videoRef.current;
+      const seekableEnd = el && el.seekable.length > 0 ? el.seekable.end(el.seekable.length - 1) : 0;
+      if (hlsSeekIsBuffered(relative, seekableEnd)) {
+        videoEl.seekRelative(relative);
+        return;
+      }
     }
+    if (source.seekWithinTranscode(target)) {
+      resumePlayRef.current = videoEl.playing;
+      return;
+    }
+    videoEl.seekRelative(relative);
   }
+
+  const together = useWatchTogether({
+    roomId: togetherId,
+    src,
+    title: title ?? '',
+    mediaId,
+    positionSec: videoEl.absoluteCurrent,
+    playing: videoEl.playing,
+    seekAbsolute,
+    setPlaying: (on) => {
+      if (on !== videoEl.playing) videoEl.togglePlay();
+    },
+  });
 
   function seekBy(deltaSec: number) {
     seekAbsolute(videoEl.absoluteCurrent + deltaSec);
@@ -297,13 +369,80 @@ export default function VideoPlayer({
 
   function handleQuality(id: string) {
     resumePlayRef.current = videoEl.playing;
-    source.setQuality(id);
+    source.setQuality(id, videoEl.absoluteCurrent);
     updatePreferences({ player: { ...prefs.player, preferredQuality: id } });
   }
 
   function handleSubtitlePrefs(patch: Partial<UserPreferences['subtitles']>) {
-    setSubtitlePrefs((s) => ({ ...s, ...patch }));
-    updatePreferences({ subtitles: { ...subtitlePrefs, ...patch } });
+    const next = { ...patch };
+    if (next.offsetMs != null) next.offsetMs = clampSubtitleOffsetMs(next.offsetMs);
+    if (next.textColor != null) next.textColor = normalizeSubtitleTextColor(next.textColor);
+    setSubtitlePrefs((s) => ({ ...s, ...next }));
+    updatePreferences({ subtitles: { ...subtitlePrefs, ...next } });
+  }
+
+  function nudgeSubtitleOffset(deltaMs: number) {
+    const nextMs = clampSubtitleOffsetMs((subtitlePrefs.offsetMs ?? 0) + deltaMs);
+    handleSubtitlePrefs({ offsetMs: nextMs });
+    setOffsetToast(`Subtitles ${formatSubtitleOffset(nextMs)}`);
+    if (offsetToastTimerRef.current) window.clearTimeout(offsetToastTimerRef.current);
+    offsetToastTimerRef.current = window.setTimeout(() => setOffsetToast(null), 800);
+  }
+
+  function handleAudioOffset(ms: number) {
+    const nextMs = clampAudioOffsetMs(ms);
+    setAudioOffsetMs(nextMs);
+    updatePreferences({ playback: { ...getPreferences().playback, audioOffsetMs: nextMs } });
+  }
+
+  async function persistSkipSegments(next: ReturnType<typeof upsertSegmentKind>) {
+    if (!mediaId) return;
+    setSkipBusy(true);
+    setSkipError(null);
+    try {
+      const res = await setPlaybackSegments(mediaId, next);
+      segments.apply(res.segments || next);
+    } catch (err) {
+      setSkipError(err instanceof Error ? err.message : 'Could not save skip points.');
+    } finally {
+      setSkipBusy(false);
+    }
+  }
+
+  function handleMarkIntroEnd() {
+    const at = videoEl.absoluteCurrent;
+    if (!(at > 0.25)) return;
+    void persistSkipSegments(upsertSegmentKind(persistedSkipSegments(segments.persisted), 'intro', 0, at));
+  }
+
+  function handleMarkOutroStart() {
+    const at = videoEl.absoluteCurrent;
+    if (!(absoluteDurationSec > at + 0.25)) return;
+    void persistSkipSegments(
+      upsertSegmentKind(persistedSkipSegments(segments.persisted), 'outro', at, absoluteDurationSec),
+    );
+  }
+
+  async function handleClearSkipPoints() {
+    if (!mediaId) return;
+    setSkipBusy(true);
+    setSkipError(null);
+    try {
+      await deletePlaybackSegments(mediaId);
+      segments.apply([]);
+    } catch (err) {
+      setSkipError(err instanceof Error ? err.message : 'Could not clear skip points.');
+    } finally {
+      setSkipBusy(false);
+    }
+  }
+
+  function nudgeAudioOffset(deltaMs: number) {
+    const nextMs = clampAudioOffsetMs((audioOffsetMs ?? 0) + deltaMs);
+    handleAudioOffset(nextMs);
+    setOffsetToast(`Audio ${formatAudioOffset(nextMs)}`);
+    if (offsetToastTimerRef.current) window.clearTimeout(offsetToastTimerRef.current);
+    offsetToastTimerRef.current = window.setTimeout(() => setOffsetToast(null), 800);
   }
 
   function handleToggleTheater() {
@@ -339,8 +478,11 @@ export default function VideoPlayer({
   const markerNavEnabled = chapters.chapters.length > 0 || segments.segments.length > 0;
 
   function handleResume() {
-    if (source.playMode === 'transcode') source.seekWithinTranscode(savedPositionSec);
-    else videoEl.seekRelative(savedPositionSec);
+    if (source.seekWithinTranscode(savedPositionSec)) {
+      setResumeDialogOpen(false);
+      return;
+    }
+    videoEl.seekRelative(savedPositionSec);
     setResumeDialogOpen(false);
   }
 
@@ -360,7 +502,25 @@ export default function VideoPlayer({
   }
 
   function handleText(idx: number) {
+    if (source.subtitleStreamIndex >= 0) {
+      resumePlayRef.current = videoEl.playing;
+      source.setSubtitleStreamIndex(-1, videoEl.absoluteCurrent);
+    }
     videoEl.setTextIdx(idx);
+  }
+
+  function handlePicture(streamIndex: number) {
+    if (streamIndex < 0) {
+      if (source.subtitleStreamIndex >= 0) {
+        resumePlayRef.current = videoEl.playing;
+        source.setSubtitleStreamIndex(-1, videoEl.absoluteCurrent);
+      }
+      return;
+    }
+    if (!source.transcoderAvailable) return;
+    videoEl.setTextIdx(-1);
+    resumePlayRef.current = videoEl.playing;
+    source.setSubtitleStreamIndex(streamIndex, videoEl.absoluteCurrent);
   }
 
   function handleFindSubtitles() {
@@ -409,6 +569,8 @@ export default function VideoPlayer({
     toggleTheater: handleToggleTheater,
     togglePiP: chrome.togglePiP,
     toggleSubtitles: toggleSubtitlesShortcut,
+    nudgeSubtitleOffset,
+    nudgeAudioOffset,
     cycleSpeed: (dir) => {
       const speeds = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
       const idx = speeds.indexOf(videoEl.rate);
@@ -462,12 +624,13 @@ export default function VideoPlayer({
         {!source.loading && (
           <video
             ref={videoRef}
+            crossOrigin="anonymous"
             className={`h-full w-full ${ASPECT_CLASS[aspectMode]}`}
             style={{ filter: `brightness(${gestures.brightness})` }}
             playsInline
             preload="metadata"
             title={title}
-            src={source.playSrc}
+            src={isHlsPlaySrc(source.playSrc) ? undefined : source.playSrc}
             data-playback-mode={source.playMode}
             onClick={videoEl.togglePlay}
           >
@@ -500,10 +663,21 @@ export default function VideoPlayer({
 
         {!source.loading && !videoEl.fatalError ? (
           <SubtitleOverlay
-            cues={subtitles.cuesAt(videoEl.absoluteCurrent)}
+            cues={subtitles.cuesAt(subtitleLookupTime(videoEl.absoluteCurrent, subtitlePrefs.offsetMs ?? 0))}
             prefs={subtitlePrefs}
             controlsVisible={chrome.showControls}
           />
+        ) : null}
+
+        {offsetToast ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-20 z-20 flex justify-center"
+            data-testid="subtitle-offset-toast"
+          >
+            <span className="rounded-full bg-black/70 px-4 py-2 text-sm font-medium text-white">
+              {offsetToast}
+            </span>
+          </div>
         ) : null}
 
         {statsVisible ? <StatsOverlay stats={stats} /> : null}
@@ -526,7 +700,15 @@ export default function VideoPlayer({
         <TopBar
           href={href}
           title={title || 'Playback'}
-          metaLine={metaLine}
+          metaLine={
+            together.youAreHost
+              ? together.copied
+                ? 'Watch Together link copied'
+                : metaLine
+              : togetherId
+                ? 'Watching together'
+                : metaLine
+          }
           showEpisodesButton={Boolean(showId && upNext.showData)}
           drawerOpen={drawerOpen}
           onToggleDrawer={() => setDrawerOpen((o) => !o)}
@@ -534,6 +716,15 @@ export default function VideoPlayer({
           onToggleStats={() => setStatsVisible((v) => !v)}
           onShowShortcuts={() => setShortcutsOpen(true)}
           visible={chrome.showControls}
+          mediaId={mediaId}
+          mediaType={mediaKind === 'episode' || mediaKind === 'tv' ? 'tv' : 'movie'}
+          watchTogetherActive={Boolean(togetherId)}
+          watchTogetherCopied={together.copied}
+          onWatchTogether={() => {
+            void together.start().then((started) => {
+              navigate(started.href, { replace: true });
+            });
+          }}
         />
 
         <ControlsBar
@@ -575,12 +766,16 @@ export default function VideoPlayer({
           onAudio={handleAudio}
           textTracks={displayText}
           pictureSubtitleTracks={pictureSubtitles}
+          burnedSubtitleStreamIndex={source.subtitleStreamIndex}
           textIdx={videoEl.textIdx}
           onText={handleText}
+          onPicture={handlePicture}
           rate={videoEl.rate}
           onRate={videoEl.setRate}
           subtitlePrefs={subtitlePrefs}
           onSubtitlePrefs={handleSubtitlePrefs}
+          audioOffsetMs={audioOffsetMs}
+          onAudioOffset={handleAudioOffset}
           onSettingsOpenChange={setSettingsOpen}
           aspectMode={aspectMode}
           onAspectMode={handleAspectMode}
@@ -595,6 +790,20 @@ export default function VideoPlayer({
             onSearch: handleFindSubtitles,
             onDownload: (id, provider) => void handleDownloadSubtitle(id, provider),
           }}
+          skipPoints={
+            mediaId && canManageLibrary()
+              ? {
+                  currentSec: videoEl.absoluteCurrent,
+                  durationSec: absoluteDurationSec,
+                  segments: segments.persisted,
+                  busy: skipBusy,
+                  error: skipError,
+                  onMarkIntroEnd: handleMarkIntroEnd,
+                  onMarkOutroStart: handleMarkOutroStart,
+                  onClear: () => void handleClearSkipPoints(),
+                }
+              : undefined
+          }
         />
 
         {activeSegment ? (

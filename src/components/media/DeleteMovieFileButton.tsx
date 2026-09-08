@@ -1,0 +1,38 @@
+import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { api } from '../../api/client';
+
+export function DeleteMovieFileButton({
+  id,
+  onRemoved,
+}: {
+  id: string;
+  onRemoved?: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function remove() {
+    if (!id || busy) return;
+    if (!window.confirm('Delete this movie file from disk? The title stays in the library.')) return;
+    setBusy(true);
+    try {
+      await api.removeMovieFile({ id, deleteFiles: true });
+      onRemoved?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)] disabled:opacity-50"
+      disabled={busy || !id}
+      onClick={() => void remove()}
+      data-testid="delete-movie-file"
+    >
+      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+      Delete file
+    </button>
+  );
+}

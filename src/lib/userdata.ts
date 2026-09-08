@@ -2,6 +2,8 @@
 
 import { buildEpisodePlayerHref } from './playHref';
 import { refreshCurrentUserId, setCurrentUserId, userIdFromUnknown } from './session';
+import { clampAudioOffsetMs } from './audio-offset';
+import { clampSubtitleOffsetMs, normalizeSubtitleTextColor } from './subtitle-offset';
 
 export type MediaKind = 'movie' | 'tv' | 'episode' | 'music' | 'book' | 'other';
 
@@ -47,6 +49,12 @@ export type ParentalPrefs = {
   pinHash: string;
   /** Whether a PIN is required to leave kids mode or unlock a restricted title. */
   pinEnabled: boolean;
+  /** Comma-separated tags/genres blocked from browse and playback. */
+  blockedTags?: string;
+  /** Comma-separated tags/genres that stay allowed when set. */
+  allowedTags?: string;
+  /** When false, unrated titles are blocked from playback. */
+  allowUnrated?: boolean;
 };
 
 type ParentalAliasRecord = Record<string, unknown>;
@@ -61,6 +69,9 @@ function firstString(raw: ParentalAliasRecord, ...keys: string[]): string {
   for (const key of keys) {
     const value = raw[key];
     if (typeof value === 'string') return value;
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '').join(', ');
+    }
   }
   return '';
 }
@@ -91,6 +102,9 @@ export function normalizeParentalPrefs(raw: unknown): ParentalPrefs {
     maxRating,
     pinHash,
     pinEnabled: explicitPinEnabled ?? Boolean(pinHash),
+    blockedTags: firstString(src, 'blockedTags', 'blocked_tags'),
+    allowedTags: firstString(src, 'allowedTags', 'allowed_tags'),
+    allowUnrated: firstBool(src, 'allowUnrated', 'allow_unrated') ?? true,
   };
 }
 
@@ -103,6 +117,12 @@ const PARENTAL_KNOWN_KEYS = new Set([
   'pin_hash',
   'pinEnabled',
   'pin_enabled',
+  'blockedTags',
+  'blocked_tags',
+  'allowedTags',
+  'allowed_tags',
+  'allowUnrated',
+  'allow_unrated',
 ]);
 
 /** Extra parental keys (blocked_tags, allow_unrated, …) that BFF/admin still consume. */
@@ -134,6 +154,15 @@ export function parentalForStorage(
     pin_hash: parental.pinHash,
     pinEnabled: parental.pinEnabled,
     pin_enabled: parental.pinEnabled,
+    ...(parental.blockedTags !== undefined
+      ? { blockedTags: parental.blockedTags, blocked_tags: parental.blockedTags }
+      : {}),
+    ...(parental.allowedTags !== undefined
+      ? { allowedTags: parental.allowedTags, allowed_tags: parental.allowedTags }
+      : {}),
+    ...(parental.allowUnrated !== undefined
+      ? { allowUnrated: parental.allowUnrated, allow_unrated: parental.allowUnrated }
+      : {}),
   };
 }
 
@@ -187,6 +216,12 @@ export type UserPreferences = {
     autoplayNext: boolean;
     rememberPosition: boolean;
     skipIntroSec: number;
+    /** Jump past detected intro/recap without tapping Skip. */
+    autoSkipIntro: boolean;
+    /** Jump past detected outro/credits (Up Next still fires). */
+    autoSkipCredits: boolean;
+    /** Audio sync offset in ms. Positive delays audio (it is heard later). */
+    audioOffsetMs: number;
   };
   subtitles: {
     enabled: boolean;
@@ -196,6 +231,10 @@ export type UserPreferences = {
     backgroundOpacity: number;
     edgeStyle: 'none' | 'drop-shadow' | 'outline';
     verticalPosition: 'bottom' | 'top';
+    /** Caption sync offset in ms. Positive delays captions (they appear later). */
+    offsetMs: number;
+    /** Overlay text color (#rrggbb). */
+    textColor: string;
   };
   controls: {
     enableKeyboardShortcuts: boolean;
@@ -211,7 +250,7 @@ export type UserPreferences = {
     /** Aspect-ratio/zoom mode for the video element. */
     aspectMode: 'contain' | 'cover' | 'fill';
   };
-  /** Parental-control settings written by admin-ui and synced read-only here. */
+  /** Parental-control settings for this household profile (admin-ui and Settings). */
   parental: ParentalPrefs;
 };
 
@@ -275,11 +314,17 @@ const defaultPrefs = (): UserPreferences => ({
     maxRating: '',
     pinHash: '',
     pinEnabled: false,
+    blockedTags: '',
+    allowedTags: '',
+    allowUnrated: true,
   },
   playback: {
     autoplayNext: false,
     rememberPosition: true,
     skipIntroSec: 0,
+    autoSkipIntro: false,
+    autoSkipCredits: false,
+    audioOffsetMs: 0,
   },
   subtitles: {
     enabled: true,
@@ -288,6 +333,8 @@ const defaultPrefs = (): UserPreferences => ({
     backgroundOpacity: 60,
     edgeStyle: 'drop-shadow',
     verticalPosition: 'bottom',
+    offsetMs: 0,
+    textColor: '#ffffff',
   },
   controls: {
     enableKeyboardShortcuts: true,
@@ -642,8 +689,17 @@ export function getPreferences(): UserPreferences {
   return {
     display: { ...base.display, ...stored.display },
     home: { ...base.home, ...stored.home },
-    playback: { ...base.playback, ...stored.playback },
-    subtitles: { ...base.subtitles, ...stored.subtitles },
+    playback: {
+      ...base.playback,
+      ...stored.playback,
+      audioOffsetMs: clampAudioOffsetMs(stored.playback?.audioOffsetMs ?? base.playback.audioOffsetMs),
+    },
+    subtitles: {
+      ...base.subtitles,
+      ...stored.subtitles,
+      offsetMs: clampSubtitleOffsetMs(stored.subtitles?.offsetMs ?? base.subtitles.offsetMs),
+      textColor: normalizeSubtitleTextColor(stored.subtitles?.textColor ?? base.subtitles.textColor),
+    },
     controls: { ...base.controls, ...stored.controls },
     notifications: { ...base.notifications, ...stored.notifications },
     player: { ...base.player, ...stored.player },
@@ -662,8 +718,17 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
   const next: UserPreferences = {
     display: { ...cur.display, ...patch.display },
     home: { ...cur.home, ...patch.home },
-    playback: { ...cur.playback, ...patch.playback },
-    subtitles: { ...cur.subtitles, ...patch.subtitles },
+    playback: {
+      ...cur.playback,
+      ...patch.playback,
+      audioOffsetMs: clampAudioOffsetMs(patch.playback?.audioOffsetMs ?? cur.playback.audioOffsetMs),
+    },
+    subtitles: {
+      ...cur.subtitles,
+      ...patch.subtitles,
+      offsetMs: clampSubtitleOffsetMs(patch.subtitles?.offsetMs ?? cur.subtitles.offsetMs),
+      textColor: normalizeSubtitleTextColor(patch.subtitles?.textColor ?? cur.subtitles.textColor),
+    },
     controls: { ...cur.controls, ...patch.controls },
     notifications: { ...cur.notifications, ...patch.notifications },
     player: { ...cur.player, ...patch.player },

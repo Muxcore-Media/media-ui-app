@@ -2029,6 +2029,20 @@ describe('api smoke (library + request + auth errors)', () => {
     const artist = await api.setRootFolder({ kind: 'artist', id: 'ar1', rootFolderPath: '/data/music' });
     expect(artist.root_folder_path).toBe('/data/music');
     expect(String(fetchMock.mock.calls[3][0])).toContain('/api/music/ar1');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ root_folder_path: '/data/books' }),
+    });
+    const author = await api.setRootFolder({ kind: 'author', id: 'au1', rootFolderPath: '/data/books' });
+    expect(author.root_folder_path).toBe('/data/books');
+    expect(String(fetchMock.mock.calls[4][0])).toContain('/api/books/au1');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ root_folder_path: '/data/audiobooks' }),
+    });
+    const audiobook = await api.setRootFolder({ kind: 'audiobook', id: 'ab1', rootFolderPath: '/data/audiobooks' });
+    expect(audiobook.root_folder_path).toBe('/data/audiobooks');
+    expect(String(fetchMock.mock.calls[5][0])).toContain('/api/audiobooks/ab1');
   });
 
   it('browseRoots createRoot and deleteRoot talk to the household BFF', async () => {

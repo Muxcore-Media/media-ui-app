@@ -6,6 +6,7 @@ import { AddAlbumField } from '../components/media/AddAlbumField';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
+import { RootFolderSelect } from '../components/media/RootFolderSelect';
 import Spinner from '../components/Spinner';
 import { Badge } from '../components/ui/Badge';
 
@@ -108,6 +109,14 @@ export default function BookAuthor() {
             title={author.name}
             hasFile={books.some((b) => (b.files || []).some((f) => Boolean(f.path || f.stream_url)))}
             onRemoved={() => navigate('/books')}
+          />
+          <RootFolderSelect
+            kind="author"
+            id={author.id}
+            value={author.path}
+            onChange={(next) =>
+              setDetail((cur) => (cur ? { ...cur, author: { ...cur.author, path: next } } : cur))
+            }
           />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">

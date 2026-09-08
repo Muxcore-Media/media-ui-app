@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
+import { RootFolderSelect } from '../components/media/RootFolderSelect';
 import Spinner from '../components/Spinner';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
@@ -110,6 +111,14 @@ export default function AudiobookDetailPage() {
             title={audiobook.title}
             hasFile={(audiobook.files || []).length > 0}
             onRemoved={() => navigate('/audiobooks')}
+          />
+          <RootFolderSelect
+            kind="audiobook"
+            id={audiobook.id}
+            value={author.path}
+            onChange={(next) =>
+              setDetail((cur) => (cur ? { ...cur, author: { ...cur.author, path: next } } : cur))
+            }
           />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">

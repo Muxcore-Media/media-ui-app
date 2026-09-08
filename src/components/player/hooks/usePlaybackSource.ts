@@ -81,6 +81,7 @@ export function usePlaybackSource(src: string) {
       quality?: string;
       audioStreamIndex?: number;
       subtitleStreamIndex?: number;
+      forceTranscode?: boolean;
     }) => {
       if (!src) {
         setState(INITIAL_STATE);
@@ -131,9 +132,14 @@ export function usePlaybackSource(src: string) {
         const qualityOpt = QUALITY_OPTIONS.find((q) => q.id === quality);
         const burnSubs = subtitleStreamIndexRef.current >= 0 && resolved.transcoder_available;
         const forceTranscode =
-          (quality !== 'auto' && qualityOpt?.maxHeight && resolved.transcoder_available) || burnSubs;
+          opts?.forceTranscode === true ||
+          (quality !== 'auto' && qualityOpt?.maxHeight && resolved.transcoder_available) ||
+          burnSubs;
 
-        if (forceTranscode && qualityOpt?.maxHeight && quality !== 'auto') {
+        if (opts?.forceTranscode && resolved.transcoder_available) {
+          streamUrl = toHlsPlaySrc(transcodePlaySrc(src));
+          mode = 'transcode';
+        } else if (forceTranscode && qualityOpt?.maxHeight && quality !== 'auto') {
           streamUrl = transcodePlaySrc(src, { maxHeight: qualityOpt.maxHeight });
           mode = 'transcode';
         } else if (burnSubs) {
@@ -245,6 +251,14 @@ export function usePlaybackSource(src: string) {
     [load],
   );
 
+  /** Switch from failed direct play to HLS transcode (keeps seek position when provided). */
+  const fallbackToTranscode = useCallback(
+    (seekToSec?: number) => {
+      void load({ forceTranscode: true, seekToSec });
+    },
+    [load],
+  );
+
   return {
     ...state,
     quality: qualityRef.current,
@@ -254,5 +268,6 @@ export function usePlaybackSource(src: string) {
     setSubtitleStreamIndex,
     retry,
     scheduleRetry,
+    fallbackToTranscode,
   };
 }

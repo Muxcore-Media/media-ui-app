@@ -161,9 +161,27 @@ export default function VideoPlayer({
   upNextRef.current = upNext;
   const sourceRef = useRef(source);
   sourceRef.current = source;
+  const transcodeFallbackRef = useRef(false);
   const handleEnded = useCallback(() => upNextRef.current.trigger(), []);
   const handleStalled = useCallback(() => sourceRef.current.scheduleRetry(0), []);
-  const handleFatalError = useCallback(() => sourceRef.current.scheduleRetry(0), []);
+  const handleFatalError = useCallback(() => {
+    const current = sourceRef.current;
+    if (
+      !transcodeFallbackRef.current &&
+      current.playMode === 'direct' &&
+      current.transcoderAvailable
+    ) {
+      transcodeFallbackRef.current = true;
+      const el = videoRef.current;
+      const seekToSec =
+        el && Number.isFinite(el.currentTime) && el.currentTime > 0
+          ? current.transcodeOffsetSec + el.currentTime
+          : undefined;
+      current.fallbackToTranscode(seekToSec);
+      return;
+    }
+    current.scheduleRetry(0);
+  }, [videoRef]);
   const handleLoadedMetadata = useCallback(() => {
     const resumeAt = sourceRef.current.pendingSeekSec;
     if (resumeAt > 0) {
@@ -175,6 +193,10 @@ export default function VideoPlayer({
       videoRef.current?.play()?.catch?.(() => {});
     }
   }, []);
+
+  useEffect(() => {
+    transcodeFallbackRef.current = false;
+  }, [src]);
 
   const probe = usePlaybackAnalysis(src);
 

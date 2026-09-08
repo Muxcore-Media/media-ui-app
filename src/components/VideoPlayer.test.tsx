@@ -223,6 +223,7 @@ describe('VideoPlayer OSD', () => {
         skipIntroSec: 0,
         autoSkipIntro: true,
         autoSkipCredits: false,
+        audioOffsetMs: 0,
       },
     });
     stubFetch({
@@ -1100,5 +1101,39 @@ describe('VideoPlayer skip-point editor', () => {
     });
     const fetchMock = vi.mocked(fetch);
     expect(fetchMock.mock.calls.some((call) => String(call[1]?.method || '').toUpperCase() === 'PUT')).toBe(true);
+  });
+});
+
+describe('VideoPlayer direct-play fallback', () => {
+  it('switches to HLS transcode when direct play hits a format error', async () => {
+    stubFetch({
+      resolve: {
+        stream_url: RESOLVED_STREAM_URL,
+        mode: 'direct',
+        resume_enabled: true,
+        transcoder_enabled: true,
+        prefer_direct_play: true,
+        max_bitrate_mbps: '80',
+        trickplay_enabled: false,
+        transcoder_available: true,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo(RESOLVED_STREAM_URL);
+    Object.defineProperty(video, 'error', {
+      configurable: true,
+      value: { code: 4 },
+    });
+    fireEvent(video, new Event('error'));
+
+    await waitFor(() => {
+      const next = document.querySelector('video');
+      expect(next?.getAttribute('src') ?? '').toContain('/stream/hls');
+    });
   });
 });

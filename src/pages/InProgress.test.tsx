@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InProgress from './InProgress';
+import {
+  ALL_CAPABILITIES,
+  CapabilitiesContext,
+  DEFAULT_CAPABILITIES,
+} from '../lib/capabilities';
+import { setCurrentRoles } from '../lib/session';
 
 const listRequests = vi.fn();
 const listMovies = vi.fn();
 const listTVShows = vi.fn();
+const listUpgrades = vi.fn();
+const searchNow = vi.fn();
+const approveRequest = vi.fn();
+const denyRequest = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -15,15 +25,29 @@ vi.mock('../api/client', async () => {
       listRequests: (...args: unknown[]) => listRequests(...args),
       listMovies: (...args: unknown[]) => listMovies(...args),
       listTVShows: (...args: unknown[]) => listTVShows(...args),
+      listUpgrades: (...args: unknown[]) => listUpgrades(...args),
+      searchNow: (...args: unknown[]) => searchNow(...args),
+      approveRequest: (...args: unknown[]) => approveRequest(...args),
+      denyRequest: (...args: unknown[]) => denyRequest(...args),
+      getRequestPolicy: async () => ({ canRequest: true, maxPerWeek: 0, maxPendingPerUser: 0 }),
+      getAcquisition: async () => ({
+        ready: true,
+        hasIndexer: true,
+        hasDownloader: true,
+        peers: [],
+        message: '',
+      }),
     },
   };
 });
 
-function renderPage() {
+function renderPage(caps = DEFAULT_CAPABILITIES) {
   return render(
-    <MemoryRouter>
-      <InProgress />
-    </MemoryRouter>,
+    <CapabilitiesContext.Provider value={{ caps, loading: false, error: null, retry: () => {} }}>
+      <MemoryRouter>
+        <InProgress />
+      </MemoryRouter>
+    </CapabilitiesContext.Provider>,
   );
 }
 
@@ -32,8 +56,15 @@ describe('InProgress page', () => {
     listRequests.mockReset();
     listMovies.mockReset();
     listTVShows.mockReset();
+    listUpgrades.mockReset();
+    searchNow.mockReset();
+    approveRequest.mockReset();
+    denyRequest.mockReset();
+    setCurrentRoles([]);
     listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
     listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listUpgrades.mockResolvedValue({ items: [], total: 0, available: true });
+    searchNow.mockResolvedValue({ started: true, message: 'wanted search started' });
   });
 
   it('shows empty state when nothing is in progress', async () => {
@@ -57,6 +88,7 @@ describe('InProgress page', () => {
         year: 2020,
         poster: '',
         status: 'downloading',
+        qualityProfileId: '4k',
         createdAt: '',
         updatedAt: '',
       },
@@ -81,6 +113,7 @@ describe('InProgress page', () => {
       expect(screen.getByTestId('in-progress-searching')).toBeInTheDocument();
     });
     expect(screen.getByText('Downloading Movie')).toBeInTheDocument();
+    expect(screen.getByText(/Movie · 2020 · 4K/)).toBeInTheDocument();
     expect(screen.getByText('Searching Show')).toBeInTheDocument();
   });
 
@@ -152,6 +185,125 @@ describe('InProgress page', () => {
     expect(screen.getByText('Import failed')).toBeInTheDocument();
     expect(screen.getByText('path not under a scanner watch directory')).toBeInTheDocument();
   });
+
+  it('lists cutoff-unmet titles and starts a wanted search', async () => {
+    listRequests.mockResolvedValueOnce([]);
+    listUpgrades.mockResolvedValueOnce({
+      available: true,
+      total: 1,
+      items: [
+        {
+          queue_id: 'q-far',
+          item_type: 'tv',
+          item_id: 's-far',
+          title: 'Needs Upgrade',
+          year: 2021,
+          current_score: 10,
+          cutoff_score: 200,
+        },
+      ],
+    });
+
+    renderPage(ALL_CAPABILITIES);
+
+    expect(await screen.findByTestId('in-progress-upgrades')).toBeInTheDocument();
+    expect(screen.getByText('Needs Upgrade')).toBeInTheDocument();
+    expect(screen.getByText(/190 below/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Needs Upgrade/i })).toHaveAttribute(
+      'href',
+      '/tv/s-far?search=1',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /search now/i }));
+    expect(await screen.findByTestId('upgrade-search-now')).toHaveTextContent(/wanted search started/i);
+    expect(searchNow).toHaveBeenCalledWith(
+      expect.objectContaining({ item_id: 's-far', item_type: 'tv' }),
+    );
+  });
+
+  it('lets privileged household users approve a pending request', async () => {
+    setCurrentRoles(['admin']);
+    const pending = {
+      id: 'r-pend',
+      itemType: 'movie',
+      itemId: '',
+      tmdbId: 55,
+      title: 'Needs Approval',
+      year: 2026,
+      poster: '',
+      status: 'pending',
+      createdAt: '',
+      updatedAt: '',
+    };
+    listRequests.mockResolvedValueOnce([pending]);
+    listRequests.mockResolvedValueOnce([]);
+    approveRequest.mockResolvedValueOnce({ status: 'requested' });
+
+    renderPage();
+
+    expect(await screen.findByTestId('in-progress-pending')).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for a household admin/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    await waitFor(() => {
+      expect(approveRequest).toHaveBeenCalledWith('r-pend');
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId('in-progress-pending')).not.toBeInTheDocument();
+    });
+  });
+
+  it('hides approve/deny from members without an approver role', async () => {
+    setCurrentRoles(['member']);
+    listRequests.mockResolvedValueOnce([
+      {
+        id: 'r-pend',
+        itemType: 'movie',
+        itemId: '',
+        tmdbId: 55,
+        title: 'Needs Approval',
+        year: 2026,
+        poster: '',
+        status: 'pending',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByTestId('in-progress-pending')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deny' })).not.toBeInTheDocument();
+  });
+
+  it('denies a pending request with an optional reason', async () => {
+    setCurrentRoles(['manager']);
+    const pending = {
+      id: 'r-deny',
+      itemType: 'tv',
+      itemId: '',
+      tmdbId: 9,
+      title: 'Skip This',
+      year: 2025,
+      poster: '',
+      status: 'pending',
+      createdAt: '',
+      updatedAt: '',
+    };
+    listRequests.mockResolvedValueOnce([pending]);
+    listRequests.mockResolvedValueOnce([]);
+    denyRequest.mockResolvedValueOnce({ status: 'denied' });
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('already own it');
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Deny' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Deny' }));
+    await waitFor(() => {
+      expect(denyRequest).toHaveBeenCalledWith('r-deny', 'already own it');
+    });
+    prompt.mockRestore();
+  });
 });
 
 describe('InProgress accessibility', () => {
@@ -159,8 +311,14 @@ describe('InProgress accessibility', () => {
     listRequests.mockReset();
     listMovies.mockReset();
     listTVShows.mockReset();
+    listUpgrades.mockReset();
+    searchNow.mockReset();
+    approveRequest.mockReset();
+    denyRequest.mockReset();
+    setCurrentRoles([]);
     listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
     listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listUpgrades.mockResolvedValue({ items: [], total: 0, available: true });
     listRequests.mockResolvedValue([]);
   });
 

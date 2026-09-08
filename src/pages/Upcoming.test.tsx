@@ -1,19 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Upcoming from './Upcoming';
 import { updatePreferences } from '../lib/userdata';
 
+const listCalendar = vi.fn();
 const listTVShows = vi.fn();
-const getTVShow = vi.fn();
+const listMovies = vi.fn();
+const searchNow = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
   return {
     ...actual,
     api: {
+      listCalendar: (...args: unknown[]) => listCalendar(...args),
       listTVShows: (...args: unknown[]) => listTVShows(...args),
-      getTVShow: (...args: unknown[]) => getTVShow(...args),
+      listMovies: (...args: unknown[]) => listMovies(...args),
+      searchNow: (...args: unknown[]) => searchNow(...args),
     },
   };
 });
@@ -22,48 +26,6 @@ function tomorrowIso(): string {
   const air = new Date();
   air.setDate(air.getDate() + 1);
   return air.toISOString().slice(0, 10);
-}
-
-function showStub(id: string, title: string, contentRating?: string) {
-  return {
-    id,
-    title,
-    year: 2026,
-    overview: '',
-    genres: [],
-    poster_url: '',
-    has_file: false,
-    created_at: '',
-    ...(contentRating ? { content_rating: contentRating } : {}),
-  };
-}
-
-function showDetail(
-  id: string,
-  title: string,
-  episodeTitle: string,
-  airDate: string,
-  contentRating?: string,
-) {
-  return {
-    ...showStub(id, title, contentRating),
-    seasons: [
-      {
-        id: `${id}-season-1`,
-        season_number: 1,
-        episodes: [
-          {
-            id: `${id}-e1`,
-            title: episodeTitle,
-            season_number: 1,
-            episode_number: 1,
-            air_date: airDate,
-            has_file: false,
-          },
-        ],
-      },
-    ],
-  };
 }
 
 function enableKidsPgCeiling() {
@@ -75,14 +37,28 @@ function enableKidsPgCeiling() {
 describe('Upcoming page', () => {
   beforeEach(() => {
     localStorage.clear();
+    listCalendar.mockReset();
     listTVShows.mockReset();
-    getTVShow.mockReset();
+    listMovies.mockReset();
+    searchNow.mockReset();
+    searchNow.mockResolvedValue({ started: true, message: 'wanted search started' });
     const airDate = tomorrowIso();
-    listTVShows.mockResolvedValue({
-      items: [showStub('s1', 'Orbital')],
-      total: 1,
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'tv',
+          id: 'ep-1',
+          parent_id: 's1',
+          title: 'Orbital',
+          subtitle: 'S01E01 · Pilot',
+          date: airDate,
+          href: '/tv/s1',
+        },
+      ],
     });
-    getTVShow.mockResolvedValue(showDetail('s1', 'Orbital', 'Pilot', airDate));
   });
 
   it('lists episodes airing soon', async () => {
@@ -96,19 +72,67 @@ describe('Upcoming page', () => {
     expect(screen.getByText(/Pilot/)).toBeInTheDocument();
   });
 
+  it('lists movie releases on the same calendar', async () => {
+    const airDate = tomorrowIso();
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'movie',
+          id: 'mv-1',
+          parent_id: 'mv-1',
+          title: 'Upcoming Film',
+          subtitle: 'Theatrical / digital',
+          date: airDate,
+          href: '/movies/mv-1',
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <Upcoming />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Upcoming Film')).toBeInTheDocument();
+    expect(screen.getByText(/Theatrical/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Upcoming Film/i })).toHaveAttribute(
+      'href',
+      '/movies/mv-1',
+    );
+  });
+
   it('hides a restricted show from the calendar under kids mode / maxRating', async () => {
     enableKidsPgCeiling();
     const airDate = tomorrowIso();
     listTVShows.mockResolvedValue({
       items: [
-        showStub('s-pg', 'Bluey', 'TV-Y'),
-        showStub('s-ma', 'The Boys', 'TV-MA'),
+        { id: 's-pg', title: 'Bluey', content_rating: 'TV-Y' },
+        { id: 's-ma', title: 'The Boys', content_rating: 'TV-MA' },
       ],
       total: 2,
     });
-    getTVShow.mockImplementation(async (id: unknown) => {
-      if (id === 's-pg') return showDetail('s-pg', 'Bluey', 'The Beach', airDate, 'TV-Y');
-      return showDetail('s-ma', 'The Boys', 'The Name of the Game', airDate, 'TV-MA');
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'tv',
+          id: 'ep-pg',
+          parent_id: 's-pg',
+          title: 'Bluey',
+          subtitle: 'The Beach',
+          date: airDate,
+          href: '/tv/s-pg',
+        },
+        {
+          kind: 'tv',
+          id: 'ep-ma',
+          parent_id: 's-ma',
+          title: 'The Boys',
+          subtitle: 'The Name of the Game',
+          date: airDate,
+          href: '/tv/s-ma',
+        },
+      ],
     });
 
     render(
@@ -122,19 +146,72 @@ describe('Upcoming page', () => {
     expect(screen.queryByText('The Boys')).not.toBeInTheDocument();
     expect(screen.queryByText(/The Name of the Game/)).not.toBeInTheDocument();
   });
+
+  it('searches a missing series from the calendar', async () => {
+    render(
+      <MemoryRouter>
+        <Upcoming />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Search now' }));
+    await waitFor(() => {
+      expect(searchNow).toHaveBeenCalledWith({ item_type: 'tv', item_id: 's1' });
+    });
+    expect(await screen.findByText('wanted search started')).toBeInTheDocument();
+  });
+
+  it('hides in-library rows when Missing only is checked', async () => {
+    const airDate = tomorrowIso();
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'tv',
+          id: 'ep-1',
+          parent_id: 's1',
+          title: 'Orbital',
+          subtitle: 'S01E01 · Pilot',
+          date: airDate,
+          href: '/tv/s1',
+          has_file: false,
+        },
+        {
+          kind: 'movie',
+          id: 'mv-1',
+          parent_id: 'mv-1',
+          title: 'Already Here',
+          date: airDate,
+          href: '/movies/mv-1',
+          has_file: true,
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <Upcoming />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Orbital')).toBeInTheDocument();
+    expect(screen.getByText('Already Here')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Missing only'));
+    expect(screen.getByText('Orbital')).toBeInTheDocument();
+    expect(screen.queryByText('Already Here')).not.toBeInTheDocument();
+  });
 });
 
 describe('Upcoming accessibility', () => {
   beforeEach(() => {
     localStorage.clear();
+    listCalendar.mockReset();
     listTVShows.mockReset();
-    getTVShow.mockReset();
+    listMovies.mockReset();
     listTVShows.mockResolvedValue({ items: [], total: 0 });
-    getTVShow.mockResolvedValue({ id: 's1', title: 'Orbital', seasons: [] });
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listCalendar.mockResolvedValue({ items: [], total: 0, available: true });
   });
 
   it('has a page h1 and announces loading on initial render', () => {
-    listTVShows.mockImplementation(() => new Promise(() => {}));
+    listCalendar.mockImplementation(() => new Promise(() => {}));
 
     render(
       <MemoryRouter>

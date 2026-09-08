@@ -7,6 +7,7 @@ const listMovies = vi.fn();
 const listTVShows = vi.fn();
 const getMovie = vi.fn();
 const getTVShow = vi.fn();
+const listWatchHistory = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -17,6 +18,7 @@ vi.mock('../api/client', async () => {
       listTVShows: (...args: unknown[]) => listTVShows(...args),
       getMovie: (...args: unknown[]) => getMovie(...args),
       getTVShow: (...args: unknown[]) => getTVShow(...args),
+      listWatchHistory: (...args: unknown[]) => listWatchHistory(...args),
     },
   };
 });
@@ -36,6 +38,8 @@ describe('History page', () => {
     listTVShows.mockReset();
     getMovie.mockReset();
     getTVShow.mockReset();
+    listWatchHistory.mockReset();
+    listWatchHistory.mockResolvedValue({ available: false, items: [], total: 0 });
     listMovies.mockResolvedValue({ items: [], total: 0 });
     listTVShows.mockResolvedValue({ items: [], total: 0 });
   });
@@ -126,5 +130,77 @@ describe('History page', () => {
     const empty = await screen.findByTestId('history-empty');
     expect(empty).toBeInTheDocument();
     expect(screen.queryByText('In Progress Movie')).not.toBeInTheDocument();
+  });
+
+  it('shows finished Jellyfin plays from playback-monitor', async () => {
+    listWatchHistory.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          id: 'h1',
+          title: 'JF Dune',
+          mediaId: 'm-jf',
+          mediaType: 'movie',
+          href: '/movies/m-jf',
+          positionSeconds: 8800,
+          durationSeconds: 9000,
+          watched: true,
+          updatedAt: '2026-09-08T00:00:00Z',
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <History />
+      </MemoryRouter>,
+    );
+    const page = await screen.findByTestId('history-page');
+    expect(page).toHaveTextContent('JF Dune');
+  });
+
+  it('filters monitor history by watcher search and skips local progress', async () => {
+    localStorage.setItem(
+      'muxcore.userdata.progress.v1',
+      JSON.stringify({
+        m1: {
+          id: 'm1',
+          kind: 'movie',
+          title: 'Local Only',
+          href: '/movies/m1',
+          positionSec: 0,
+          durationSec: 7200,
+          updatedAt: '2026-09-01T10:00:00Z',
+          watched: true,
+        },
+      }),
+    );
+    listWatchHistory.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          id: 'h2',
+          title: 'Pat Movie',
+          mediaId: 'm-pat',
+          mediaType: 'movie',
+          href: '/movies/m-pat',
+          positionSeconds: 8800,
+          durationSeconds: 9000,
+          watched: true,
+          updatedAt: '2026-09-08T00:00:00Z',
+        },
+      ],
+    });
+    render(
+      <MemoryRouter initialEntries={['/history?q=pat']}>
+        <History />
+      </MemoryRouter>,
+    );
+    const page = await screen.findByTestId('history-page');
+    expect(page).toHaveTextContent('Pat Movie');
+    expect(page).not.toHaveTextContent('Local Only');
+    expect(screen.getByTestId('history-filter-label')).toHaveTextContent('matching “pat”');
+    expect(listWatchHistory).toHaveBeenCalledWith(100, { userId: undefined, q: 'pat' });
   });
 });

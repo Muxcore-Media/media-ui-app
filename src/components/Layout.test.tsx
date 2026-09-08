@@ -3,18 +3,41 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Layout from './Layout';
 import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../lib/capabilities';
+import { NowPlayingProvider, useNowPlaying } from '../lib/nowPlaying';
+
+function PlayProbe() {
+  const { play } = useNowPlaying();
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        play({
+          id: 't1',
+          src: '/stream/t1',
+          title: 'Hyperballad',
+          artistName: 'Björk',
+          href: '/music/ar1',
+        })
+      }
+    >
+      start track
+    </button>
+  );
+}
 
 function renderLayout(caps = DEFAULT_CAPABILITIES) {
   return render(
-    <CapabilitiesContext.Provider value={{ caps, loading: false, error: null, retry: () => {} }}>
-      <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<div>home body</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
-    </CapabilitiesContext.Provider>,
+    <NowPlayingProvider>
+      <CapabilitiesContext.Provider value={{ caps, loading: false, error: null, retry: () => {} }}>
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route index element={<div>home body</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </CapabilitiesContext.Provider>
+    </NowPlayingProvider>,
   );
 }
 
@@ -54,5 +77,39 @@ describe('Layout (session / login shell)', () => {
       'href',
       '/books',
     );
+  });
+
+  it('docks a now-playing bar after a track starts so music survives navigation', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    render(
+      <NowPlayingProvider>
+        <CapabilitiesContext.Provider
+          value={{ caps: DEFAULT_CAPABILITIES, loading: false, error: null, retry: () => {} }}
+        >
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route
+                  index
+                  element={
+                    <div>
+                      home body
+                      <PlayProbe />
+                    </div>
+                  }
+                />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </CapabilitiesContext.Provider>
+      </NowPlayingProvider>,
+    );
+
+    expect(screen.queryByTestId('now-playing-bar')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'start track' }));
+    expect(screen.getByTestId('now-playing-bar')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Now playing' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Björk' })).toHaveAttribute('href', '/music/ar1');
   });
 });

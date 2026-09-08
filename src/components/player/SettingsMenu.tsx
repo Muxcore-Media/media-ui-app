@@ -9,6 +9,7 @@ import {
   Loader2,
   Maximize2,
   Search,
+  SkipForward,
   Subtitles as SubtitlesIcon,
   Sparkles,
   X,
@@ -20,9 +21,19 @@ import {
   type QualityOption,
 } from '../../lib/player/types';
 import { formatAudioTrackLabel, formatSubtitleTrackLabel } from '../../lib/player/tracks';
-import { languageDisplayName } from '../../lib/player/format';
+import { formatTime, languageDisplayName } from '../../lib/player/format';
+import { skipPointsSummary } from '../../lib/playback-segments';
 import type { UserPreferences } from '../../lib/userdata';
-import type { SubtitleSearchResult } from '../../api/client';
+import type { PlaybackSegment, SubtitleSearchResult } from '../../api/client';
+import {
+  formatSubtitleOffset,
+  SUBTITLE_OFFSET_STEP_MS,
+  SUBTITLE_TEXT_COLORS,
+} from '../../lib/subtitle-offset';
+import {
+  formatAudioOffset,
+  AUDIO_OFFSET_STEP_MS,
+} from '../../lib/audio-offset';
 
 export type SubtitleSearchMenuProps = {
   status: 'idle' | 'searching' | 'done' | 'unavailable' | 'error';
@@ -42,7 +53,19 @@ type Panel =
   | 'subtitle-appearance'
   | 'subtitle-find'
   | 'speed'
-  | 'aspect';
+  | 'aspect'
+  | 'skip-points';
+
+export type SkipPointsEditor = {
+  currentSec: number;
+  durationSec: number;
+  segments: PlaybackSegment[];
+  busy: boolean;
+  error: string | null;
+  onMarkIntroEnd: () => void;
+  onMarkOutroStart: () => void;
+  onClear: () => void;
+};
 
 type Props = {
   onClose: () => void;
@@ -56,15 +79,20 @@ type Props = {
   onAudio: (idx: number) => void;
   textTracks: PlayerTrackInfo[];
   pictureSubtitleTracks?: PlayerTrackInfo[];
+  burnedSubtitleStreamIndex?: number;
   textIdx: number;
   onText: (idx: number) => void;
+  onPicture?: (streamIndex: number) => void;
   rate: number;
   onRate: (rate: number) => void;
   subtitlePrefs: UserPreferences['subtitles'];
   onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void;
+  audioOffsetMs: number;
+  onAudioOffset: (ms: number) => void;
   aspectMode: AspectMode;
   onAspectMode: (mode: AspectMode) => void;
   subtitleSearch?: SubtitleSearchMenuProps;
+  skipPoints?: SkipPointsEditor;
 };
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -88,15 +116,20 @@ export default function SettingsMenu(props: Props) {
     onAudio,
     textTracks,
     pictureSubtitleTracks = [],
+    burnedSubtitleStreamIndex = -1,
     textIdx,
     onText,
+    onPicture,
     rate,
     onRate,
     subtitlePrefs,
     onSubtitlePrefs,
+    audioOffsetMs,
+    onAudioOffset,
     aspectMode,
     onAspectMode,
     subtitleSearch,
+    skipPoints,
   } = props;
 
   const activeQualityLabel = qualityOptions.find((q) => q.id === quality)?.label || 'Original';
@@ -135,6 +168,7 @@ export default function SettingsMenu(props: Props) {
           {panel === 'subtitle-find' && 'Find subtitles'}
           {panel === 'speed' && 'Playback speed'}
           {panel === 'aspect' && 'Aspect ratio'}
+          {panel === 'skip-points' && 'Skip points'}
         </h2>
         <button
           type="button"
@@ -159,9 +193,12 @@ export default function SettingsMenu(props: Props) {
             <RootRow
               icon={<Languages className="h-4 w-4" aria-hidden="true" />}
               label="Audio"
-              value={trackLabel(audioTracks[audioIdx] ?? ({ label: 'Default' } as PlayerTrackInfo))}
+              value={
+                (audioOffsetMs ?? 0) === 0
+                  ? trackLabel(audioTracks[audioIdx] ?? ({ label: 'Default' } as PlayerTrackInfo))
+                  : `${trackLabel(audioTracks[audioIdx] ?? ({ label: 'Default' } as PlayerTrackInfo))} · ${formatAudioOffset(audioOffsetMs)}`
+              }
               onClick={() => setPanel('audio')}
-              disabled={audioTracks.length <= 1}
             />
             <RootRow
               icon={<SubtitlesIcon className="h-4 w-4" aria-hidden="true" />}
@@ -181,6 +218,14 @@ export default function SettingsMenu(props: Props) {
               value={ASPECT_MODE_OPTIONS.find((a) => a.id === aspectMode)?.label || 'Fit'}
               onClick={() => setPanel('aspect')}
             />
+            {skipPoints ? (
+              <RootRow
+                icon={<SkipForward className="h-4 w-4" aria-hidden="true" />}
+                label="Skip points"
+                value={skipPointsSummary(skipPoints.segments)}
+                onClick={() => setPanel('skip-points')}
+              />
+            ) : null}
           </ul>
         )}
 
@@ -198,28 +243,78 @@ export default function SettingsMenu(props: Props) {
         )}
 
         {panel === 'audio' && (
-          <ul className="space-y-0.5 text-sm">
-            {audioTracks.map((t) => (
-              <OptionRow
-                key={t.id}
-                label={trackLabel(t)}
-                active={t.index === audioIdx}
-                onClick={() => onAudio(t.index)}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="space-y-0.5 text-sm">
+              {audioTracks.map((t) => (
+                <OptionRow
+                  key={t.id}
+                  label={trackLabel(t)}
+                  active={t.index === audioIdx}
+                  onClick={() => onAudio(t.index)}
+                />
+              ))}
+            </ul>
+            <div className="mt-2 border-t border-[var(--player-chip-border)] px-2.5 pt-2">
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
+                Sync offset
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--player-chip-border)] px-2 py-1.5 text-xs hover:bg-[var(--player-chip-hover)]"
+                  aria-label="Shift audio earlier"
+                  onClick={() => onAudioOffset((audioOffsetMs ?? 0) - AUDIO_OFFSET_STEP_MS)}
+                >
+                  −
+                </button>
+                <input
+                  type="range"
+                  min={-10000}
+                  max={10000}
+                  step={50}
+                  value={audioOffsetMs ?? 0}
+                  onChange={(e) => onAudioOffset(Number(e.target.value))}
+                  className="min-w-0 flex-1 accent-[var(--accent-color)]"
+                  aria-label="Audio sync offset"
+                  data-testid="audio-offset-slider"
+                />
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--player-chip-border)] px-2 py-1.5 text-xs hover:bg-[var(--player-chip-hover)]"
+                  aria-label="Shift audio later"
+                  onClick={() => onAudioOffset((audioOffsetMs ?? 0) + AUDIO_OFFSET_STEP_MS)}
+                >
+                  +
+                </button>
+              </div>
+              <p className="mt-1 text-center text-xs text-[var(--player-fg-subtle)]" data-testid="audio-offset-value">
+                {(audioOffsetMs ?? 0) === 0 ? 'In sync' : formatAudioOffset(audioOffsetMs)}
+                {' · [ / ]'}
+              </p>
+            </div>
+          </>
         )}
 
         {panel === 'subtitles' && (
           <>
             <ul className="space-y-0.5 text-sm">
-              <OptionRow label="Off" active={textIdx === -1} onClick={() => onText(-1)} />
+              <OptionRow
+                label="Off"
+                active={textIdx === -1 && burnedSubtitleStreamIndex < 0}
+                onClick={() => {
+                  onPicture?.(-1);
+                  onText(-1);
+                }}
+              />
               {textTracks.map((t) => (
                 <OptionRow
                   key={t.id}
                   label={trackLabel(t)}
-                  active={t.index === textIdx}
-                  onClick={() => onText(t.index)}
+                  active={t.index === textIdx && burnedSubtitleStreamIndex < 0}
+                  onClick={() => {
+                    onPicture?.(-1);
+                    onText(t.index);
+                  }}
                 />
               ))}
             </ul>
@@ -229,17 +324,26 @@ export default function SettingsMenu(props: Props) {
                   Image subtitles
                 </p>
                 <ul className="space-y-0.5 text-sm">
-                  {pictureSubtitleTracks.map((t) => (
-                    <li key={t.id}>
-                      <div
-                        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[var(--player-fg-subtle)] opacity-60"
-                        title="Burned into video during transcode — not available as text captions"
-                      >
-                        <span className="flex h-4 w-4 shrink-0" />
-                        <span>{trackLabel(t)}</span>
-                      </div>
-                    </li>
-                  ))}
+                  {pictureSubtitleTracks.map((t) =>
+                    transcoderAvailable && t.streamIndex != null && t.streamIndex >= 0 ? (
+                      <OptionRow
+                        key={t.id}
+                        label={`${trackLabel(t)} · Burn-in`}
+                        active={t.streamIndex === burnedSubtitleStreamIndex}
+                        onClick={() => onPicture?.(t.streamIndex ?? -1)}
+                      />
+                    ) : (
+                      <li key={t.id}>
+                        <div
+                          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[var(--player-fg-subtle)] opacity-60"
+                          title="Connect the transcoder to burn PGS/VobSub into the video"
+                        >
+                          <span className="flex h-4 w-4 shrink-0" />
+                          <span>{trackLabel(t)}</span>
+                        </div>
+                      </li>
+                    ),
+                  )}
                 </ul>
               </div>
             ) : null}
@@ -271,6 +375,29 @@ export default function SettingsMenu(props: Props) {
 
         {panel === 'subtitle-appearance' && (
           <div className="space-y-4 px-2 py-1 text-sm text-[var(--player-fg)]">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
+                Color
+              </label>
+              <div className="flex flex-wrap gap-1.5" data-testid="subtitle-text-colors">
+                {SUBTITLE_TEXT_COLORS.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    title={c.label}
+                    aria-label={`Subtitle color ${c.label}`}
+                    aria-pressed={(subtitlePrefs.textColor || '#ffffff').toLowerCase() === c.hex}
+                    className={`h-7 w-7 rounded-full border-2 ${
+                      (subtitlePrefs.textColor || '#ffffff').toLowerCase() === c.hex
+                        ? 'border-[var(--accent-color)]'
+                        : 'border-[var(--player-chip-border)]'
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                    onClick={() => onSubtitlePrefs({ textColor: c.hex })}
+                  />
+                ))}
+              </div>
+            </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
                 Size
@@ -349,6 +476,48 @@ export default function SettingsMenu(props: Props) {
                 ))}
               </div>
             </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-[var(--player-fg-subtle)]">
+                Sync offset
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--player-chip-border)] px-2 py-1.5 text-xs hover:bg-[var(--player-chip-hover)]"
+                  aria-label="Shift subtitles earlier"
+                  onClick={() =>
+                    onSubtitlePrefs({ offsetMs: (subtitlePrefs.offsetMs ?? 0) - SUBTITLE_OFFSET_STEP_MS })
+                  }
+                >
+                  −
+                </button>
+                <input
+                  type="range"
+                  min={-10000}
+                  max={10000}
+                  step={50}
+                  value={subtitlePrefs.offsetMs ?? 0}
+                  onChange={(e) => onSubtitlePrefs({ offsetMs: Number(e.target.value) })}
+                  className="min-w-0 flex-1 accent-[var(--accent-color)]"
+                  aria-label="Subtitle sync offset"
+                  data-testid="subtitle-offset-slider"
+                />
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--player-chip-border)] px-2 py-1.5 text-xs hover:bg-[var(--player-chip-hover)]"
+                  aria-label="Shift subtitles later"
+                  onClick={() =>
+                    onSubtitlePrefs({ offsetMs: (subtitlePrefs.offsetMs ?? 0) + SUBTITLE_OFFSET_STEP_MS })
+                  }
+                >
+                  +
+                </button>
+              </div>
+              <p className="mt-1 text-center text-xs text-[var(--player-fg-subtle)]" data-testid="subtitle-offset-value">
+                {(subtitlePrefs.offsetMs ?? 0) === 0 ? 'In sync' : formatSubtitleOffset(subtitlePrefs.offsetMs)}
+                {' · G / H'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -381,6 +550,8 @@ export default function SettingsMenu(props: Props) {
         {panel === 'subtitle-find' && (
           <SubtitleFindPanel search={subtitleSearch} />
         )}
+
+        {panel === 'skip-points' && skipPoints ? <SkipPointsPanel editor={skipPoints} /> : null}
       </div>
     </div>
   );
@@ -542,4 +713,56 @@ function SubtitleFindPanel({ search }: { search: SubtitleSearchMenuProps | undef
   }
 
   return null;
+}
+
+function SkipPointsPanel({ editor }: { editor: SkipPointsEditor }) {
+  const canMarkIntro = editor.currentSec > 0.25 && !editor.busy;
+  const canMarkOutro = editor.durationSec > editor.currentSec + 0.25 && !editor.busy;
+  const canClear = editor.segments.length > 0 && !editor.busy;
+
+  return (
+    <div className="space-y-3 px-2 py-1 text-sm text-[var(--player-fg)]" data-testid="player-skip-points">
+      <p className="text-xs text-[var(--player-fg-subtle)]">
+        Position {formatTime(editor.currentSec)}
+        {editor.durationSec > 0 ? ` / ${formatTime(editor.durationSec)}` : ''}
+      </p>
+      <p className="text-xs text-[var(--player-fg-muted)]" data-testid="player-skip-points-summary">
+        {skipPointsSummary(editor.segments)}
+      </p>
+      <div className="space-y-1.5">
+        <button
+          type="button"
+          disabled={!canMarkIntro}
+          data-testid="player-mark-intro"
+          className="w-full rounded-lg border border-[var(--player-chip-border)] px-3 py-2 text-left hover:bg-[var(--player-chip-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={editor.onMarkIntroEnd}
+        >
+          Intro ends here
+        </button>
+        <button
+          type="button"
+          disabled={!canMarkOutro}
+          data-testid="player-mark-outro"
+          className="w-full rounded-lg border border-[var(--player-chip-border)] px-3 py-2 text-left hover:bg-[var(--player-chip-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={editor.onMarkOutroStart}
+        >
+          Outro starts here
+        </button>
+        <button
+          type="button"
+          disabled={!canClear}
+          data-testid="player-clear-skip-points"
+          className="w-full rounded-lg px-3 py-2 text-left text-[var(--accent-color)] hover:bg-[var(--player-chip-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={editor.onClear}
+        >
+          Clear skip points
+        </button>
+      </div>
+      {editor.error ? (
+        <p className="text-xs text-red-400" data-testid="player-skip-points-error">
+          {editor.error}
+        </p>
+      ) : null}
+    </div>
+  );
 }

@@ -8,6 +8,7 @@ import { useUpcomingEpisodes } from './useUpcomingEpisodes';
 // ---------------------------------------------------------------------------
 
 const getTVShow = vi.fn();
+const listCalendar = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -15,6 +16,7 @@ vi.mock('../api/client', async () => {
     ...actual,
     api: {
       getTVShow: (...args: unknown[]) => getTVShow(...args),
+      listCalendar: (...args: unknown[]) => listCalendar(...args),
     },
   };
 });
@@ -27,6 +29,9 @@ vi.mock('../lib/parental', async () => {
 
 beforeEach(() => {
   getTVShow.mockReset();
+  listCalendar.mockReset();
+  // Existing window/dedupe tests exercise the per-show fallback.
+  listCalendar.mockRejectedValue(new Error('calendar unavailable'));
 });
 
 // ---------------------------------------------------------------------------
@@ -317,5 +322,97 @@ describe('useUpcomingEpisodes — error handling', () => {
 
     expect(result.current.rows).toHaveLength(1);
     expect(result.current.rows[0].show.id).toBe('show-ok');
+  });
+});
+
+describe('useUpcomingEpisodes — calendar API', () => {
+  it('prefers listCalendar over per-show fetches when available', async () => {
+    const show = makeShow({ id: 'show-cal' });
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'tv',
+          id: 'ep-cal',
+          parent_id: 'show-cal',
+          title: 'Test Show',
+          subtitle: 'S01E02 · Calendar Ep',
+          date: airDate(4),
+          href: '/tv/show-cal',
+          season_number: 1,
+          episode_number: 2,
+          has_file: false,
+        },
+      ],
+    });
+
+    const { result } = renderHook(() => useUpcomingEpisodes([show], EMPTY_EXCLUDE));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(getTVShow).not.toHaveBeenCalled();
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0].kind).toBe('tv');
+    expect(result.current.rows[0].episode.id).toBe('ep-cal');
+    expect(result.current.rows[0].episode.episode_number).toBe(2);
+  });
+
+  it('maps movie releases onto the rail from calendar items', async () => {
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'movie',
+          id: 'movie-1',
+          parent_id: 'movie-1',
+          title: 'Opening Night',
+          subtitle: 'Theatrical',
+          date: airDate(2),
+          href: '/movies/movie-1',
+          has_file: true,
+        },
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useUpcomingEpisodes(
+        [],
+        EMPTY_EXCLUDE,
+        [
+          {
+            id: 'movie-1',
+            title: 'Opening Night',
+            year: 2026,
+            overview: '',
+            runtime: 120,
+            vote_average: 7,
+            genres: [],
+            poster_url: '/poster-movie.jpg',
+            has_file: true,
+            stream_url: '/stream/movies/movie-1',
+            created_at: '',
+          },
+        ],
+      ),
+    );
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0].kind).toBe('movie');
+    expect(result.current.rows[0].show.title).toBe('Opening Night');
+    expect(result.current.rows[0].show.poster_url).toBe('/poster-movie.jpg');
+    expect(result.current.rows[0].episode.title).toBe('Theatrical');
+  });
+
+  it('falls back to getTVShow when calendar reports unavailable', async () => {
+    listCalendar.mockResolvedValue({ available: false, items: [] });
+    const show = makeShow();
+    getTVShow.mockResolvedValue(makeShowWithEpisode({ airOffset: 7 }));
+
+    const { result } = renderHook(() => useUpcomingEpisodes([show], EMPTY_EXCLUDE));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(getTVShow).toHaveBeenCalledWith('show-1');
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0].kind).toBe('tv');
   });
 });

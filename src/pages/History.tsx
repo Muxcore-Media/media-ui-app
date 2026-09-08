@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { History as HistoryIcon } from 'lucide-react';
 import { api } from '../api/client';
 import { ProgressCard } from '../components/media/ProgressCard';
@@ -12,6 +12,7 @@ import {
   recentlyWatched,
   type ProgressEntry,
 } from '../lib/userdata';
+import { mergeWatchProgress, progressFromMonitor, watchedOnly } from '../lib/watch-history';
 import {
   applyUserdataParentalFilter,
   expandLibraryRatingsForUserdata,
@@ -20,6 +21,10 @@ import {
 import { formatWatchedRelative } from '../lib/relativeDate';
 
 export default function History() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const userId = searchParams.get('userId')?.trim() ?? '';
+  const q = searchParams.get('q')?.trim() ?? '';
+  const filtered = Boolean(userId || q);
   const [rawItems, setRawItems] = useState<ProgressEntry[]>([]);
   const [joinMovies, setJoinMovies] = useState<Array<{ id: string; content_rating?: string }>>([]);
   const [joinShows, setJoinShows] = useState<Array<{ id: string; content_rating?: string }>>([]);
@@ -29,11 +34,17 @@ export default function History() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
         await pullUserdataFromServer();
         if (cancelled) return;
-        const watched = recentlyWatched(100);
+        const remote = await api
+          .listWatchHistory(100, { userId: userId || undefined, q: q || undefined })
+          .catch(() => ({ available: false, items: [], total: 0 }));
+        if (cancelled) return;
+        const local = filtered ? [] : recentlyWatched(100);
+        const watched = watchedOnly(mergeWatchProgress(local, progressFromMonitor(remote))).slice(0, 100);
         if (cancelled) return;
 
         let ratingMovies: Array<{ id: string; content_rating?: string }> = [];
@@ -73,7 +84,7 @@ export default function History() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filtered, q, userId]);
 
   const items = useMemo(
     () => (joinReady ? applyUserdataParentalFilter(rawItems, joinMovies, joinShows) : []),
@@ -87,8 +98,50 @@ export default function History() {
           Watch History
         </h1>
         <p className="text-sm text-[var(--text-secondary)]">
-          Recently finished movies and episodes.
+          Recently finished movies and episodes, including Jellyfin clients.
         </p>
+        <form
+          className="mt-3 flex flex-wrap items-end gap-2"
+          data-testid="history-filter"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const next = new FormData(event.currentTarget).get('q');
+            const value = typeof next === 'string' ? next.trim() : '';
+            const params = new URLSearchParams(searchParams);
+            if (value) params.set('q', value);
+            else params.delete('q');
+            setSearchParams(params, { replace: true });
+          }}
+        >
+          <label className="block min-w-[12rem] flex-1">
+            <span className="sr-only">Search watch history</span>
+            <input
+              name="q"
+              defaultValue={q}
+              key={`${userId}:${q}`}
+              placeholder="Search title or watcher"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)]"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-2 text-sm font-semibold text-white"
+          >
+            Search
+          </button>
+          {filtered ? (
+            <Link to="/history" className="text-sm font-semibold text-[var(--accent-color)] hover:underline">
+              Clear filter
+            </Link>
+          ) : null}
+        </form>
+        {filtered ? (
+          <p className="text-xs text-[var(--text-tertiary)]" data-testid="history-filter-label">
+            Showing monitor plays
+            {userId ? ` for ${userId}` : ''}
+            {q ? ` matching “${q}”` : ''}.
+          </p>
+        ) : null}
       </header>
 
       {error && <ErrorBanner message={error} />}

@@ -10,10 +10,12 @@ import {
   listWantToWatch,
   normalizeParentalPrefs,
   parentalForStorage,
+  getPreferences,
   pullUserdataFromServer,
   resolveNextUp,
   showIdFromHref,
   toggleWantToWatch,
+  updatePreferences,
   upsertProgress,
 } from './userdata';
 
@@ -133,6 +135,9 @@ describe('normalizeParentalPrefs', () => {
       maxRating: 'PG',
       pinHash: 'abc123',
       pinEnabled: true,
+      blockedTags: '',
+      allowedTags: '',
+      allowUnrated: true,
     });
   });
 
@@ -149,6 +154,9 @@ describe('normalizeParentalPrefs', () => {
       maxRating: 'PG-13',
       pinHash: 'deadbeef',
       pinEnabled: true,
+      blockedTags: '',
+      allowedTags: '',
+      allowUnrated: true,
     });
   });
 
@@ -169,6 +177,9 @@ describe('normalizeParentalPrefs', () => {
       maxRating: 'R',
       pinHash: 'camel',
       pinEnabled: false,
+      blockedTags: '',
+      allowedTags: '',
+      allowUnrated: true,
     });
   });
 
@@ -178,6 +189,9 @@ describe('normalizeParentalPrefs', () => {
       maxRating: '',
       pinHash: '',
       pinEnabled: false,
+      blockedTags: '',
+      allowedTags: '',
+      allowUnrated: true,
     });
   });
 });
@@ -247,6 +261,9 @@ describe('umbrella#85 admin snake_case userdata round-trip', () => {
       maxRating: 'PG',
       pinHash,
       pinEnabled: true,
+      blockedTags: 'violence',
+      allowedTags: '',
+      allowUnrated: false,
     });
 
     const state = getParentalState();
@@ -308,5 +325,32 @@ describe('want-to-watch userdata', () => {
     expect(ok).toBe(true);
     expect(listWantToWatch()[0]?.title).toBe('Fight Club');
     expect(isWantToWatch('tmdb:movie:550')).toBe(true);
+  });
+
+  it('defaults subtitle sync offset and clamps stored values', () => {
+    expect(getPreferences().subtitles.offsetMs).toBe(0);
+    expect(getPreferences().subtitles.textColor).toBe('#ffffff');
+    localStorage.setItem(
+      'muxcore.userdata.prefs.v1',
+      JSON.stringify({ subtitles: { language: 'spa', offsetMs: 50_000, textColor: 'red' } }),
+    );
+    expect(getPreferences().subtitles.language).toBe('spa');
+    expect(getPreferences().subtitles.offsetMs).toBe(10_000);
+    expect(getPreferences().subtitles.textColor).toBe('#ffffff');
+    expect(
+      updatePreferences({
+        subtitles: { ...getPreferences().subtitles, offsetMs: -12_000, textColor: '#ffff00' },
+      }).subtitles,
+    ).toMatchObject({ offsetMs: -10_000, textColor: '#ffff00' });
+  });
+
+  it('defaults audio sync offset and clamps stored values', () => {
+    expect(getPreferences().playback.audioOffsetMs).toBe(0);
+    localStorage.setItem(
+      'muxcore.userdata.prefs.v1',
+      JSON.stringify({ playback: { audioOffsetMs: 50_000 } }),
+    );
+    expect(getPreferences().playback.audioOffsetMs).toBe(10_000);
+    expect(updatePreferences({ playback: { ...getPreferences().playback, audioOffsetMs: -12_000 } }).playback.audioOffsetMs).toBe(-10_000);
   });
 });

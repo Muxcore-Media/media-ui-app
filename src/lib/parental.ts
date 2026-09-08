@@ -87,14 +87,38 @@ export function ratingExceedsMax(
 // Typed item helpers (Movie | TVShow)
 // ---------------------------------------------------------------------------
 
-type RatableItem = Pick<Movie | TVShow, 'content_rating'>;
+type RatableItem = Pick<Movie | TVShow, 'content_rating'> & {
+  genres?: string[];
+  tags?: string[];
+};
+
+function itemTagHaystack(item: RatableItem): string {
+  return [...(item.genres ?? []), ...(item.tags ?? [])].join(',').toLowerCase();
+}
+
+export function itemMatchesBlockedTags(item: RatableItem, blockedTags?: string): boolean {
+  const haystack = itemTagHaystack(item);
+  if (!haystack) return false;
+  return String(blockedTags ?? '')
+    .split(',')
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean)
+    .some((tag) => haystack.includes(tag));
+}
+
+export function validateParentalPIN(pin: string): string | null {
+  if (!pin) return null;
+  if (!/^\d{4,6}$/.test(pin)) return 'PIN must be 4–6 digits';
+  return null;
+}
 
 /** Returns true when the item should be hidden given current parental prefs. */
 export function isItemRestricted(
   item: RatableItem,
-  prefs: Pick<ParentalPrefs, 'kidsMode' | 'maxRating'>,
+  prefs: Pick<ParentalPrefs, 'kidsMode' | 'maxRating' | 'blockedTags'>,
 ): boolean {
   const { kidsMode, maxRating } = prefs;
+  if (itemMatchesBlockedTags(item, prefs.blockedTags)) return true;
   const ceiling = kidsMode && !maxRating ? 'PG' : maxRating;
   if (!ceiling) return false;
   return ratingExceedsMax(item.content_rating, ceiling);
@@ -103,10 +127,10 @@ export function isItemRestricted(
 /** Filter an array of items, removing any restricted by current parental prefs. */
 export function filterByParentalControls<T extends RatableItem>(
   items: T[],
-  prefs: Pick<ParentalPrefs, 'kidsMode' | 'maxRating'>,
+  prefs: Pick<ParentalPrefs, 'kidsMode' | 'maxRating' | 'blockedTags'>,
 ): T[] {
   const { kidsMode, maxRating } = prefs;
-  if (!kidsMode && !maxRating) return items;
+  if (!kidsMode && !maxRating && !String(prefs.blockedTags ?? '').trim()) return items;
   return items.filter((item) => !isItemRestricted(item, prefs));
 }
 
@@ -329,7 +353,7 @@ export function getParentalState(): ParentalState {
       maxRating: p.maxRating,
       pinEnabled: p.pinEnabled,
       pinHash: p.pinHash,
-      anyRestriction: p.kidsMode || Boolean(p.maxRating),
+      anyRestriction: p.kidsMode || Boolean(p.maxRating) || Boolean(String(p.blockedTags ?? '').trim()),
     };
   } catch {
     return { kidsMode: false, maxRating: '', pinEnabled: false, pinHash: '', anyRestriction: false };

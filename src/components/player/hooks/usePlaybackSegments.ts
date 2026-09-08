@@ -80,9 +80,16 @@ export function usePlaybackSegments({
     return null;
   }
 
+  function apply(next: PlaybackSegment[]) {
+    setSegments(next);
+    setLoaded(true);
+  }
+
   return {
     segments: effectiveSegments,
+    persisted: segments,
     loaded,
+    apply,
     activeSegmentAt,
     nextBoundaryAfter,
     prevBoundaryBefore,

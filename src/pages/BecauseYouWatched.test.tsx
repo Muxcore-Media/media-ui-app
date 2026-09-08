@@ -42,6 +42,8 @@ vi.mock('../api/client', async () => {
       getMovie: (...args: unknown[]) => getMovie(...args),
       listCollections: (...args: unknown[]) => listCollections(...args),
       getRelated: (...args: unknown[]) => getRelated(...args),
+      listWatchHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
+      listSessions: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
     },
   };
 });

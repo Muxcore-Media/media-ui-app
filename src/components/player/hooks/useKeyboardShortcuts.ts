@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { AUDIO_OFFSET_STEP_MS } from '../../../lib/audio-offset';
+import { SUBTITLE_OFFSET_STEP_MS } from '../../../lib/subtitle-offset';
 
 export type KeyboardShortcutHandlers = {
   enabled: boolean;
@@ -11,6 +13,8 @@ export type KeyboardShortcutHandlers = {
   toggleTheater: () => void;
   togglePiP: () => void;
   toggleSubtitles: () => void;
+  nudgeSubtitleOffset: (deltaMs: number) => void;
+  nudgeAudioOffset: (deltaMs: number) => void;
   cycleSpeed: (direction: 1 | -1) => void;
   skipActiveSegment: () => void;
   toggleEpisodeDrawer?: () => void;
@@ -30,6 +34,8 @@ export const KEYBOARD_SHORTCUTS: { keys: string; description: string }[] = [
   { keys: 'T', description: 'Theater mode' },
   { keys: 'P', description: 'Picture-in-picture' },
   { keys: 'C', description: 'Toggle subtitles' },
+  { keys: 'G / H', description: 'Subtitle delay earlier / later' },
+  { keys: '[ / ]', description: 'Audio delay earlier / later' },
   { keys: 'I', description: 'Skip intro / outro / credits' },
   { keys: 'E', description: 'Episodes' },
   { keys: '< / >', description: 'Playback speed' },
@@ -104,6 +110,22 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
           break;
         case 'KeyC':
           h.toggleSubtitles();
+          break;
+        case 'KeyG':
+          e.preventDefault();
+          h.nudgeSubtitleOffset(-SUBTITLE_OFFSET_STEP_MS);
+          break;
+        case 'KeyH':
+          e.preventDefault();
+          h.nudgeSubtitleOffset(SUBTITLE_OFFSET_STEP_MS);
+          break;
+        case 'BracketLeft':
+          e.preventDefault();
+          h.nudgeAudioOffset(-AUDIO_OFFSET_STEP_MS);
+          break;
+        case 'BracketRight':
+          e.preventDefault();
+          h.nudgeAudioOffset(AUDIO_OFFSET_STEP_MS);
           break;
         case 'KeyI':
           h.skipActiveSegment();

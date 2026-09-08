@@ -26,7 +26,15 @@ export type FeatureKey =
   | 'favorites'
   | 'debrid'
   | 'watchlist'
-  | 'wantToWatch';
+  | 'wantToWatch'
+  | 'releases'
+  | 'activity'
+  | 'issues'
+  | 'playbackMonitor'
+  | 'acquisition'
+  | 'watchTogether'
+  | 'offline'
+  | 'formats';
 
 export type Capabilities = {
   libraries: Record<LibraryKey, boolean>;
@@ -59,6 +67,14 @@ export const ALL_CAPABILITIES: Capabilities = {
     debrid: false,
     watchlist: true,
     wantToWatch: true,
+    releases: true,
+    activity: true,
+    issues: true,
+    playbackMonitor: true,
+    acquisition: true,
+    watchTogether: true,
+    offline: true,
+    formats: true,
   },
 };
 
@@ -89,6 +105,14 @@ export const DEFAULT_CAPABILITIES: Capabilities = {
     debrid: false,
     watchlist: false,
     wantToWatch: true,
+    releases: false,
+    activity: false,
+    issues: true,
+    playbackMonitor: false,
+    acquisition: false,
+    watchTogether: true,
+    offline: true,
+    formats: false,
   },
 };
 

@@ -32,12 +32,12 @@ GET /api/playback/resolve?src=<stream_url>
 natively playable by the browser; the `<video>` element points straight at the
 file or HTTP stream. No ffmpeg involvement.
 
-**Transcode (`mode = "transcode"`, or forced by a quality cap)** — the BFF pipes
-the stream through ffmpeg at `/stream/transcode?src=…`. Because this is a
-live-piped fMP4 (no server-side random access once started), seeking mid-transcode
-restarts the pipe at a new offset (`start=` query param) and the `<video>` element
-is remounted with the new URL. Audio stream selection works the same way
-(`audio_index=` on the transcode URL).
+**Transcode (`mode = "transcode"`, or forced by a quality cap)** — the BFF
+serves a growing HLS playlist at `/stream/hls?src=…` (Chrome uses `hls.js`;
+Safari plays it natively). Seeking uses the playlist's segments instead of
+restarting ffmpeg. Quality / audio / image-subtitle changes still start a new
+HLS session (`max_height=`, `audio_index=`, `subtitle_index=`). `/stream/transcode`
+remains the piped fMP4 fallback (`start=` restarts that pipe).
 
 Quality override: when the user picks a non-`auto` quality level in Settings,
 `usePlaybackSource` always forces a transcode capped at the chosen pixel height,
@@ -65,7 +65,20 @@ Track lists come from two sources merged at render time:
 
 The merge logic lives in `src/lib/player/tracks.ts`. Track selection UI is in
 `ControlsBar` → `SettingsMenu`. For audio tracks during transcode, switching a
-track restarts the transcode pipe with the new `audio_index`.
+track restarts the transcode pipe with the new `audio_index`. Image subtitles
+(PGS / VobSub) are burned in the same way (`subtitle_index=` → ffmpeg overlay)
+when the transcoder is available.
+
+Settings → Playback can auto-skip detected intro/recap and outro/credits
+(`media-intro-outro` segments, or the legacy "Skip intro seconds" fallback).
+
+**Watch Together** (player Users control) creates a household SyncPlay room
+(`POST /api/watch-together`). The host tab keeps a secret token; guests open
+`/player?together=` and follow play/pause/seek within 1.5s.
+
+**Saved offline** (detail **Save offline**, More → Saved offline) stores the
+stream in the browser Cache API. `usePlaybackSource` prefers that blob URL
+over live resolve/transcode so playback works without the library server.
 
 Graceful empty state: if no tracks are detected, the Audio row in Settings is
 disabled (grayed out). The Subtitles panel always shows "Off" as an option.

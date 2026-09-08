@@ -18,6 +18,7 @@ export default function Player() {
   const season = params.get('season');
   const episode = params.get('episode');
   const startOver = params.get('restart') === '1';
+  const togetherId = params.get('together') || undefined;
   const contentRating = params.get('content_rating') || undefined;
 
   const [pinOpen, setPinOpen] = useState(false);
@@ -81,6 +82,7 @@ export default function Player() {
       episodeNumber={episode ? Number(episode) : undefined}
       startOver={startOver}
       contentRating={contentRating}
+      togetherId={togetherId}
     />
   );
 }

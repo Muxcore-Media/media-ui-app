@@ -2,6 +2,37 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll } from 'vitest';
 
+function memoryStorage(): Storage {
+  const mem = new Map<string, string>();
+  return {
+    get length() {
+      return mem.size;
+    },
+    clear() {
+      mem.clear();
+    },
+    getItem(key: string) {
+      return mem.get(String(key)) ?? null;
+    },
+    key(index: number) {
+      return [...mem.keys()][index] ?? null;
+    },
+    removeItem(key: string) {
+      mem.delete(String(key));
+    },
+    setItem(key: string, value: string) {
+      mem.set(String(key), String(value));
+    },
+  };
+}
+
+if (typeof globalThis.localStorage?.clear !== 'function') {
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: memoryStorage() });
+}
+if (typeof globalThis.sessionStorage?.clear !== 'function') {
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: memoryStorage() });
+}
+
 beforeAll(() => {
   // jsdom does not implement media element load(); VideoPlayer calls it on src change.
   Object.defineProperty(HTMLMediaElement.prototype, 'load', {

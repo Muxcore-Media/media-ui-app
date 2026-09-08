@@ -24,6 +24,9 @@ export interface Movie {
   content_rating?: string;
   /** Production studio / distributor as returned by the media server (e.g. "Pixar", "Warner Bros."). */
   studio?: string;
+  /** Whether automation should search and upgrade this movie. */
+  monitored?: boolean;
+  quality_profile_id?: string;
 }
 
 export interface Episode {
@@ -36,6 +39,10 @@ export interface Episode {
   has_file: boolean;
   stream_url: string;
   air_date?: string;
+  monitored?: boolean;
+  quality?: string;
+  filename?: string;
+  file_id?: string;
 }
 
 export interface Season {
@@ -45,6 +52,7 @@ export interface Season {
   episode_count: number;
   poster_url: string;
   episodes: Episode[];
+  monitored?: boolean;
 }
 
 export interface TVShow {
@@ -68,6 +76,10 @@ export interface TVShow {
   network?: string;
   /** Production studio (e.g. "HBO Studios", "Bad Robot Productions"). */
   studio?: string;
+  /** Whether automation should search and upgrade this series. */
+  monitored?: boolean;
+  quality_profile_id?: string;
+  root_folder_path?: string;
 }
 
 export interface ListResponse<T> {
@@ -122,6 +134,14 @@ export interface DiscoverDetail {
   mediaType: 'movie' | 'tv';
   trailer?: DiscoverTrailer;
   cast?: DiscoverCastMember[];
+  seasons?: DiscoverSeason[];
+}
+
+export interface DiscoverSeason {
+  seasonNumber: number;
+  name: string;
+  episodeCount: number;
+  airDate?: string;
 }
 
 export interface MediaRequest {
@@ -136,8 +156,24 @@ export interface MediaRequest {
   status: string;
   statusDetail?: string;
   statusLabel?: string;
+  qualityProfileId?: string;
+  seasonNumber?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export type MediaIssueKind = 'video' | 'audio' | 'subtitles' | 'wrong' | 'other';
+
+export interface MediaIssue {
+  id: string;
+  kind: MediaIssueKind | string;
+  mediaType: string;
+  mediaId?: string;
+  tmdbId?: number;
+  title: string;
+  message: string;
+  reportedBy: string;
+  createdAt: string;
 }
 
 /** Soft library rows from mediauiprox /api/{music|books|comics|audiobooks}. */
@@ -149,6 +185,151 @@ export interface LibraryRow {
   year?: number;
   publisher?: string;
   [key: string]: unknown;
+}
+
+export interface ReleaseMatch {
+  guid: string;
+  title: string;
+  indexer_name?: string;
+  download_protocol?: string;
+  size?: number;
+  seeders?: number;
+  peers?: number;
+  score?: number;
+  download_url?: string;
+  info_url?: string;
+  category?: string;
+  quality?: {
+    label?: string;
+    resolution?: string;
+    source?: string;
+    codec?: string;
+    hdr?: boolean;
+    score?: number;
+  };
+}
+
+export interface ReleaseSearchResponse {
+  items: ReleaseMatch[];
+  total: number;
+  available?: boolean;
+  message?: string;
+  query?: string;
+  type?: string;
+}
+
+export interface ReleaseGrabResult {
+  download_id: string;
+  status: string;
+}
+
+export interface CutoffItem {
+  queue_id?: string;
+  item_type: string;
+  item_id: string;
+  title: string;
+  year?: number;
+  current_score: number;
+  cutoff_score: number;
+  quality_profile_id?: string;
+}
+
+export interface CutoffUnmetResponse {
+  items: CutoffItem[];
+  total: number;
+  page?: number;
+  page_size?: number;
+  available?: boolean;
+  message?: string;
+}
+
+export interface SearchNowResult {
+  started: boolean;
+  message?: string;
+}
+
+export interface ReleaseBlockResult {
+  success: boolean;
+  guid?: string;
+}
+
+export interface ActivityRecord {
+  id: string;
+  wanted_item_id?: string;
+  guid?: string;
+  title: string;
+  indexer?: string;
+  size?: number;
+  score?: number;
+  download_protocol?: string;
+  status: string;
+  status_label?: string;
+  status_detail?: string;
+  created_at?: string;
+  download_id?: string;
+  warning?: boolean;
+  stuck?: boolean;
+}
+
+export interface ActivityResponse {
+  items: ActivityRecord[];
+  total: number;
+  page?: number;
+  page_size?: number;
+  available?: boolean;
+  message?: string;
+}
+
+export interface WantedItem {
+  id: string;
+  item_type: string;
+  item_id: string;
+  title: string;
+  year?: number;
+  tmdb_id?: number;
+  monitored: boolean;
+  missing: boolean;
+  updated_at?: string;
+  season_number?: number;
+  episode_number?: number;
+}
+
+export interface WantedResponse {
+  items: WantedItem[];
+  total: number;
+  page?: number;
+  page_size?: number;
+  available?: boolean;
+  message?: string;
+}
+
+export interface ActivityRetryResult {
+  attempted: number;
+  message?: string;
+}
+
+export interface CalendarItem {
+  kind: 'movie' | 'tv' | string;
+  id: string;
+  parent_id: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  href: string;
+  monitored?: boolean;
+  has_file?: boolean;
+  season_number?: number;
+  episode_number?: number;
+  year?: number;
+  content_rating?: string;
+}
+
+export interface CalendarResponse {
+  items: CalendarItem[];
+  total: number;
+  start?: string;
+  end?: string;
+  available?: boolean;
 }
 
 export interface LibraryListResponse {
@@ -178,12 +359,46 @@ export interface MusicAlbum {
   artist_id?: string;
   title: string;
   year?: number;
+  monitored?: boolean;
   tracks?: MusicTrack[];
 }
 
 export interface MusicArtistDetail {
-  artist: { id: string; name: string; path?: string; monitored?: boolean };
+  artist: {
+    id: string;
+    name: string;
+    path?: string;
+    monitored?: boolean;
+    quality_profile_id?: string;
+    root_folder_path?: string;
+  };
   albums: MusicAlbum[];
+}
+
+export interface AudiobookFile {
+  id: string;
+  audiobook_id?: string;
+  title: string;
+  path?: string;
+  stream_url?: string;
+}
+
+export interface Audiobook {
+  id: string;
+  author_id?: string;
+  title: string;
+  narrator?: string;
+  asin?: string;
+  year?: number;
+  duration_seconds?: number;
+  monitored?: boolean;
+  stream_url?: string;
+  files?: AudiobookFile[];
+}
+
+export interface AudiobookDetail {
+  author: { id: string; name: string; path?: string; monitored?: boolean };
+  audiobook: Audiobook;
 }
 
 /**

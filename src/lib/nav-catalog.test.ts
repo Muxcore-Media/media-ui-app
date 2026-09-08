@@ -15,8 +15,15 @@ describe('nav-catalog', () => {
     const overflow = visibleOverflowNav(DEFAULT_CAPABILITIES);
     expect(overflow.map((i) => i.label)).toContain('Collections');
     expect(overflow.map((i) => i.label)).toContain('In progress');
+    expect(overflow.map((i) => i.label)).toContain('Issues');
     expect(overflow.map((i) => i.label)).toContain('Want to Watch');
+    expect(overflow.map((i) => i.label)).toContain('Missing');
+    expect(overflow.map((i) => i.label)).toContain('Saved offline');
+    expect(overflow.map((i) => i.label)).not.toContain('Now watching');
+    expect(overflow.map((i) => i.label)).not.toContain('Watch stats');
     expect(overflow.map((i) => i.label)).not.toContain('Watchlist');
+    expect(overflow.map((i) => i.label)).not.toContain('Quality upgrades');
+    expect(overflow.map((i) => i.label)).not.toContain('Downloads');
     expect(overflow.map((i) => i.label)).not.toContain('Music Videos');
     expect(overflow.map((i) => i.label)).not.toContain('Home Videos');
   });
@@ -47,6 +54,11 @@ describe('nav-catalog', () => {
     expect(overflow.map((i) => i.label)).toContain('Music Videos');
     expect(overflow.map((i) => i.label)).toContain('Home Videos');
     expect(overflow.map((i) => i.label)).toContain('Watchlist');
+    expect(overflow.map((i) => i.label)).toContain('Quality upgrades');
+    expect(overflow.map((i) => i.label)).toContain('Downloads');
+    expect(overflow.map((i) => i.label)).toContain('Blocklist');
+    expect(overflow.map((i) => i.label)).toContain('Now watching');
+    expect(overflow.map((i) => i.label)).toContain('Watch stats');
   });
 
   it('blocks routes for disabled libraries', () => {
@@ -87,6 +99,14 @@ describe('nav-catalog', () => {
         debrid: false,
         watchlist: false,
         wantToWatch: false,
+        releases: false,
+        activity: false,
+        issues: false,
+        playbackMonitor: false,
+        acquisition: false,
+        watchTogether: false,
+        offline: false,
+        formats: false,
       },
     };
     expect(showDesktopMoreMenu(bare)).toBe(false);

@@ -10,6 +10,7 @@ const listRequests = vi.fn();
 const getTVShow = vi.fn();
 const getMovie = vi.fn();
 const listCollections = vi.fn();
+const listWatchHistory = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -22,6 +23,8 @@ vi.mock('../api/client', async () => {
       getTVShow: (...args: unknown[]) => getTVShow(...args),
       getMovie: (...args: unknown[]) => getMovie(...args),
       listCollections: (...args: unknown[]) => listCollections(...args),
+      listWatchHistory: (...args: unknown[]) => listWatchHistory(...args),
+      listSessions: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
     },
   };
 });
@@ -47,6 +50,8 @@ describe('Home page', () => {
     getTVShow.mockReset();
     getMovie.mockReset();
     listCollections.mockReset();
+    listWatchHistory.mockReset();
+    listWatchHistory.mockResolvedValue({ available: false, items: [], total: 0 });
     listCollections.mockResolvedValue({ items: [] });
     listRequests.mockResolvedValue([]);
     listTVShows.mockResolvedValue({
@@ -115,7 +120,13 @@ describe('Home page', () => {
           showNextUp: true,
           showRecentlyAdded: false,
         },
-        playback: { autoplayNext: false, rememberPosition: true, skipIntroSec: 0 },
+        playback: {
+          autoplayNext: false,
+          rememberPosition: true,
+          skipIntroSec: 0,
+          autoSkipIntro: false,
+          autoSkipCredits: false,
+        },
         subtitles: {
           enabled: true,
           language: 'eng',
@@ -123,6 +134,8 @@ describe('Home page', () => {
           backgroundOpacity: 60,
           edgeStyle: 'drop-shadow',
           verticalPosition: 'bottom',
+          offsetMs: 0,
+          textColor: '#ffffff',
         },
         controls: { enableKeyboardShortcuts: true },
         player: { preferredQuality: 'auto', theaterMode: false, aspectMode: 'contain' },
@@ -1286,7 +1299,13 @@ describe('Upcoming / On The Air rail', () => {
           showPlaylists: true,
           showWantToWatch: true,
         },
-        playback: { autoplayNext: false, rememberPosition: true, skipIntroSec: 0 },
+        playback: {
+          autoplayNext: false,
+          rememberPosition: true,
+          skipIntroSec: 0,
+          autoSkipIntro: false,
+          autoSkipCredits: false,
+        },
         subtitles: {
           enabled: true,
           language: 'eng',
@@ -1294,6 +1313,8 @@ describe('Upcoming / On The Air rail', () => {
           backgroundOpacity: 60,
           edgeStyle: 'drop-shadow',
           verticalPosition: 'bottom',
+          offsetMs: 0,
+          textColor: '#ffffff',
         },
         controls: { enableKeyboardShortcuts: true },
         player: { preferredQuality: 'auto', theaterMode: false, aspectMode: 'contain' },

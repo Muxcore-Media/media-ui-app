@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Music from './Music';
+import { NowPlayingProvider } from '../lib/nowPlaying';
+import { setCurrentRoles } from '../lib/session';
 import type { LibraryListResponse } from '../types';
 
 const listMusic = vi.fn();
 const getMusicArtist = vi.fn();
+const addMusicArtist = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -15,6 +18,7 @@ vi.mock('../api/client', async () => {
       ...actual.api,
       listMusic: (...args: unknown[]) => listMusic(...args),
       getMusicArtist: (...args: unknown[]) => getMusicArtist(...args),
+      addMusicArtist: (...args: unknown[]) => addMusicArtist(...args),
     },
   };
 });
@@ -23,7 +27,10 @@ describe('Music consumer section', () => {
   beforeEach(() => {
     listMusic.mockReset();
     getMusicArtist.mockReset();
+    addMusicArtist.mockReset();
+    setCurrentRoles([]);
     getMusicArtist.mockResolvedValue({ artist: { id: 'ar1', name: 'Björk' }, albums: [] });
+    addMusicArtist.mockResolvedValue({ added: true, artist: { id: 'ar-new', name: 'Daft Punk' } });
   });
 
   it('shows unavailable message when BFF reports module unavailable', async () => {
@@ -36,9 +43,11 @@ describe('Music consumer section', () => {
     } satisfies LibraryListResponse);
 
     render(
+      <NowPlayingProvider>
       <MemoryRouter>
         <Music />
-      </MemoryRouter>,
+      </MemoryRouter>
+      </NowPlayingProvider>,
     );
 
     await waitFor(() => {
@@ -55,14 +64,46 @@ describe('Music consumer section', () => {
     } satisfies LibraryListResponse);
 
     render(
+      <NowPlayingProvider>
       <MemoryRouter>
         <Music />
-      </MemoryRouter>,
+      </MemoryRouter>
+      </NowPlayingProvider>,
     );
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: 'Björk' })).toHaveAttribute('href', '/music/ar1');
     });
+  });
+
+  it('adds an artist from the library list', async () => {
+    setCurrentRoles(['admin']);
+    listMusic
+      .mockResolvedValueOnce({
+        items: [],
+        total: 0,
+        available: true,
+      } satisfies LibraryListResponse)
+      .mockResolvedValueOnce({
+        items: [{ id: 'ar-new', name: 'Daft Punk', monitored: true }],
+        total: 1,
+        available: true,
+      } satisfies LibraryListResponse);
+
+    render(
+      <NowPlayingProvider>
+      <MemoryRouter>
+        <Music />
+      </MemoryRouter>
+      </NowPlayingProvider>,
+    );
+
+    fireEvent.change(await screen.findByLabelText('Artist name'), { target: { value: 'Daft Punk' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add artist' }));
+    await waitFor(() => {
+      expect(addMusicArtist).toHaveBeenCalledWith({ name: 'Daft Punk' });
+    });
+    expect(await screen.findByRole('link', { name: 'Daft Punk' })).toHaveAttribute('href', '/music/ar-new');
   });
 });
 
@@ -70,6 +111,8 @@ describe('Music accessibility', () => {
   beforeEach(() => {
     listMusic.mockReset();
     getMusicArtist.mockReset();
+    addMusicArtist.mockReset();
+    setCurrentRoles([]);
     getMusicArtist.mockResolvedValue({ artist: { id: 'ar1', name: 'Björk' }, albums: [] });
   });
 
@@ -77,9 +120,11 @@ describe('Music accessibility', () => {
     listMusic.mockImplementation(() => new Promise(() => {}));
 
     render(
+      <NowPlayingProvider>
       <MemoryRouter>
         <Music />
-      </MemoryRouter>,
+      </MemoryRouter>
+      </NowPlayingProvider>,
     );
 
     expect(screen.getByRole('heading', { level: 1, name: 'Music' })).toBeInTheDocument();
@@ -94,9 +139,11 @@ describe('Music accessibility', () => {
     } satisfies LibraryListResponse);
 
     render(
+      <NowPlayingProvider>
       <MemoryRouter>
         <Music />
-      </MemoryRouter>,
+      </MemoryRouter>
+      </NowPlayingProvider>,
     );
 
     await waitFor(() => {
@@ -115,9 +162,11 @@ describe('Music accessibility', () => {
     } satisfies LibraryListResponse);
 
     render(
+      <NowPlayingProvider>
       <MemoryRouter>
         <Music />
-      </MemoryRouter>,
+      </MemoryRouter>
+      </NowPlayingProvider>,
     );
 
     expect(await screen.findByText('Music unavailable')).toBeInTheDocument();

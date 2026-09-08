@@ -12,6 +12,10 @@ import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { tmdbImageUrl } from '../lib/tmdbImages';
 import TrailerSection from '../components/media/TrailerSection';
 import { isWantToWatch, toggleWantToWatch } from '../lib/userdata';
+import { AcquisitionSetupBanner } from '../components/media/AcquisitionSetupBanner';
+import { RequestQuotaBanner } from '../components/media/RequestQuotaBanner';
+import { ReportIssueButton } from '../components/media/ReportIssueButton';
+import type { RequestQuality } from '../lib/request-quality';
 import type { DiscoverDetail } from '../types';
 
 export default function DiscoverDetail() {
@@ -25,6 +29,7 @@ export default function DiscoverDetail() {
   const [error, setError] = useState<string | null>(null);
   const [requested, setRequested] = useState<string | null>(null);
   const [wantToWatch, setWantToWatch] = useState(false);
+  const [seasonNumber, setSeasonNumber] = useState(0);
 
   const backHref = params.get('return') || '/search';
 
@@ -69,7 +74,7 @@ export default function DiscoverDetail() {
     return bits.join(' · ');
   }, [detail]);
 
-  async function requestTitle() {
+  async function requestTitle(quality: RequestQuality) {
     if (!detail) return;
     const res = await api.requestTitle({
       tmdbId: detail.id,
@@ -78,6 +83,8 @@ export default function DiscoverDetail() {
       overview: detail.overview,
       poster: detail.poster,
       mediaType: detail.mediaType,
+      qualityProfile: quality,
+      seasonNumber: detail.mediaType === 'tv' && seasonNumber > 0 ? seasonNumber : undefined,
     });
     setRequested(res.status || 'requested');
   }
@@ -120,6 +127,9 @@ export default function DiscoverDetail() {
         </Link>
       </nav>
 
+      <AcquisitionSetupBanner />
+      <RequestQuotaBanner />
+
       <DetailHero
         backdropUrl={backdropUrl}
         posterUrl={posterUrl}
@@ -139,13 +149,41 @@ export default function DiscoverDetail() {
                 <Badge tone="success">{requested}</Badge>
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={() => void requestTitle()}
-                className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
-              >
-                Request {detail.mediaType === 'tv' ? 'series' : 'movie'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {detail.mediaType === 'tv' && (detail.seasons?.length ?? 0) > 0 ? (
+                  <label className="text-sm text-[var(--text-secondary)]">
+                    Season
+                    <select
+                      className="ml-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-2 text-sm text-[var(--text-primary)]"
+                      value={seasonNumber}
+                      onChange={(e) => setSeasonNumber(Number(e.target.value))}
+                      data-testid="discover-season"
+                    >
+                      <option value={0}>All seasons</option>
+                      {detail.seasons!.map((s) => (
+                        <option key={s.seasonNumber} value={s.seasonNumber}>
+                          {s.name}
+                          {s.episodeCount ? ` (${s.episodeCount} ep)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void requestTitle('hd')}
+                  className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+                >
+                  Request HD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void requestTitle('4k')}
+                  className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--bg-elevated-2)]"
+                >
+                  Request 4K
+                </button>
+              </div>
             )}
             <Button
               variant={wantToWatch ? 'primary' : 'secondary'}
@@ -172,6 +210,11 @@ export default function DiscoverDetail() {
             >
               {wantToWatch ? 'On Want to Watch' : 'Want to Watch'}
             </Button>
+            <ReportIssueButton
+              title={detail.title}
+              mediaType={detail.mediaType}
+              tmdbId={detail.id}
+            />
           </>
         }
       />

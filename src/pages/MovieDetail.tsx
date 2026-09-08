@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Bookmark, Check, ExternalLink, ListPlus, Play, Star } from 'lucide-react';
 import { api } from '../api/client';
 import { usePlaybackAnalysis } from '../components/player/hooks/usePlaybackAnalysis';
@@ -7,6 +7,27 @@ import CastSection from '../components/media/CastSection';
 import TrailerSection from '../components/media/TrailerSection';
 import MoreLikeThisShelf from '../components/media/MoreLikeThisShelf';
 import RelatedShelf from '../components/media/RelatedShelf';
+import InteractiveSearch from '../components/media/InteractiveSearch';
+import { ReportIssueButton } from '../components/media/ReportIssueButton';
+import { OfflineDownloadButton } from '../components/media/OfflineDownloadButton';
+import { MonitorButton } from '../components/media/MonitorButton';
+import { AddWantedButton } from '../components/media/AddWantedButton';
+import { JellyfinLinkButton } from '../components/media/JellyfinLinkButton';
+import { QualityProfileSelect } from '../components/media/QualityProfileSelect';
+import { AlternateTitlesCard } from '../components/media/AlternateTitlesCard';
+import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
+import { ItemWatchStatsCard } from '../components/media/ItemWatchStatsCard';
+import { ArtworkCard } from '../components/media/ArtworkCard';
+import { SearchSubtitlesButton } from '../components/media/SearchSubtitlesButton';
+import { SubtitleFilesCard } from '../components/media/SubtitleFilesCard';
+import { ProtectTitleButton } from '../components/media/ProtectTitleButton';
+import { TagSelect } from '../components/media/TagSelect';
+import { RootFolderSelect } from '../components/media/RootFolderSelect';
+import { PreviewRename } from '../components/media/PreviewRename';
+import { RefreshMetadataButton } from '../components/media/RefreshMetadataButton';
+import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
+import { DeleteMovieFileButton } from '../components/media/DeleteMovieFileButton';
+import { MovieFilesCard } from '../components/media/MovieFilesCard';
 import { DetailHero } from '../components/media/DetailHero';
 import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -30,6 +51,7 @@ import type { DiscoverDetail, Movie } from '../types';
 
 export default function MovieDetail() {
   const { id = '' } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
@@ -186,6 +208,7 @@ export default function MovieDetail() {
               </span>
             ) : null}
             {movie.genres.length > 0 && <span>{movie.genres.slice(0, 3).join(' · ')}</span>}
+            {movie.monitored ? <Badge tone="accent">Monitoring</Badge> : <Badge tone="neutral">Unmonitored</Badge>}
           </>
         }
         actions={
@@ -213,6 +236,76 @@ export default function MovieDetail() {
                 Play from beginning
               </Link>
             ) : null}
+            <MonitorButton
+              kind="movie"
+              id={movie.id}
+              monitored={movie.monitored}
+              onChange={(next) => setMovie((cur) => (cur ? { ...cur, monitored: next } : cur))}
+            />
+            <AddWantedButton
+              itemType="movie"
+              itemId={movie.id}
+              title={movie.title}
+              year={movie.year}
+              tmdbId={movie.tmdb_id}
+              qualityProfileId={movie.quality_profile_id}
+            />
+            <QualityProfileSelect
+              kind="movie"
+              id={movie.id}
+              value={movie.quality_profile_id}
+              onChange={(next) => setMovie((cur) => (cur ? { ...cur, quality_profile_id: next } : cur))}
+            />
+            <TagSelect kind="movie" id={movie.id} />
+            <AlternateTitlesCard kind="movie" id={movie.id} />
+            <ItemHistoryCard kind="movie" id={movie.id} />
+            <ItemWatchStatsCard id={movie.id} runtimeMinutes={movie.runtime} />
+            <ArtworkCard kind="movie" id={movie.id} />
+            <SubtitleFilesCard kind="movie" id={movie.id} />
+            <MovieFilesCard
+              id={movie.id}
+              onEmpty={() =>
+                setMovie((cur) => (cur ? { ...cur, has_file: false, stream_url: '' } : cur))
+              }
+            />
+            <SearchSubtitlesButton id={movie.id} />
+            <ProtectTitleButton kind="movie" id={movie.id} title={movie.title} />
+            <RootFolderSelect
+              kind="movie"
+              id={movie.id}
+              value={movie.root_folder_path}
+              onChange={(next) => setMovie((cur) => (cur ? { ...cur, root_folder_path: next } : cur))}
+            />
+            <RefreshMetadataButton
+              kind="movie"
+              id={movie.id}
+              onRefreshed={() => {
+                void api.getMovie(movie.id).then(setMovie).catch(() => undefined);
+              }}
+            />
+            {movie.has_file ? (
+              <DeleteMovieFileButton
+                id={movie.id}
+                onRemoved={() =>
+                  setMovie((cur) => (cur ? { ...cur, has_file: false, stream_url: '' } : cur))
+                }
+              />
+            ) : null}
+            <RemoveLibraryButton
+              kind="movie"
+              id={movie.id}
+              title={movie.title}
+              hasFile={movie.has_file}
+              onRemoved={() => navigate('/movies')}
+            />
+            <OfflineDownloadButton
+              id={movie.id}
+              title={movie.title}
+              kind="movie"
+              src={movie.has_file ? movie.stream_url : undefined}
+              poster={movie.poster_url}
+              href={`/movies/${movie.id}`}
+            />
             <Button
               variant="secondary"
               icon={<ListPlus className="h-4 w-4" aria-hidden="true" />}
@@ -307,6 +400,22 @@ export default function MovieDetail() {
                 Open in linked app
               </a>
             )}
+            <JellyfinLinkButton
+              muxId={movie.id}
+              title={movie.title}
+              mediaKind="movie"
+              tmdbId={movie.tmdb_id}
+              path={movie.root_folder_path}
+              linked={Boolean(jellyfinURL)}
+              onLinked={(url) => setJellyfinURL(url)}
+              onUnlinked={() => setJellyfinURL(null)}
+            />
+            <ReportIssueButton
+              title={movie.title}
+              mediaType="movie"
+              mediaId={movie.id}
+              tmdbId={movie.tmdb_id}
+            />
           </>
         }
       />
@@ -342,6 +451,17 @@ export default function MovieDetail() {
         kind="movie"
         genres={movie.genres}
         excludeId={movie.id}
+      />
+
+      <PreviewRename kind="movie" id={movie.id} />
+
+      <InteractiveSearch
+        itemType="movie"
+        itemId={movie.id}
+        title={movie.title}
+        year={movie.year}
+        tmdbId={movie.tmdb_id}
+        autoSearch={searchParams.get('search') === '1'}
       />
 
       <RelatedShelf kind="movie" tmdbId={movie.tmdb_id} />

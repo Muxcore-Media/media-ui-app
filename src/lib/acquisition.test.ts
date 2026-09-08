@@ -26,7 +26,8 @@ describe('acquisition helpers', () => {
 
   it('labels request statuses for display', () => {
     expect(requestStatusLabel('searching')).toBe('Searching');
-    expect(requestStatusLabel('workflow')).toBe('Pending approval');
+    expect(requestStatusLabel('workflow')).toBe('Starting acquisition');
+    expect(requestStatusLabel('pending')).toBe('Pending approval');
     expect(requestStatusLabel('import_failed')).toBe('Import failed');
     expect(requestStatusLabel('failed')).toBe('Download failed');
     expect(requestStatusLabel('stalled')).toBe('Stalled');
@@ -83,6 +84,7 @@ describe('acquisition helpers', () => {
     expect(requestPhase('downloading')).toBe('downloading');
     expect(requestPhase('searching')).toBe('searching');
     expect(requestPhase('pending')).toBe('pending');
+    expect(requestPhase('workflow')).toBe('searching');
     expect(requestPhase('requested')).toBe('requested');
   });
 
@@ -242,6 +244,31 @@ describe('acquisition helpers', () => {
     const grouped = groupInProgressByPhase(entries);
     expect(grouped.pending).toHaveLength(1);
     expect(requestStatusLabel('pending')).toBe('Pending approval');
+  });
+
+  it('groups workflow requests with searching, not pending approval', () => {
+    const entries = mergeInProgressEntries(
+      [
+        {
+          id: 'r-wf',
+          itemType: 'movie',
+          itemId: 'm2',
+          tmdbId: 2,
+          title: 'Workflow Film',
+          year: 2024,
+          poster: '',
+          status: 'workflow',
+          createdAt: '',
+          updatedAt: '',
+        },
+      ],
+      [],
+      [],
+    );
+    const grouped = groupInProgressByPhase(entries);
+    expect(grouped.searching).toHaveLength(1);
+    expect(grouped.pending).toHaveLength(0);
+    expect(requestStatusLabel('workflow')).toBe('Starting acquisition');
   });
 
   it('groups stalled and failed requests in the attention phase', () => {

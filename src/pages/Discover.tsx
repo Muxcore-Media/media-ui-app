@@ -4,6 +4,8 @@ import { api, searchResultKey } from '../api/client';
 import RequestableCard from '../components/search/RequestableCard';
 import { Shelf, ShelfItem } from '../components/media/Shelf';
 import { PosterGridSkeleton } from '../components/media/PosterGrid';
+import { AcquisitionSetupBanner } from '../components/media/AcquisitionSetupBanner';
+import { RequestQuotaBanner } from '../components/media/RequestQuotaBanner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
@@ -108,6 +110,9 @@ export default function Discover() {
           new.
         </p>
       </header>
+
+      <AcquisitionSetupBanner />
+      <RequestQuotaBanner />
 
       {error ? <ErrorBanner message={error} /> : null}
 

@@ -14,7 +14,10 @@ import {
   hashPin,
   verifyPin,
   getParentalState,
+  isItemRestricted,
+  itemMatchesBlockedTags,
   normalizeRating,
+  validateParentalPIN,
 } from './parental';
 import { updatePreferences } from './userdata';
 import { setCurrentUserId } from './session';
@@ -144,6 +147,38 @@ describe('filterByParentalControls', () => {
     const items = [makeItem('no-rating'), makeItem('unknown', 'WEIRD-RATING')];
     const result = filterByParentalControls(items, { kidsMode: true, maxRating: 'G' });
     expect(result).toHaveLength(2);
+  });
+
+  it('hides titles whose genres match blocked tags', () => {
+    const items = [
+      { id: 'ok', content_rating: 'G', genres: ['Family'] },
+      { id: 'horror', content_rating: 'G', genres: ['Horror', 'Thriller'] },
+    ];
+    const result = filterByParentalControls(items, {
+      kidsMode: false,
+      maxRating: '',
+      blockedTags: 'horror',
+    });
+    expect(result.map((i) => i.id)).toEqual(['ok']);
+  });
+});
+
+describe('validateParentalPIN', () => {
+  it('accepts empty (leave unchanged) and 4–6 digits', () => {
+    expect(validateParentalPIN('')).toBeNull();
+    expect(validateParentalPIN('1234')).toBeNull();
+    expect(validateParentalPIN('123456')).toBeNull();
+    expect(validateParentalPIN('12')).toBe('PIN must be 4–6 digits');
+    expect(validateParentalPIN('abcdef')).toBe('PIN must be 4–6 digits');
+  });
+});
+
+describe('itemMatchesBlockedTags', () => {
+  it('matches genre or tag substrings case-insensitively', () => {
+    expect(itemMatchesBlockedTags({ content_rating: 'G', genres: ['Horror'] }, 'horror')).toBe(true);
+    expect(itemMatchesBlockedTags({ content_rating: 'G', tags: ['Gore'] }, 'gore, violence')).toBe(true);
+    expect(itemMatchesBlockedTags({ content_rating: 'G', genres: ['Family'] }, 'horror')).toBe(false);
+    expect(isItemRestricted({ content_rating: 'G', genres: ['Horror'] }, { kidsMode: false, maxRating: '', blockedTags: 'horror' })).toBe(true);
   });
 });
 
@@ -290,6 +325,13 @@ describe('getParentalState', () => {
 
   it('reports anyRestriction as true when only maxRating is set', () => {
     updatePreferences({ parental: { kidsMode: false, maxRating: 'PG-13', pinHash: '', pinEnabled: false } });
+    expect(getParentalState().anyRestriction).toBe(true);
+  });
+
+  it('reports anyRestriction as true when only blocked tags are set', () => {
+    updatePreferences({
+      parental: { kidsMode: false, maxRating: '', pinHash: '', pinEnabled: false, blockedTags: 'horror' },
+    });
     expect(getParentalState().anyRestriction).toBe(true);
   });
 });

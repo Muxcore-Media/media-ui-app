@@ -4,6 +4,7 @@ import CapabilitiesProvider from './components/CapabilitiesProvider';
 import Layout from './components/Layout';
 import { ErrorBanner } from './components/ui/ErrorBanner';
 import { ToastProvider } from './components/ui/Toast';
+import { NowPlayingProvider } from './lib/nowPlaying';
 import { PosterGridSkeleton } from './components/media/PosterGrid';
 import {
   DetailHeroSkeleton,
@@ -35,7 +36,14 @@ const WantToWatch = lazy(() => import('./pages/WantToWatch'));
 const Collections = lazy(() => import('./pages/Collections'));
 const Music = lazy(() => import('./pages/Music'));
 const InProgress = lazy(() => import('./pages/InProgress'));
+const Activity = lazy(() => import('./pages/Activity'));
+const Issues = lazy(() => import('./pages/Issues'));
+const Offline = lazy(() => import('./pages/Offline'));
+const Sessions = lazy(() => import('./pages/Sessions'));
+const WatchStats = lazy(() => import('./pages/WatchStats'));
+const Blocklist = lazy(() => import('./pages/Blocklist'));
 const Upcoming = lazy(() => import('./pages/Upcoming'));
+const Missing = lazy(() => import('./pages/Missing'));
 const Mixed = lazy(() => import('./pages/Mixed'));
 const MusicVideos = lazy(() => import('./pages/MusicVideos'));
 const HomeVideos = lazy(() => import('./pages/HomeVideos'));
@@ -43,7 +51,9 @@ const Studios = lazy(() => import('./pages/Studios'));
 const Books = lazy(() => import('./pages/Books'));
 const BookAuthor = lazy(() => import('./pages/BookAuthor'));
 const Comics = lazy(() => import('./pages/Comics'));
+const ComicSeries = lazy(() => import('./pages/ComicSeries'));
 const Audiobooks = lazy(() => import('./pages/Audiobooks'));
+const AudiobookDetail = lazy(() => import('./pages/AudiobookDetail'));
 const Favorites = lazy(() => import('./pages/Favorites'));
 const Queue = lazy(() => import('./pages/Queue'));
 const Playlists = lazy(() => import('./pages/Playlists'));
@@ -185,6 +195,14 @@ function LazyUpcoming() {
   );
 }
 
+function LazyMissing() {
+  return (
+    <Suspense fallback={<ShelfSkeleton count={4} />}>
+      <Missing />
+    </Suspense>
+  );
+}
+
 function LazyMixed() {
   return (
     <Suspense fallback={<PosterGridSkeleton count={12} />}>
@@ -241,10 +259,26 @@ function LazyComics() {
   );
 }
 
+function LazyComicSeries() {
+  return (
+    <Suspense fallback={<DetailHeroSkeleton />}>
+      <ComicSeries />
+    </Suspense>
+  );
+}
+
 function LazyAudiobooks() {
   return (
     <Suspense fallback={<ShelfSkeleton count={4} />}>
       <Audiobooks />
+    </Suspense>
+  );
+}
+
+function LazyAudiobookDetail() {
+  return (
+    <Suspense fallback={<DetailHeroSkeleton />}>
+      <AudiobookDetail />
     </Suspense>
   );
 }
@@ -269,6 +303,54 @@ function LazyQueue() {
   return (
     <Suspense fallback={<QueueListSkeleton />}>
       <Queue />
+    </Suspense>
+  );
+}
+
+function LazyActivity() {
+  return (
+    <Suspense fallback={<QueueListSkeleton />}>
+      <Activity />
+    </Suspense>
+  );
+}
+
+function LazyIssues() {
+  return (
+    <Suspense fallback={<QueueListSkeleton />}>
+      <Issues />
+    </Suspense>
+  );
+}
+
+function LazyOffline() {
+  return (
+    <Suspense fallback={<QueueListSkeleton />}>
+      <Offline />
+    </Suspense>
+  );
+}
+
+function LazySessions() {
+  return (
+    <Suspense fallback={<QueueListSkeleton />}>
+      <Sessions />
+    </Suspense>
+  );
+}
+
+function LazyWatchStats() {
+  return (
+    <Suspense fallback={<QueueListSkeleton />}>
+      <WatchStats />
+    </Suspense>
+  );
+}
+
+function LazyBlocklist() {
+  return (
+    <Suspense fallback={<QueueListSkeleton />}>
+      <Blocklist />
     </Suspense>
   );
 }
@@ -421,10 +503,21 @@ function AppRoutes() {
         <Route path="history" element={<LazyHistory />} />
         {featureEnabled(caps, 'queue') && <Route path="queue" element={<LazyQueue />} />}
         {featureEnabled(caps, 'request') && <Route path="requests" element={<LazyInProgress />} />}
+        {featureEnabled(caps, 'activity') && <Route path="activity" element={<LazyActivity />} />}
+        {featureEnabled(caps, 'activity') && <Route path="blocklist" element={<LazyBlocklist />} />}
+        {featureEnabled(caps, 'issues') && <Route path="issues" element={<LazyIssues />} />}
+        {featureEnabled(caps, 'offline') && <Route path="offline" element={<LazyOffline />} />}
+        {featureEnabled(caps, 'playbackMonitor') && (
+          <Route path="sessions" element={<LazySessions />} />
+        )}
+        {featureEnabled(caps, 'playbackMonitor') && (
+          <Route path="watch-stats" element={<LazyWatchStats />} />
+        )}
         {featureEnabled(caps, 'collections') && (
           <Route path="collections" element={<LazyCollections />} />
         )}
         {featureEnabled(caps, 'upcoming') && <Route path="upcoming" element={<LazyUpcoming />} />}
+        {featureEnabled(caps, 'upcoming') && <Route path="missing" element={<LazyMissing />} />}
         {featureEnabled(caps, 'playlists') && (
           <Route path="playlists" element={<LazyPlaylists />} />
         )}
@@ -437,11 +530,27 @@ function AppRoutes() {
         <Route path="settings/display" element={<LazySettings />} />
         <Route path="settings/home" element={<LazySettings />} />
         <Route path="settings/playback" element={<LazySettings />} />
+        <Route path="settings/parental" element={<LazySettings />} />
         <Route path="settings/subtitles" element={<LazySettings />} />
         <Route path="settings/controls" element={<LazySettings />} />
+        <Route path="settings/notifications" element={<LazySettings />} />
         {featureEnabled(caps, 'debrid') && (
           <Route path="settings/debrid" element={<LazySettings />} />
         )}
+        <Route path="settings/requests" element={<LazySettings />} />
+        <Route path="settings/acquisition" element={<LazySettings />} />
+        <Route path="settings/quality" element={<LazySettings />} />
+        <Route path="settings/delay" element={<LazySettings />} />
+        <Route path="settings/libraries" element={<LazySettings />} />
+        <Route path="settings/maintainer" element={<LazySettings />} />
+        <Route path="settings/naming" element={<LazySettings />} />
+        <Route path="settings/tags" element={<LazySettings />} />
+        <Route path="settings/backups" element={<LazySettings />} />
+        <Route path="settings/lists" element={<LazySettings />} />
+        <Route path="settings/migrate" element={<LazySettings />} />
+        <Route path="settings/users" element={<LazySettings />} />
+        <Route path="settings/keys" element={<LazySettings />} />
+        <Route path="settings/invites" element={<LazySettings />} />
         {featureEnabled(caps, 'studios') && <Route path="studios" element={<LazyStudios />} />}
         {libraryEnabled(caps, 'movies') && (
           <>
@@ -474,9 +583,17 @@ function AppRoutes() {
             <Route path="books/:id" element={<LazyBookAuthor />} />
           </>
         )}
-        {libraryEnabled(caps, 'comics') && <Route path="comics" element={<LazyComics />} />}
+        {libraryEnabled(caps, 'comics') && (
+          <>
+            <Route path="comics" element={<LazyComics />} />
+            <Route path="comics/:id" element={<LazyComicSeries />} />
+          </>
+        )}
         {libraryEnabled(caps, 'audiobooks') && (
-          <Route path="audiobooks" element={<LazyAudiobooks />} />
+          <>
+            <Route path="audiobooks" element={<LazyAudiobooks />} />
+            <Route path="audiobooks/:id" element={<LazyAudiobookDetail />} />
+          </>
         )}
         <Route path="forgot-password" element={<LazyForgotPassword />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -501,16 +618,18 @@ export default function App() {
     <CapabilitiesProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ToastProvider>
-          {userdataSyncFailed && (
-            <p
-              role="status"
-              data-testid="userdata-sync-warning"
-              className="border-b border-[var(--danger-color)]/30 bg-[var(--bg-elevated)] px-4 py-2 text-center text-sm text-[var(--text-secondary)]"
-            >
-              Couldn&apos;t sync your progress — showing local data.
-            </p>
-          )}
-          <AppRoutes />
+          <NowPlayingProvider>
+            {userdataSyncFailed && (
+              <p
+                role="status"
+                data-testid="userdata-sync-warning"
+                className="border-b border-[var(--danger-color)]/30 bg-[var(--bg-elevated)] px-4 py-2 text-center text-sm text-[var(--text-secondary)]"
+              >
+                Couldn&apos;t sync your progress — showing local data.
+              </p>
+            )}
+            <AppRoutes />
+          </NowPlayingProvider>
         </ToastProvider>
       </BrowserRouter>
     </CapabilitiesProvider>

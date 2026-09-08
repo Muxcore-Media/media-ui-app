@@ -49,8 +49,8 @@ export default function SubtitleOverlay({ cues, prefs, controlsVisible }: Props)
       {cues.map((cue, i) => (
         <span
           key={`${cue.startSec}-${i}`}
-          className={`max-w-3xl rounded px-2 py-1 font-medium leading-snug text-white ${SIZE_CLASS[prefs.textSize]}`}
-          style={{ backgroundColor: bg, ...edgeStyleCss(prefs.edgeStyle) }}
+          className={`max-w-3xl rounded px-2 py-1 font-medium leading-snug ${SIZE_CLASS[prefs.textSize]}`}
+          style={{ color: prefs.textColor || '#ffffff', backgroundColor: bg, ...edgeStyleCss(prefs.edgeStyle) }}
           dangerouslySetInnerHTML={{ __html: cue.html }}
         />
       ))}

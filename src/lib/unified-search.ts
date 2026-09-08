@@ -204,7 +204,7 @@ export async function runUnifiedSearch(
         .filter((m) => rowTitle(m).includes(needle))
         .map((m) => ({
           kind: 'other' as const,
-          href: '/comics',
+          href: `/comics/${encodeURIComponent(m.id)}`,
           title: m.title || m.name || m.id,
           subtitle: 'Comics',
           poster: typeof m.poster_url === 'string' ? m.poster_url : undefined,
@@ -217,7 +217,7 @@ export async function runUnifiedSearch(
         .filter((m) => rowTitle(m).includes(needle))
         .map((m) => ({
           kind: 'other' as const,
-          href: '/audiobooks',
+          href: `/audiobooks/${encodeURIComponent(m.id)}`,
           title: m.title || m.name || m.id,
           subtitle: 'Audiobooks',
           poster: typeof m.poster_url === 'string' ? m.poster_url : undefined,

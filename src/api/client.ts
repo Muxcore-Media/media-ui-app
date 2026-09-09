@@ -2715,7 +2715,7 @@ export const api = {
   },
   async searchReleases(opts: {
     q: string;
-    type: 'movie' | 'tv';
+    type: 'movie' | 'tv' | 'music' | 'book' | 'comic' | 'audiobook';
     year?: number;
     tmdbId?: number;
     season?: number;
@@ -2746,7 +2746,7 @@ export const api = {
     size?: number;
     score?: number;
     indexer_name?: string;
-    item_type: 'movie' | 'tv';
+    item_type: 'movie' | 'tv' | 'music' | 'book' | 'comic' | 'audiobook';
     item_id: string;
     tmdb_id?: number;
   }): Promise<ReleaseGrabResult> {

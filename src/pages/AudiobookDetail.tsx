@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useId, useState } from 'react';
 import { ArrowLeft, Pause, Play } from 'lucide-react';
 import { api } from '../api/client';
+import InteractiveSearch from '../components/media/InteractiveSearch';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
@@ -204,6 +205,13 @@ export default function AudiobookDetailPage() {
           </ul>
         </section>
       )}
+
+      <InteractiveSearch
+        itemType="audiobook"
+        itemId={audiobook.id}
+        title={audiobook.title}
+        year={audiobook.year}
+      />
     </div>
   );
 }

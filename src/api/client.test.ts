@@ -550,6 +550,13 @@ describe('api smoke (library + request + auth errors)', () => {
     const tv = await api.listItemHistory('tv', 's1');
     expect(tv.available).toBe(true);
     expect(String(fetchMock.mock.calls[1][0])).toContain('/api/tv/s1/history');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ available: true, items: [], total: 0 }),
+    });
+    const artist = await api.listItemHistory('artist', 'ar1');
+    expect(artist.available).toBe(true);
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/api/music/ar1/history');
   });
 
   it('title artwork talks to the household BFF', async () => {

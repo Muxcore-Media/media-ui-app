@@ -22,8 +22,9 @@ describe('item history', () => {
     expect(historyEventLabel(next.items[0].eventType)).toBe('Grabbed');
   });
 
-  it('builds movie and TV history paths', () => {
+  it('builds movie, TV, and music history paths', () => {
     expect(historyPath('movie', 'm1')).toBe('/api/movies/m1/history');
     expect(historyPath('tv', 's/1')).toBe('/api/tv/s%2F1/history');
+    expect(historyPath('artist', 'ar1')).toBe('/api/music/ar1/history');
   });
 });

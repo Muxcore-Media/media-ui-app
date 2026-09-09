@@ -6,7 +6,7 @@ export function ItemHistoryCard({
   kind,
   id,
 }: {
-  kind: 'movie' | 'tv';
+  kind: 'movie' | 'tv' | 'artist';
   id: string;
 }) {
   const [items, setItems] = useState<ItemHistoryEntry[]>([]);

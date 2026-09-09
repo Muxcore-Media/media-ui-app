@@ -40,6 +40,7 @@ vi.mock('../api/client', async () => {
       listTags: vi.fn().mockResolvedValue({ available: false, tags: [] }),
       getItemTags: vi.fn().mockResolvedValue({ available: false, tags: [] }),
       setItemTags: vi.fn(),
+      listItemHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
     },
   };
 });

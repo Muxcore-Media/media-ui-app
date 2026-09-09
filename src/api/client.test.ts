@@ -495,6 +495,13 @@ describe('api smoke (library + request + auth errors)', () => {
     const saved = await api.setItemTags('tv', 'show1', ['m1']);
     expect(saved.ok).toBe(true);
     expect(String(fetchMock.mock.calls[3][0])).toContain('/api/tv/show1/tags');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ available: true, tags: [{ id: 'u1', label: 'live', media: 'music' }] }),
+    });
+    const artistTags = await api.getItemTags('artist', 'ar1');
+    expect(artistTags.tags[0].id).toBe('u1');
+    expect(String(fetchMock.mock.calls[4][0])).toContain('/api/music/ar1/tags');
   });
 
   it('alternate titles talk to the household BFF', async () => {

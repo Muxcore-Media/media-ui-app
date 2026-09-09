@@ -7,6 +7,7 @@ import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { QualityProfileSelect } from '../components/media/QualityProfileSelect';
 import { RootFolderSelect } from '../components/media/RootFolderSelect';
+import { TagSelect } from '../components/media/TagSelect';
 import { RefreshMetadataButton } from '../components/media/RefreshMetadataButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
 import Spinner from '../components/Spinner';
@@ -158,6 +159,7 @@ export default function MusicArtist() {
               )
             }
           />
+          <TagSelect kind="artist" id={artist.id} />
           <RefreshMetadataButton
             kind="artist"
             id={artist.id}

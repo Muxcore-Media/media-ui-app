@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeTags, tagLabel, tagWriteBody } from './tags';
+import { itemTagsPath, normalizeTags, tagLabel, tagWriteBody } from './tags';
 
 describe('library tags', () => {
-  it('normalizes movie and TV catalog rows', () => {
+  it('normalizes movie, TV, and music catalog rows', () => {
     const next = normalizeTags({
       available: true,
       tags: [
         { id: 'm1', label: '4K', media: 'movie' },
         { id: 't1', name: 'anime', media: 'tv' },
+        { id: 'u1', label: 'live', media: 'music' },
         { id: '' },
       ],
     });
-    expect(next.tags).toHaveLength(2);
+    expect(next.tags).toHaveLength(3);
     expect(tagLabel(next.tags[1])).toBe('anime');
+    expect(next.tags[2].media).toBe('music');
   });
 
   it('soft-fails when library modules are down', () => {
@@ -21,5 +23,12 @@ describe('library tags', () => {
 
   it('writes create bodies', () => {
     expect(tagWriteBody({ label: 'kids', media: 'movie' })).toEqual({ label: 'kids', media: 'movie' });
+  });
+
+  it('routes per-item tags by library', () => {
+    expect(itemTagsPath('movie', 'mov1')).toBe('/api/movies/mov1/tags');
+    expect(itemTagsPath('tv', 'show1')).toBe('/api/tv/show1/tags');
+    expect(itemTagsPath('artist', 'ar1')).toBe('/api/music/ar1/tags');
+    expect(itemTagsPath('music', 'ar1')).toBe('/api/music/ar1/tags');
   });
 });

@@ -4598,7 +4598,7 @@ function TagsPane() {
     <div className={paneClass} data-testid="settings-tags">
       <h2 className="font-semibold text-[var(--text-primary)]">Tags</h2>
       <p className="text-sm text-[var(--text-secondary)]">
-        Arr-style labels for movies and TV — assign them on a title page to filter and organize
+        Arr-style labels for movies, TV, and music — assign them on a title page to filter and organize
         the library.
       </p>
       {error ? (

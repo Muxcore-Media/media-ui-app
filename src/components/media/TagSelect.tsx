@@ -3,11 +3,16 @@ import { api } from '../../api/client';
 import { canManageTags } from '../../lib/session';
 import { tagLabel, type LibraryTag } from '../../lib/tags';
 
+function tagMediaMatches(media: string, kind: string): boolean {
+  if (!media || media === kind) return true;
+  return (kind === 'artist' || kind === 'music') && (media === 'artist' || media === 'music');
+}
+
 export function TagSelect({
   kind,
   id,
 }: {
-  kind: 'movie' | 'tv';
+  kind: 'movie' | 'tv' | 'artist';
   id: string;
 }) {
   const canEdit = canManageTags();
@@ -22,7 +27,7 @@ export function TagSelect({
       .then(([all, mine]) => {
         if (cancelled) return;
         setAvailable(all.available !== false);
-        setCatalog(all.tags.filter((t) => !t.media || t.media === kind));
+        setCatalog(all.tags.filter((t) => tagMediaMatches(t.media, kind)));
         setSelected(mine.tags.map((t) => t.id).filter(Boolean));
       })
       .catch(() => {

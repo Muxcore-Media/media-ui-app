@@ -5,6 +5,7 @@ import Offline from './Offline';
 import { OFFLINE_MANIFEST_KEY, type OfflineTitle } from '../lib/offline-library';
 
 const listPlexSyncLists = vi.fn();
+const plexPlayURL = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -13,6 +14,7 @@ vi.mock('../api/client', async () => {
     api: {
       ...actual.api,
       listPlexSyncLists: (...args: unknown[]) => listPlexSyncLists(...args),
+      plexPlayURL: (...args: unknown[]) => plexPlayURL(...args),
     },
   };
 });
@@ -23,6 +25,8 @@ function seed(row: OfflineTitle) {
 
 beforeEach(() => {
   listPlexSyncLists.mockReset();
+  plexPlayURL.mockReset();
+  plexPlayURL.mockResolvedValue('https://plex.example/web/#!/details');
   listPlexSyncLists.mockResolvedValue({
     available: false,
     machineIdentifier: '',
@@ -113,5 +117,55 @@ describe('Offline page', () => {
     await waitFor(() => {
       expect(listPlexSyncLists).toHaveBeenCalledWith({ refresh: true });
     });
+  });
+
+  it('opens a Plex device download in Plex', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    listPlexSyncLists.mockResolvedValue({
+      available: true,
+      machineIdentifier: 'machine-1',
+      updatedAt: '',
+      total: 1,
+      error: '',
+      lists: [{
+        id: 'list-1',
+        clientIdentifier: 'client-1',
+        deviceUserId: 'plex-user',
+        deviceName: 'Pat iPad',
+        devicePlatform: 'iOS',
+        deviceProduct: 'Plex for iOS',
+        items: [{
+          id: 'item-1',
+          title: 'Dune',
+          rootTitle: 'Movies',
+          metadataType: '',
+          contentType: '',
+          mediaType: '',
+          ratingKey: '1',
+          state: 'downloaded',
+          failure: '',
+          itemsCount: 1,
+          itemsCompleteCount: 1,
+          itemsDownloadedCount: 1,
+          totalSizeBytes: 1024,
+          videoResolution: '1080',
+        }],
+      }],
+    });
+    render(
+      <MemoryRouter>
+        <Offline />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Dune in Plex' }));
+    await waitFor(() => {
+      expect(plexPlayURL).toHaveBeenCalledWith('1');
+    });
+    expect(open).toHaveBeenCalledWith(
+      'https://plex.example/web/#!/details',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    open.mockRestore();
   });
 });

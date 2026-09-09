@@ -5,6 +5,7 @@ import Sessions from './Sessions';
 
 const listSessions = vi.fn();
 const stopSession = vi.fn();
+const plexPlayURL = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -13,6 +14,7 @@ vi.mock('../api/client', async () => {
     api: {
       listSessions: (...args: unknown[]) => listSessions(...args),
       stopSession: (...args: unknown[]) => stopSession(...args),
+      plexPlayURL: (...args: unknown[]) => plexPlayURL(...args),
     },
   };
 });
@@ -21,6 +23,8 @@ describe('Sessions page', () => {
   beforeEach(() => {
     listSessions.mockReset();
     stopSession.mockReset();
+    plexPlayURL.mockReset();
+    plexPlayURL.mockResolvedValue('https://plex.example/web/#!/details');
   });
 
   it('lists live household streams', async () => {
@@ -94,5 +98,41 @@ describe('Sessions page', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText('Nobody is watching')).toBeInTheDocument();
+  });
+
+  it('opens a live Plex session in Plex', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    listSessions.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          id: 'ps1',
+          title: 'Dune',
+          user: 'sam',
+          mediaId: '99',
+          serverType: 'plex',
+          player: 'Plex for iOS',
+          paused: false,
+          positionSeconds: 30,
+          durationSeconds: 600,
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <Sessions />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Dune in Plex' }));
+    await waitFor(() => {
+      expect(plexPlayURL).toHaveBeenCalledWith('99');
+    });
+    expect(open).toHaveBeenCalledWith(
+      'https://plex.example/web/#!/details',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    open.mockRestore();
   });
 });

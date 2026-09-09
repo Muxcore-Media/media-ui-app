@@ -17,6 +17,8 @@ export default function Offline() {
   const [items, setItems] = useState<OfflineTitle[]>([]);
   const [plex, setPlex] = useState<PlexSyncListsResponse | null>(null);
   const [plexBusy, setPlexBusy] = useState(false);
+  const [openingKey, setOpeningKey] = useState<string | null>(null);
+  const [plexError, setPlexError] = useState<string | null>(null);
 
   function refresh() {
     setItems(listOfflineTitles());
@@ -124,6 +126,7 @@ export default function Offline() {
             {plexBusy ? 'Refreshing…' : 'Refresh Plex'}
           </button>
         </div>
+        {plexError ? <p className="text-sm text-[var(--danger-color)]">{plexError}</p> : null}
         {!plex?.available ? (
           <p className="text-sm text-[var(--text-secondary)]">Plex is not connected.</p>
         ) : plex.lists.length === 0 ? (
@@ -139,10 +142,33 @@ export default function Offline() {
                   {list.items.map((item) => (
                     <li key={item.id || item.ratingKey} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
                       <span className="truncate text-[var(--text-primary)]">{item.title}</span>
-                      <span className="shrink-0 text-xs text-[var(--text-tertiary)]">
-                        {item.totalSizeBytes ? `${formatOfflineBytes(item.totalSizeBytes)} · ` : ''}
-                        {plexSyncItemLabel(item)}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="text-xs text-[var(--text-tertiary)]">
+                          {item.totalSizeBytes ? `${formatOfflineBytes(item.totalSizeBytes)} · ` : ''}
+                          {plexSyncItemLabel(item)}
+                        </span>
+                        {item.ratingKey ? (
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-[var(--accent-color)] hover:underline disabled:opacity-50"
+                            disabled={openingKey === item.ratingKey}
+                            aria-label={`Open ${item.title} in Plex`}
+                            onClick={() => {
+                              setOpeningKey(item.ratingKey);
+                              setPlexError(null);
+                              void api
+                                .plexPlayURL(item.ratingKey)
+                                .then((url) => {
+                                  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                                  else setPlexError('Plex play link is not available');
+                                })
+                                .finally(() => setOpeningKey(null));
+                            }}
+                          >
+                            Open in Plex
+                          </button>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>

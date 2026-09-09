@@ -15,6 +15,7 @@ export default function Sessions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stopping, setStopping] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     return api
@@ -92,6 +93,29 @@ export default function Sessions() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
+                {row.serverType === 'plex' && row.mediaId ? (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-[var(--accent-color)] hover:underline disabled:opacity-50"
+                    disabled={opening === row.id}
+                    aria-label={`Open ${row.title} in Plex`}
+                    onClick={() => {
+                      setOpening(row.id);
+                      void api
+                        .plexPlayURL(row.mediaId)
+                        .then((url) => {
+                          if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                          else setError('Plex play link is not available');
+                        })
+                        .catch((err) => {
+                          setError(err instanceof Error ? err.message : 'Could not open Plex');
+                        })
+                        .finally(() => setOpening(null));
+                    }}
+                  >
+                    Open in Plex
+                  </button>
+                ) : null}
                 {row.id ? (
                   <button
                     type="button"

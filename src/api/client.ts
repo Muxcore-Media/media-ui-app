@@ -2609,6 +2609,20 @@ export const api = {
     }
   },
 
+  /** Plex web deep-link for a rating key (null when the bridge is down). */
+  async plexPlayURL(ratingKey: string): Promise<string | null> {
+    const key = ratingKey.trim();
+    if (!key) return null;
+    try {
+      const data = await getJSON<{ url?: string }>(
+        `/api/plex/play?rating_key=${encodeURIComponent(key)}`,
+      );
+      return data.url || null;
+    } catch {
+      return null;
+    }
+  },
+
   async listMusic(): Promise<LibraryListResponse> {
     return getLibraryList('/api/music');
   },

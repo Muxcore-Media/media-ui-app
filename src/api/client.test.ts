@@ -457,6 +457,16 @@ describe('api smoke (library + request + auth errors)', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/plex/sync-lists?refresh=1&userId=plex-user');
   });
 
+  it('plexPlayURL reads the household Plex deep-link', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ url: 'https://plex.example/web/#!/details' }),
+    });
+    const url = await api.plexPlayURL('99');
+    expect(url).toBe('https://plex.example/web/#!/details');
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/plex/play?rating_key=99');
+  });
+
   it('library tags talk to the household BFF', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,

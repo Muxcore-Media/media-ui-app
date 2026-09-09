@@ -24,6 +24,19 @@ describe('acquisition status', () => {
     expect(s.hasIndexer).toBe(true);
     expect(s.hasDownloader).toBe(false);
     expect(s.message).toBe('need a downloader');
+    expect(s.liveGrabAllowed).toBe(true);
+  });
+
+  it('maps live grab VPN policy', () => {
+    const s = normalizeAcquisitionStatus({
+      live_grab_allowed: false,
+      downloader_mode: 'live',
+      indexer_mode: 'live',
+      vpn: { configured: true, conf_present: false },
+    });
+    expect(s.liveGrabAllowed).toBe(false);
+    expect(s.downloaderMode).toBe('live');
+    expect(s.vpn).toEqual({ configured: true, confPresent: false });
   });
 
   it('maps Prowlarr/Jackett children', () => {

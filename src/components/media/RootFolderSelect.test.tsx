@@ -100,4 +100,23 @@ describe('RootFolderSelect', () => {
       });
     });
   });
+
+  it('assigns a comics root to a series', async () => {
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    listRoots.mockResolvedValue({
+      available: true,
+      roots: [{ id: 'r4', path: '/data/comics', name: 'Comics', mediaKind: 'comics', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],
+    });
+    setRootFolder.mockResolvedValue({ root_folder_path: '/data/comics' });
+    render(<RootFolderSelect kind="series" id="s1" />);
+    fireEvent.change(await screen.findByLabelText('Root folder'), { target: { value: '/data/comics' } });
+    await waitFor(() => {
+      expect(listRoots).toHaveBeenCalledWith('comics');
+      expect(setRootFolder).toHaveBeenCalledWith({
+        kind: 'series',
+        id: 's1',
+        rootFolderPath: '/data/comics',
+      });
+    });
+  });
 });

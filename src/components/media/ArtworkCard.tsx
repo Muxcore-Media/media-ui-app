@@ -16,7 +16,7 @@ export function ArtworkCard({
   kind,
   id,
 }: {
-  kind: 'movie' | 'tv';
+  kind: 'movie' | 'tv' | 'artist';
   id: string;
 }) {
   const canEdit = canManageLibrary();
@@ -109,7 +109,7 @@ export function ArtworkCard({
               onChange={(e) => setKindType(e.target.value)}
             >
               <option value="poster">Poster</option>
-              <option value="background">Backdrop</option>
+              {kind === 'artist' ? null : <option value="background">Backdrop</option>}
             </select>
           </label>
           <label className="text-sm text-[var(--text-tertiary)]">

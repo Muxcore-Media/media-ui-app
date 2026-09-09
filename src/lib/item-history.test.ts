@@ -26,5 +26,6 @@ describe('item history', () => {
     expect(historyPath('movie', 'm1')).toBe('/api/movies/m1/history');
     expect(historyPath('tv', 's/1')).toBe('/api/tv/s%2F1/history');
     expect(historyPath('artist', 'ar1')).toBe('/api/music/ar1/history');
+    expect(historyPath('author', 'au1')).toBe('/api/books/au1/history');
   });
 });

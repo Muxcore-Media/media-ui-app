@@ -6,6 +6,7 @@ import { AddAlbumField } from '../components/media/AddAlbumField';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
+import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
 import { RootFolderSelect } from '../components/media/RootFolderSelect';
 import Spinner from '../components/Spinner';
 import { Badge } from '../components/ui/Badge';
@@ -118,6 +119,7 @@ export default function BookAuthor() {
               setDetail((cur) => (cur ? { ...cur, author: { ...cur.author, path: next } } : cur))
             }
           />
+          <ItemHistoryCard kind="author" id={author.id} />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">
           {books.length} book{books.length === 1 ? '' : 's'}

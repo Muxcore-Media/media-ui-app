@@ -41,6 +41,8 @@ vi.mock('../api/client', async () => {
       getItemTags: vi.fn().mockResolvedValue({ available: false, tags: [] }),
       setItemTags: vi.fn(),
       listItemHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
+      listItemArtwork: vi.fn().mockResolvedValue({ available: false, items: [] }),
+      replaceItemArtwork: vi.fn(),
     },
   };
 });

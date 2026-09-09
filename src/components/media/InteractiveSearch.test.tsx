@@ -6,6 +6,7 @@ import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../
 const searchReleases = vi.fn();
 const grabRelease = vi.fn();
 const blockRelease = vi.fn();
+const getAcquisition = vi.fn();
 
 vi.mock('../../api/client', async () => {
   const actual = await vi.importActual<typeof import('../../api/client')>('../../api/client');
@@ -15,6 +16,7 @@ vi.mock('../../api/client', async () => {
       searchReleases: (...args: unknown[]) => searchReleases(...args),
       grabRelease: (...args: unknown[]) => grabRelease(...args),
       blockRelease: (...args: unknown[]) => blockRelease(...args),
+      getAcquisition: (...args: unknown[]) => getAcquisition(...args),
     },
   };
 });
@@ -57,6 +59,8 @@ describe('InteractiveSearch', () => {
       ],
     });
     grabRelease.mockResolvedValue({ download_id: 'dl-1', status: 'queued' });
+    getAcquisition.mockReset();
+    getAcquisition.mockResolvedValue({ liveGrabAllowed: true, message: '' });
   });
 
   it('hides when releases capability is off', () => {
@@ -93,6 +97,17 @@ describe('InteractiveSearch', () => {
     expect(blockRelease).toHaveBeenCalledWith(
       expect.objectContaining({ guid: 'high', item_id: 'm1' }),
     );
+    expect(screen.getByRole('button', { name: /grab dune.2021/i })).toBeDisabled();
+  });
+
+  it('disables grab when live VPN policy blocks it', async () => {
+    getAcquisition.mockResolvedValue({
+      liveGrabAllowed: false,
+      message: 'Live torrent grab needs WireGuard.',
+    });
+    renderSearch();
+    fireEvent.click(screen.getByRole('button', { name: /search releases/i }));
+    expect(await screen.findByTestId('release-grab-blocked')).toHaveTextContent(/wireguard/i);
     expect(screen.getByRole('button', { name: /grab dune.2021/i })).toBeDisabled();
   });
 });

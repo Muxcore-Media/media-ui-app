@@ -26,6 +26,7 @@ vi.mock('../api/client', async () => {
       listRoots: (...args: unknown[]) => listRoots(...args),
       pickRoot: (...args: unknown[]) => pickRoot(...args),
       setRootFolder: (...args: unknown[]) => setRootFolder(...args),
+      listItemHistory: vi.fn().mockResolvedValue({ available: false, items: [], total: 0 }),
     },
   };
 });

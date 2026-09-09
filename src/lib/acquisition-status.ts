@@ -25,6 +25,11 @@ export type IndexerCapabilities = {
   supportedProtocols: string[];
 };
 
+export type AcquisitionVpn = {
+  configured: boolean;
+  confPresent: boolean;
+};
+
 export type AcquisitionStatus = {
   ready: boolean;
   hasIndexer: boolean;
@@ -35,6 +40,10 @@ export type AcquisitionStatus = {
   capabilities: IndexerCapabilities;
   capabilitiesAvailable: boolean;
   message: string;
+  liveGrabAllowed: boolean;
+  indexerMode: string;
+  downloaderMode: string;
+  vpn: AcquisitionVpn;
 };
 
 export type IndexersResponse = {
@@ -121,6 +130,7 @@ export function normalizeAcquisitionStatus(raw: Record<string, unknown> = {}): A
     capabilities: raw.capabilities,
     capabilities_available: raw.capabilities_available === true || raw.capabilitiesAvailable === true,
   });
+  const vpnRaw = asRecord(raw.vpn);
   return {
     ready: raw.ready === true,
     hasIndexer: raw.hasIndexer === true || raw.has_indexer === true,
@@ -131,6 +141,13 @@ export function normalizeAcquisitionStatus(raw: Record<string, unknown> = {}): A
     capabilities: listed.capabilities,
     capabilitiesAvailable: listed.capabilitiesAvailable,
     message: String(raw.message ?? ''),
+    liveGrabAllowed: raw.live_grab_allowed !== false && raw.liveGrabAllowed !== false,
+    indexerMode: String(raw.indexer_mode ?? raw.indexerMode ?? ''),
+    downloaderMode: String(raw.downloader_mode ?? raw.downloaderMode ?? ''),
+    vpn: {
+      configured: vpnRaw.configured === true,
+      confPresent: vpnRaw.conf_present === true || vpnRaw.confPresent === true,
+    },
   };
 }
 

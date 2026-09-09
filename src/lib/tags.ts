@@ -1,4 +1,4 @@
-export const TAG_MEDIA = ['movie', 'tv'] as const;
+export const TAG_MEDIA = ['movie', 'tv', 'music'] as const;
 
 export type TagMedia = (typeof TAG_MEDIA)[number];
 
@@ -20,7 +20,7 @@ function asRecord(raw: unknown): Record<string, unknown> {
 
 export function normalizeLibraryTag(raw: unknown): LibraryTag {
   const rec = asRecord(raw);
-  const media = String(rec.media ?? '') === 'tv' ? 'tv' : String(rec.media ?? '') === 'movie' ? 'movie' : String(rec.media ?? '');
+  const media = String(rec.media ?? '');
   return {
     id: String(rec.id ?? ''),
     label: String(rec.label ?? rec.name ?? ''),
@@ -44,4 +44,14 @@ export function tagLabel(tag: LibraryTag): string {
 
 export function tagWriteBody(input: { label: string; media?: string }): Record<string, unknown> {
   return { label: input.label, media: input.media };
+}
+
+export function itemTagsPath(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): string {
+  if (kind === 'tv') {
+    return `/api/tv/${encodeURIComponent(id)}/tags`;
+  }
+  if (kind === 'artist' || kind === 'music') {
+    return `/api/music/${encodeURIComponent(id)}/tags`;
+  }
+  return `/api/movies/${encodeURIComponent(id)}/tags`;
 }

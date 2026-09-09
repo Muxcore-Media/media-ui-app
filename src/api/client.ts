@@ -185,7 +185,7 @@ import {
   normalizeNotifications,
   type NotificationsStatus,
 } from '../lib/notifications';
-import { normalizeLibraryTag, normalizeTags, tagWriteBody, type LibraryTag, type TagsResponse } from '../lib/tags';
+import { itemTagsPath, normalizeLibraryTag, normalizeTags, tagWriteBody, type LibraryTag, type TagsResponse } from '../lib/tags';
 import {
   normalizeAlternateTitle,
   normalizeAlternateTitles,
@@ -1762,9 +1762,8 @@ export const api = {
     });
   },
 
-  async getItemTags(kind: 'movie' | 'tv', id: string): Promise<TagsResponse> {
-    const path = kind === 'tv' ? `/api/tv/${encodeURIComponent(id)}/tags` : `/api/movies/${encodeURIComponent(id)}/tags`;
-    return normalizeTags(await getJSON<unknown>(path));
+  async getItemTags(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): Promise<TagsResponse> {
+    return normalizeTags(await getJSON<unknown>(itemTagsPath(kind, id)));
   },
 
   async listAlternateTitles(kind: 'movie' | 'tv', id: string): Promise<AlternateTitlesResponse> {
@@ -1871,8 +1870,8 @@ export const api = {
     return normalizeItemArtwork(raw.artwork);
   },
 
-  async setItemTags(kind: 'movie' | 'tv', id: string, tagIds: string[]): Promise<{ ok: boolean; tag_ids: string[] }> {
-    const path = kind === 'tv' ? `/api/tv/${encodeURIComponent(id)}/tags` : `/api/movies/${encodeURIComponent(id)}/tags`;
+  async setItemTags(kind: 'movie' | 'tv' | 'artist' | 'music', id: string, tagIds: string[]): Promise<{ ok: boolean; tag_ids: string[] }> {
+    const path = itemTagsPath(kind, id);
     const raw = await getJSON<Record<string, unknown>>(path, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

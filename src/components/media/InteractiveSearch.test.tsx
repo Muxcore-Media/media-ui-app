@@ -100,6 +100,16 @@ describe('InteractiveSearch', () => {
     expect(screen.getByRole('button', { name: /grab dune.2021/i })).toBeDisabled();
   });
 
+  it('searches music releases for a library artist', async () => {
+    render(
+      <CapabilitiesContext.Provider value={{ caps: ALL_CAPABILITIES, loading: false, error: null, retry: () => {} }}>
+        <InteractiveSearch itemType="music" itemId="ar1" title="Radiohead" />
+      </CapabilitiesContext.Provider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /search releases/i }));
+    expect(searchReleases).toHaveBeenCalledWith(expect.objectContaining({ q: 'Radiohead', type: 'music' }));
+  });
+
   it('disables grab when live VPN policy blocks it', async () => {
     getAcquisition.mockResolvedValue({
       liveGrabAllowed: false,

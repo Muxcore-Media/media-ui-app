@@ -7,6 +7,7 @@ import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { QualityProfileSelect } from '../components/media/QualityProfileSelect';
 import { RootFolderSelect } from '../components/media/RootFolderSelect';
+import InteractiveSearch from '../components/media/InteractiveSearch';
 import { ArtworkCard } from '../components/media/ArtworkCard';
 import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
 import { TagSelect } from '../components/media/TagSelect';
@@ -342,6 +343,8 @@ export default function MusicArtist() {
           ))}
         </section>
       )}
+
+      <InteractiveSearch itemType="music" itemId={artist.id} title={artist.name} />
     </div>
   );
 }

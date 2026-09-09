@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import InteractiveSearch from '../components/media/InteractiveSearch';
 import { AddIssueField } from '../components/media/AddIssueField';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
@@ -197,6 +198,8 @@ export default function ComicSeries() {
           ))}
         </ul>
       )}
+
+      <InteractiveSearch itemType="comic" itemId={series.id} title={series.title} />
     </div>
   );
 }

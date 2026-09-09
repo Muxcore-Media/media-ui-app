@@ -8,8 +8,10 @@ import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import type { ReleaseMatch } from '../../types';
 
+type ReleaseSearchType = 'movie' | 'tv' | 'music' | 'book' | 'comic' | 'audiobook';
+
 type Props = {
-  itemType: 'movie' | 'tv';
+  itemType: ReleaseSearchType;
   itemId: string;
   title: string;
   year?: number;
@@ -149,7 +151,7 @@ export default function InteractiveSearch({
             Releases
           </h2>
           <p className="text-sm text-[var(--text-secondary)]">
-            Search indexers and grab a scored release, same as Radarr/Sonarr interactive search.
+            Search indexers and grab a scored release, same as Arr interactive search.
           </p>
         </div>
         <Button

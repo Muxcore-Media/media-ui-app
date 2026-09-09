@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import InteractiveSearch from '../components/media/InteractiveSearch';
 import { AddAlbumField } from '../components/media/AddAlbumField';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
@@ -256,6 +257,8 @@ export default function BookAuthor() {
           ))}
         </ul>
       )}
+
+      <InteractiveSearch itemType="book" itemId={author.id} title={author.name} />
     </div>
   );
 }

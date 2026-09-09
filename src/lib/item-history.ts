@@ -54,7 +54,7 @@ export function normalizeItemHistory(raw: unknown): ItemHistoryResponse {
   };
 }
 
-export function historyPath(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author', id: string): string {
+export function historyPath(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'series' | 'audiobook', id: string): string {
   const root =
     kind === 'tv'
       ? '/api/tv'
@@ -62,7 +62,11 @@ export function historyPath(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author'
         ? '/api/music'
         : kind === 'author'
           ? '/api/books'
-          : '/api/movies';
+          : kind === 'series'
+            ? '/api/comics'
+            : kind === 'audiobook'
+              ? '/api/audiobooks'
+              : '/api/movies';
   return `${root}/${encodeURIComponent(id)}/history`;
 }
 

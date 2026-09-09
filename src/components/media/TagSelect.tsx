@@ -5,14 +5,17 @@ import { tagLabel, type LibraryTag } from '../../lib/tags';
 
 function tagMediaMatches(media: string, kind: string): boolean {
   if (!media || media === kind) return true;
-  return (kind === 'artist' || kind === 'music') && (media === 'artist' || media === 'music');
+  return (
+    ((kind === 'artist' || kind === 'music') && (media === 'artist' || media === 'music')) ||
+    (kind === 'author' && (media === 'author' || media === 'book' || media === 'books'))
+  );
 }
 
 export function TagSelect({
   kind,
   id,
 }: {
-  kind: 'movie' | 'tv' | 'artist';
+  kind: 'movie' | 'tv' | 'artist' | 'author';
   id: string;
 }) {
   const canEdit = canManageTags();

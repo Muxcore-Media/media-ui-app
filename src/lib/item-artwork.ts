@@ -46,7 +46,7 @@ export function normalizeItemArtworkList(raw: unknown): ItemArtworkResponse {
   };
 }
 
-export type ArtworkKind = 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook';
+export type ArtworkKind = 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook' | 'series';
 
 export function artworkPath(kind: ArtworkKind, id: string): string {
   const root =
@@ -58,7 +58,9 @@ export function artworkPath(kind: ArtworkKind, id: string): string {
           ? '/api/books'
           : kind === 'audiobook'
             ? '/api/audiobooks'
-            : '/api/movies';
+            : kind === 'series'
+              ? '/api/comics'
+              : '/api/movies';
   return `${root}/${encodeURIComponent(id)}/artwork`;
 }
 

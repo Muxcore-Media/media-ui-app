@@ -2,7 +2,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import { ArtworkCard } from '../components/media/ArtworkCard';
 import InteractiveSearch from '../components/media/InteractiveSearch';
+import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
 import { AddIssueField } from '../components/media/AddIssueField';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
@@ -110,6 +112,8 @@ export default function ComicSeries() {
             hasFile={issues.some((iss) => Boolean(iss.stream_url || iss.has_file))}
             onRemoved={() => navigate('/comics')}
           />
+          <ArtworkCard kind="series" id={series.id} />
+          <ItemHistoryCard kind="series" id={series.id} />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">{series.publisher || 'Comic series'}</p>
       </div>

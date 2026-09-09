@@ -8,6 +8,7 @@ import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
 import { ArtworkCard } from '../components/media/ArtworkCard';
+import { TagSelect } from '../components/media/TagSelect';
 import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
 import { RootFolderSelect } from '../components/media/RootFolderSelect';
 import Spinner from '../components/Spinner';
@@ -123,6 +124,7 @@ export default function BookAuthor() {
           />
           <ItemHistoryCard kind="author" id={author.id} />
           <ArtworkCard kind="author" id={author.id} />
+          <TagSelect kind="author" id={author.id} />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">
           {books.length} book{books.length === 1 ? '' : 's'}

@@ -1799,7 +1799,7 @@ export const api = {
     });
   },
 
-  async getItemTags(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): Promise<TagsResponse> {
+  async getItemTags(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author', id: string): Promise<TagsResponse> {
     return normalizeTags(await getJSON<unknown>(itemTagsPath(kind, id)));
   },
 
@@ -1822,7 +1822,7 @@ export const api = {
     });
   },
 
-  async listItemHistory(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author', id: string, event?: string): Promise<ItemHistoryResponse> {
+  async listItemHistory(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'series' | 'audiobook', id: string, event?: string): Promise<ItemHistoryResponse> {
     const q = event ? `?event=${encodeURIComponent(event)}` : '';
     return normalizeItemHistory(await getJSON<unknown>(`${historyPath(kind, id)}${q}`));
   },
@@ -1867,7 +1867,7 @@ export const api = {
     );
   },
 
-  async listItemArtwork(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook', id: string): Promise<ItemArtworkResponse> {
+  async listItemArtwork(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook' | 'series', id: string): Promise<ItemArtworkResponse> {
     return normalizeItemArtworkList(await getJSON<unknown>(artworkPath(kind, id)));
   },
 
@@ -1895,7 +1895,7 @@ export const api = {
   },
 
   async replaceItemArtwork(
-    kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook',
+    kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook' | 'series',
     id: string,
     input: { type: string; filename: string; data: string },
   ): Promise<ItemArtwork> {
@@ -1907,7 +1907,7 @@ export const api = {
     return normalizeItemArtwork(raw.artwork);
   },
 
-  async setItemTags(kind: 'movie' | 'tv' | 'artist' | 'music', id: string, tagIds: string[]): Promise<{ ok: boolean; tag_ids: string[] }> {
+  async setItemTags(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author', id: string, tagIds: string[]): Promise<{ ok: boolean; tag_ids: string[] }> {
     const path = itemTagsPath(kind, id);
     const raw = await getJSON<Record<string, unknown>>(path, {
       method: 'PUT',

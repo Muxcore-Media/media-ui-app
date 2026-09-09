@@ -27,6 +27,7 @@ describe('item artwork', () => {
     expect(artworkPath('artist', 'ar1')).toBe('/api/music/ar1/artwork');
     expect(artworkPath('author', 'au1')).toBe('/api/books/au1/artwork');
     expect(artworkPath('audiobook', 'ab1')).toBe('/api/audiobooks/ab1/artwork');
+    expect(artworkPath('series', 'cs1')).toBe('/api/comics/cs1/artwork');
     expect(replaceArtworkBody({ type: 'poster', filename: 'p.jpg', data: 'abc' })).toEqual({
       type: 'poster',
       filename: 'p.jpg',

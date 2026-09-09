@@ -46,12 +46,15 @@ export function tagWriteBody(input: { label: string; media?: string }): Record<s
   return { label: input.label, media: input.media };
 }
 
-export function itemTagsPath(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): string {
+export function itemTagsPath(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author', id: string): string {
   if (kind === 'tv') {
     return `/api/tv/${encodeURIComponent(id)}/tags`;
   }
   if (kind === 'artist' || kind === 'music') {
     return `/api/music/${encodeURIComponent(id)}/tags`;
+  }
+  if (kind === 'author') {
+    return `/api/books/${encodeURIComponent(id)}/tags`;
   }
   return `/api/movies/${encodeURIComponent(id)}/tags`;
 }

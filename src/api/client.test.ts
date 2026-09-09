@@ -579,11 +579,25 @@ describe('api smoke (library + request + auth errors)', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/api/tv/s1/artwork');
     fetchMock.mockResolvedValueOnce({
       ok: true,
+      json: async () => ({ available: true, items: [] }),
+    });
+    const books = await api.listItemArtwork('author', 'au1');
+    expect(books.available).toBe(true);
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/api/books/au1/artwork');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ available: true, items: [] }),
+    });
+    const audiobooks = await api.listItemArtwork('audiobook', 'ab1');
+    expect(audiobooks.available).toBe(true);
+    expect(String(fetchMock.mock.calls[3][0])).toContain('/api/audiobooks/ab1/artwork');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
       json: async () => ({ ok: true, artwork: { id: 'm1_poster', type: 'poster', url: '/images/movies/m1/poster.jpg' } }),
     });
     const replaced = await api.replaceItemArtwork('movie', 'm1', { type: 'poster', filename: 'p.jpg', data: 'abc' });
     expect(replaced.type).toBe('poster');
-    expect(String(fetchMock.mock.calls[2][1]?.method)).toBe('POST');
+    expect(String(fetchMock.mock.calls[4][1]?.method)).toBe('POST');
   });
 
   it('title subtitle files talk to the household BFF', async () => {

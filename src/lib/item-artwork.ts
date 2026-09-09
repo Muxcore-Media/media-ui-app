@@ -46,8 +46,19 @@ export function normalizeItemArtworkList(raw: unknown): ItemArtworkResponse {
   };
 }
 
-export function artworkPath(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): string {
-  const root = kind === 'tv' ? '/api/tv' : kind === 'artist' || kind === 'music' ? '/api/music' : '/api/movies';
+export type ArtworkKind = 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook';
+
+export function artworkPath(kind: ArtworkKind, id: string): string {
+  const root =
+    kind === 'tv'
+      ? '/api/tv'
+      : kind === 'artist' || kind === 'music'
+        ? '/api/music'
+        : kind === 'author'
+          ? '/api/books'
+          : kind === 'audiobook'
+            ? '/api/audiobooks'
+            : '/api/movies';
   return `${root}/${encodeURIComponent(id)}/artwork`;
 }
 

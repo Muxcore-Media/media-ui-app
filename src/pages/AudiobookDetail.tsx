@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useId, useState } from 'react';
 import { ArrowLeft, Pause, Play } from 'lucide-react';
 import { api } from '../api/client';
+import { ArtworkCard } from '../components/media/ArtworkCard';
 import InteractiveSearch from '../components/media/InteractiveSearch';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
@@ -121,6 +122,7 @@ export default function AudiobookDetailPage() {
               setDetail((cur) => (cur ? { ...cur, author: { ...cur.author, path: next } } : cur))
             }
           />
+          <ArtworkCard kind="audiobook" id={audiobook.id} />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">
           {meta}

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../../api/client';
-import { artworkTypeLabel, type ItemArtwork } from '../../lib/item-artwork';
+import { artworkTypeLabel, type ArtworkKind, type ItemArtwork } from '../../lib/item-artwork';
 import { canManageLibrary } from '../../lib/session';
 
 function readFileData(file: File): Promise<string> {
@@ -16,7 +16,7 @@ export function ArtworkCard({
   kind,
   id,
 }: {
-  kind: 'movie' | 'tv' | 'artist';
+  kind: ArtworkKind;
   id: string;
 }) {
   const canEdit = canManageLibrary();
@@ -109,7 +109,9 @@ export function ArtworkCard({
               onChange={(e) => setKindType(e.target.value)}
             >
               <option value="poster">Poster</option>
-              {kind === 'artist' ? null : <option value="background">Backdrop</option>}
+              {kind === 'artist' || kind === 'author' || kind === 'audiobook' ? null : (
+                <option value="background">Backdrop</option>
+              )}
             </select>
           </label>
           <label className="text-sm text-[var(--text-tertiary)]">

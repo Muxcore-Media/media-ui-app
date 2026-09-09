@@ -1867,7 +1867,7 @@ export const api = {
     );
   },
 
-  async listItemArtwork(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): Promise<ItemArtworkResponse> {
+  async listItemArtwork(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook', id: string): Promise<ItemArtworkResponse> {
     return normalizeItemArtworkList(await getJSON<unknown>(artworkPath(kind, id)));
   },
 
@@ -1895,7 +1895,7 @@ export const api = {
   },
 
   async replaceItemArtwork(
-    kind: 'movie' | 'tv' | 'artist' | 'music',
+    kind: 'movie' | 'tv' | 'artist' | 'music' | 'author' | 'audiobook',
     id: string,
     input: { type: string; filename: string; data: string },
   ): Promise<ItemArtwork> {

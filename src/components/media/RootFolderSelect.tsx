@@ -8,7 +8,7 @@ export function RootFolderSelect({
   value,
   onChange,
 }: {
-  kind: 'movie' | 'tv' | 'artist' | 'author' | 'audiobook';
+  kind: 'movie' | 'tv' | 'artist' | 'author' | 'audiobook' | 'series';
   id: string;
   value?: string;
   onChange?: (next: string) => void;
@@ -25,7 +25,9 @@ export function RootFolderSelect({
           ? 'books'
           : kind === 'audiobook'
             ? 'audiobooks'
-            : 'music';
+            : kind === 'series'
+              ? 'comics'
+              : 'music';
 
   useEffect(() => {
     let cancelled = false;

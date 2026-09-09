@@ -29,8 +29,10 @@ import type { Capabilities, FeatureKey, LibraryKey } from '../lib/capabilities';
 import { DEFAULT_CAPABILITIES } from '../lib/capabilities';
 import {
   normalizeAcquisitionStatus,
+  normalizeHouseholdIndexer,
   normalizeIndexers,
   type AcquisitionStatus,
+  type HouseholdIndexer,
   type IndexersResponse,
 } from '../lib/acquisition-status';
 import { normalizeWatchTogether, type WatchTogetherRoom } from '../lib/watch-together';
@@ -609,6 +611,39 @@ export const api = {
 
   async listIndexers(): Promise<IndexersResponse> {
     return normalizeIndexers(await getJSON<unknown>('/api/indexers'));
+  },
+
+  async createIndexer(input: {
+    name: string;
+    base_url: string;
+    api_key?: string;
+    implementation?: string;
+    enable?: boolean;
+  }): Promise<HouseholdIndexer> {
+    return normalizeHouseholdIndexer(
+      await getJSON<unknown>('/api/indexers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+    );
+  },
+
+  async updateIndexer(
+    id: number,
+    input: { name?: string; base_url?: string; api_key?: string; enable?: boolean },
+  ): Promise<HouseholdIndexer> {
+    return normalizeHouseholdIndexer(
+      await getJSON<unknown>(`/api/indexers/${encodeURIComponent(String(id))}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+    );
+  },
+
+  async deleteIndexer(id: number): Promise<void> {
+    await getJSON<unknown>(`/api/indexers/${encodeURIComponent(String(id))}`, { method: 'DELETE' });
   },
 
   async listSessions(): Promise<SessionsResponse> {
@@ -1272,12 +1307,12 @@ export const api = {
     );
   },
 
-  async listRoots(kind?: 'movies' | 'tv' | 'music' | 'books' | 'audiobooks'): Promise<RootsCatalog> {
+  async listRoots(kind?: 'movies' | 'tv' | 'music' | 'books' | 'audiobooks' | 'comics'): Promise<RootsCatalog> {
     const q = kind ? `?kind=${encodeURIComponent(kind)}` : '';
     return normalizeRootsCatalog(await getJSON<unknown>(`/api/roots${q}`));
   },
 
-  async pickRoot(kind: 'movies' | 'tv' | 'music' | 'books' | 'audiobooks'): Promise<RootPick> {
+  async pickRoot(kind: 'movies' | 'tv' | 'music' | 'books' | 'audiobooks' | 'comics'): Promise<RootPick> {
     return normalizeRootPick(await getJSON<unknown>(`/api/roots/pick?kind=${encodeURIComponent(kind)}`));
   },
 
@@ -1415,7 +1450,7 @@ export const api = {
   },
 
   async setRootFolder(input: {
-    kind: 'movie' | 'tv' | 'artist' | 'author' | 'audiobook';
+    kind: 'movie' | 'tv' | 'artist' | 'author' | 'audiobook' | 'series';
     id: string;
     rootFolderPath: string;
   }): Promise<{ root_folder_path: string }> {
@@ -1428,7 +1463,9 @@ export const api = {
             ? `/api/books/${encodeURIComponent(input.id)}`
             : input.kind === 'audiobook'
               ? `/api/audiobooks/${encodeURIComponent(input.id)}`
-              : `/api/music/${encodeURIComponent(input.id)}`;
+              : input.kind === 'series'
+                ? `/api/comics/${encodeURIComponent(input.id)}`
+                : `/api/music/${encodeURIComponent(input.id)}`;
     return getJSON<{ root_folder_path: string }>(path, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -1785,7 +1822,7 @@ export const api = {
     });
   },
 
-  async listItemHistory(kind: 'movie' | 'tv' | 'artist' | 'music', id: string, event?: string): Promise<ItemHistoryResponse> {
+  async listItemHistory(kind: 'movie' | 'tv' | 'artist' | 'music' | 'author', id: string, event?: string): Promise<ItemHistoryResponse> {
     const q = event ? `?event=${encodeURIComponent(event)}` : '';
     return normalizeItemHistory(await getJSON<unknown>(`${historyPath(kind, id)}${q}`));
   },
@@ -1830,7 +1867,7 @@ export const api = {
     );
   },
 
-  async listItemArtwork(kind: 'movie' | 'tv', id: string): Promise<ItemArtworkResponse> {
+  async listItemArtwork(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): Promise<ItemArtworkResponse> {
     return normalizeItemArtworkList(await getJSON<unknown>(artworkPath(kind, id)));
   },
 
@@ -1858,7 +1895,7 @@ export const api = {
   },
 
   async replaceItemArtwork(
-    kind: 'movie' | 'tv',
+    kind: 'movie' | 'tv' | 'artist' | 'music',
     id: string,
     input: { type: string; filename: string; data: string },
   ): Promise<ItemArtwork> {
@@ -2644,7 +2681,7 @@ export const api = {
     return getLibraryList('/api/comics');
   },
   async getComicSeries(id: string): Promise<{
-    series: { id: string; title: string; publisher?: string; monitored?: boolean };
+    series: { id: string; title: string; publisher?: string; monitored?: boolean; path?: string };
     issues: Array<{
       id: string;
       series_id?: string;

@@ -137,7 +137,7 @@ export function rootLabel(root: LibraryRoot): string {
   return name ? `${name} — ${root.path}${suffix}` : `${root.path}${suffix}`;
 }
 
-export const ROOT_MEDIA_KINDS = ['movies', 'tv', 'music', 'books', 'audiobooks', 'any'] as const;
+export const ROOT_MEDIA_KINDS = ['movies', 'tv', 'music', 'books', 'audiobooks', 'comics', 'any'] as const;
 
 export function rootWriteBody(input: {
   name?: string;

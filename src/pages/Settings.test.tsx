@@ -10,6 +10,9 @@ import * as passkeys from '../lib/passkeys';
 const getRequestPolicy = vi.fn();
 const updateRequestPolicy = vi.fn();
 const getAcquisition = vi.fn();
+const createIndexer = vi.fn();
+const updateIndexer = vi.fn();
+const deleteIndexer = vi.fn();
 const getFormats = vi.fn();
 const syncTrashGuides = vi.fn();
 const scoreRelease = vi.fn();
@@ -152,6 +155,9 @@ vi.mock('../api/client', async () => {
       getRequestPolicy: (...args: unknown[]) => getRequestPolicy(...args),
       updateRequestPolicy: (...args: unknown[]) => updateRequestPolicy(...args),
       getAcquisition: (...args: unknown[]) => getAcquisition(...args),
+      createIndexer: (...args: unknown[]) => createIndexer(...args),
+      updateIndexer: (...args: unknown[]) => updateIndexer(...args),
+      deleteIndexer: (...args: unknown[]) => deleteIndexer(...args),
       getFormats: (...args: unknown[]) => getFormats(...args),
       syncTrashGuides: (...args: unknown[]) => syncTrashGuides(...args),
       scoreRelease: (...args: unknown[]) => scoreRelease(...args),
@@ -310,6 +316,9 @@ describe('Settings page', () => {
     getRequestPolicy.mockReset();
     updateRequestPolicy.mockReset();
     getAcquisition.mockReset();
+    createIndexer.mockReset();
+    updateIndexer.mockReset();
+    deleteIndexer.mockReset();
     getFormats.mockReset();
     syncTrashGuides.mockReset();
     scoreRelease.mockReset();
@@ -1057,10 +1066,17 @@ describe('Settings page', () => {
       hdr: true,
       score: 150,
     });
+    createIndexer.mockResolvedValue({ id: 9, name: 'Knaben', protocol: 'torrent', language: 'en', configured: true });
+    updateIndexer.mockResolvedValue({ id: 3, name: 'Knaben', protocol: 'torrent', language: 'en', configured: false });
+    deleteIndexer.mockResolvedValue(undefined);
     getAcquisition.mockResolvedValue({
       ready: false,
       hasIndexer: true,
       hasDownloader: false,
+      liveGrabAllowed: true,
+      downloaderMode: 'fixture',
+      indexerMode: 'fixture',
+      vpn: { configured: false, confPresent: false },
       message: 'An indexer is up, but no downloader is connected.',
       peers: [
         { id: 'idx', kind: 'indexer', label: 'Pirate Bay indexer', live: true },
@@ -1226,6 +1242,25 @@ describe('Settings page', () => {
     expect(await screen.findByTestId('indexer-list')).toHaveTextContent('Knaben');
     expect(await screen.findByTestId('indexer-capabilities')).toHaveTextContent('Season packs');
     expect(screen.getByTestId('indexer-capabilities')).toHaveTextContent('ID search');
+    expect(await screen.findByTestId('acquisition-vpn')).toHaveTextContent(/fixture grab/i);
+  });
+
+  it('lets admins add a Prowlarr Torznab indexer', async () => {
+    setCurrentRoles(['admin']);
+    renderSettings('/settings/acquisition');
+    fireEvent.change(await screen.findByLabelText('Indexer name'), { target: { value: 'Knaben' } });
+    fireEvent.change(screen.getByLabelText('Indexer URL'), { target: { value: 'https://knaben.example/api' } });
+    fireEvent.change(screen.getByLabelText('Indexer API key'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: /add indexer/i }));
+    await waitFor(() => {
+      expect(createIndexer).toHaveBeenCalledWith({
+        name: 'Knaben',
+        base_url: 'https://knaben.example/api',
+        api_key: 'secret',
+        implementation: 'torznab',
+        enable: true,
+      });
+    });
   });
 
   it('lists TRaSH packs and syncs them', async () => {

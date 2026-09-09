@@ -1053,6 +1053,22 @@ describe('api smoke (library + request + auth errors)', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/indexers');
   });
 
+  it('createIndexer posts a Prowlarr feed', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 9, name: 'Knaben', protocol: 'torrent', configured: true }),
+    });
+    const created = await api.createIndexer({
+      name: 'Knaben',
+      base_url: 'https://knaben.example/api',
+      api_key: 'secret',
+    });
+    expect(created.name).toBe('Knaben');
+    expect(fetchMock.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
   it('listSessions reads household now-watching rows', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -2067,6 +2083,13 @@ describe('api smoke (library + request + auth errors)', () => {
     const audiobook = await api.setRootFolder({ kind: 'audiobook', id: 'ab1', rootFolderPath: '/data/audiobooks' });
     expect(audiobook.root_folder_path).toBe('/data/audiobooks');
     expect(String(fetchMock.mock.calls[5][0])).toContain('/api/audiobooks/ab1');
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ root_folder_path: '/data/comics' }),
+    });
+    const series = await api.setRootFolder({ kind: 'series', id: 's1', rootFolderPath: '/data/comics' });
+    expect(series.root_folder_path).toBe('/data/comics');
+    expect(String(fetchMock.mock.calls[6][0])).toContain('/api/comics/s1');
   });
 
   it('browseRoots createRoot and deleteRoot talk to the household BFF', async () => {

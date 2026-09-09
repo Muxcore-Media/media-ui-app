@@ -46,8 +46,8 @@ export function normalizeItemArtworkList(raw: unknown): ItemArtworkResponse {
   };
 }
 
-export function artworkPath(kind: 'movie' | 'tv', id: string): string {
-  const root = kind === 'tv' ? '/api/tv' : '/api/movies';
+export function artworkPath(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): string {
+  const root = kind === 'tv' ? '/api/tv' : kind === 'artist' || kind === 'music' ? '/api/music' : '/api/movies';
   return `${root}/${encodeURIComponent(id)}/artwork`;
 }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ban, Download, Search } from 'lucide-react';
 import { api } from '../../api/client';
 import { featureEnabled, useCapabilities } from '../../lib/capabilities';
+import type { AcquisitionStatus } from '../../lib/acquisition-status';
 import { normalizeParsedQuality, parsedQualityLabel } from '../../lib/formats';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
@@ -43,8 +44,10 @@ export default function InteractiveSearch({
   const [grabbed, setGrabbed] = useState<string | null>(null);
   const [blocking, setBlocking] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<Set<string>>(() => new Set());
+  const [acquisition, setAcquisition] = useState<AcquisitionStatus | null>(null);
   const didAutoSearch = useRef(false);
   const enabled = featureEnabled(caps, 'releases');
+  const grabAllowed = acquisition?.liveGrabAllowed !== false;
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -68,6 +71,22 @@ export default function InteractiveSearch({
       setLoading(false);
     }
   }, [title, itemType, year, tmdbId]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    void api
+      .getAcquisition()
+      .then((next) => {
+        if (!cancelled) setAcquisition(next);
+      })
+      .catch(() => {
+        if (!cancelled) setAcquisition(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled || !autoSearch || didAutoSearch.current) return;
@@ -144,6 +163,12 @@ export default function InteractiveSearch({
       </div>
 
       {error ? <ErrorBanner message={error} testId="release-search-error" /> : null}
+      {!grabAllowed ? (
+        <p className="text-sm text-[var(--text-secondary)]" data-testid="release-grab-blocked">
+          {acquisition?.message ||
+            'Live grab is off until WireGuard is connected (fixture engine or WG_CONF).'}
+        </p>
+      ) : null}
       {grabbed ? (
         <p className="text-sm text-[var(--text-secondary)]" data-testid="release-grabbed">
           Queued {grabbed}
@@ -216,7 +241,7 @@ export default function InteractiveSearch({
                         type="button"
                         className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
                         aria-label={`Grab ${rel.title}`}
-                        disabled={grabbing === rel.guid || blocked.has(rel.guid)}
+                        disabled={!grabAllowed || grabbing === rel.guid || blocked.has(rel.guid)}
                         onClick={() => void grab(rel)}
                       >
                         <Download className="h-3.5 w-3.5" aria-hidden="true" />

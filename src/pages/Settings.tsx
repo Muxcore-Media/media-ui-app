@@ -1533,6 +1533,16 @@ function DebridPane() {
 function AcquisitionPane() {
   const [status, setStatus] = useState<AcquisitionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [implementation, setImplementation] = useState('torznab');
+  const [busy, setBusy] = useState(false);
+  const canEdit = canManageQuality();
+
+  async function reload() {
+    setStatus(await api.getAcquisition());
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -1568,6 +1578,29 @@ function AcquisitionPane() {
         <p className="text-sm text-[var(--text-secondary)]" data-testid="acquisition-message">
           {status.message}
         </p>
+      ) : null}
+      {status ? (
+        <div
+          className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-2 text-sm"
+          data-testid="acquisition-vpn"
+        >
+          <span className="text-[var(--text-primary)]">
+            VPN {status.downloaderMode === 'fixture' ? '(fixture grab)' : '(live torrent)'}
+          </span>
+          <span
+            className={
+              status.liveGrabAllowed ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'
+            }
+          >
+            {status.liveGrabAllowed
+              ? status.vpn.confPresent
+                ? 'WG_CONF present'
+                : 'Allowed'
+              : status.vpn.configured
+                ? 'Conf missing'
+                : 'WG_CONF not set'}
+          </span>
+        </div>
       ) : null}
       <ul className="space-y-2 text-sm" data-testid="acquisition-peers">
         {peers.map((peer) => (
@@ -1623,13 +1656,119 @@ function AcquisitionPane() {
                   {ix.name}
                   {ix.protocol ? ` · ${ix.protocol}` : ''}
                 </span>
-                <span className={ix.configured ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'}>
-                  {ix.configured ? 'Enabled' : 'Disabled'}
+                <span className="flex items-center gap-2">
+                  <span className={ix.configured ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'}>
+                    {ix.configured ? 'Enabled' : 'Disabled'}
+                  </span>
+                  {canEdit ? (
+                    <>
+                      <button
+                        type="button"
+                        className="text-xs text-[var(--accent-color)]"
+                        onClick={() => {
+                          setBusy(true);
+                          setError(null);
+                          void api
+                            .updateIndexer(ix.id, { enable: !ix.configured })
+                            .then(() => reload())
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Could not update indexer'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        {ix.configured ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-[var(--danger-color)]"
+                        aria-label={`Remove ${ix.name}`}
+                        onClick={() => {
+                          setBusy(true);
+                          setError(null);
+                          void api
+                            .deleteIndexer(ix.id)
+                            .then(() => reload())
+                            .catch((err) => setError(err instanceof Error ? err.message : 'Could not remove indexer'))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </>
+                  ) : null}
                 </span>
               </li>
             ))}
           </ul>
         </div>
+      ) : null}
+      {canEdit ? (
+        <form
+          className="space-y-2"
+          data-testid="indexer-add-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError(null);
+            void api
+              .createIndexer({
+                name: name.trim(),
+                base_url: baseUrl.trim(),
+                api_key: apiKey.trim() || undefined,
+                implementation,
+                enable: true,
+              })
+              .then(() => {
+                setName('');
+                setBaseUrl('');
+                setApiKey('');
+                return reload();
+              })
+              .catch((err) => setError(err instanceof Error ? err.message : 'Could not add indexer'))
+              .finally(() => setBusy(false));
+          }}
+        >
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Add Prowlarr indexer</h3>
+          <p className="text-sm text-[var(--text-secondary)]">
+            Torznab or Newznab feed. MuxCore proxies Prowlarr — it does not keep its own indexer
+            database.
+          </p>
+          <input
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm"
+            placeholder="Name"
+            aria-label="Indexer name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <input
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm"
+            placeholder="https://indexer.example/api"
+            aria-label="Indexer URL"
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            required
+          />
+          <input
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm"
+            placeholder="API key"
+            aria-label="Indexer API key"
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+          <select
+            className="w-full rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-transparent px-3 py-2 text-sm"
+            aria-label="Indexer type"
+            value={implementation}
+            onChange={(e) => setImplementation(e.target.value)}
+          >
+            <option value="torznab">Torznab</option>
+            <option value="newznab">Newznab</option>
+          </select>
+          <button type="submit" disabled={busy} className={saveBtnClass}>
+            {busy ? 'Saving…' : 'Add indexer'}
+          </button>
+        </form>
       ) : null}
       {peers.length === 0 && !error ? (
         <p className="text-sm text-[var(--text-secondary)]">Checking acquisition peers…</p>
@@ -2087,6 +2226,7 @@ function LibrariesPane() {
             <option value="music">music</option>
             <option value="books">books</option>
             <option value="audiobooks">audiobooks</option>
+            <option value="comics">comics</option>
             <option value="any">any</option>
           </select>
         </label>
@@ -4054,9 +4194,11 @@ function QualityPane() {
       </div>
       {catalog?.sync ? (
         <p className="text-sm text-[var(--text-secondary)]" data-testid="formats-sync-result">
-          Imported {catalog.sync.formatsUpserted} formats and {catalog.sync.profilesUpserted}{' '}
-          profiles
-          {catalog.sync.guidesPath ? ` from ${catalog.sync.guidesPath}` : ''}.
+          Imported {catalog.sync.formatsUpserted} formats
+          {catalog.sync.formatsSkipped ? ` (${catalog.sync.formatsSkipped} skipped)` : ''} and{' '}
+          {catalog.sync.profilesUpserted} profiles
+          {catalog.sync.guidesPath ? ` from ${catalog.sync.guidesPath}` : ''}
+          {catalog.sync.warnings.length ? ` · ${catalog.sync.warnings.length} warnings` : ''}.
         </p>
       ) : null}
       <section data-testid="release-profiles">

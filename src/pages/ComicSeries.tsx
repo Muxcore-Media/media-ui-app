@@ -6,6 +6,7 @@ import { AddIssueField } from '../components/media/AddIssueField';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
+import { RootFolderSelect } from '../components/media/RootFolderSelect';
 import Spinner from '../components/Spinner';
 import { Badge } from '../components/ui/Badge';
 
@@ -21,7 +22,7 @@ export type ComicIssue = {
 };
 
 export type ComicSeriesDetail = {
-  series: { id: string; title: string; publisher?: string; monitored?: boolean };
+  series: { id: string; title: string; publisher?: string; monitored?: boolean; path?: string };
   issues: ComicIssue[];
 };
 
@@ -91,6 +92,14 @@ export default function ComicSeries() {
             compact
             onChange={(next) =>
               setDetail((cur) => (cur ? { ...cur, series: { ...cur.series, monitored: next } } : cur))
+            }
+          />
+          <RootFolderSelect
+            kind="series"
+            id={series.id}
+            value={series.path}
+            onChange={(next) =>
+              setDetail((cur) => (cur ? { ...cur, series: { ...cur.series, path: next } } : cur))
             }
           />
           <RemoveLibraryButton

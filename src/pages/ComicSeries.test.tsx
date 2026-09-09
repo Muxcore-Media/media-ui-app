@@ -9,6 +9,9 @@ const setMonitored = vi.fn();
 const removeLibraryItem = vi.fn();
 const addComicIssue = vi.fn();
 const importLibraryFile = vi.fn();
+const listRoots = vi.fn();
+const pickRoot = vi.fn();
+const setRootFolder = vi.fn();
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -20,6 +23,9 @@ vi.mock('../api/client', async () => {
       removeLibraryItem: (...args: unknown[]) => removeLibraryItem(...args),
       addComicIssue: (...args: unknown[]) => addComicIssue(...args),
       importLibraryFile: (...args: unknown[]) => importLibraryFile(...args),
+      listRoots: (...args: unknown[]) => listRoots(...args),
+      pickRoot: (...args: unknown[]) => pickRoot(...args),
+      setRootFolder: (...args: unknown[]) => setRootFolder(...args),
     },
   };
 });
@@ -31,7 +37,16 @@ describe('ComicSeries page', () => {
     removeLibraryItem.mockReset();
     addComicIssue.mockReset();
     importLibraryFile.mockReset();
+    listRoots.mockReset();
+    pickRoot.mockReset();
+    setRootFolder.mockReset();
     setCurrentRoles([]);
+    listRoots.mockResolvedValue({
+      available: true,
+      roots: [{ id: 'r1', path: '/data/comics', name: 'Comics', mediaKind: 'comics', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],
+    });
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    setRootFolder.mockResolvedValue({ root_folder_path: '/data/comics' });
     setMonitored.mockResolvedValue({ monitored: false });
     addComicIssue.mockResolvedValue({ added: true, item: { id: 'ci-new', title: 'Romance Dawn', number: '1' } });
     importLibraryFile.mockResolvedValue({ imported: true });

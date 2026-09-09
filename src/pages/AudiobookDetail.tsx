@@ -4,6 +4,7 @@ import { ArrowLeft, Pause, Play } from 'lucide-react';
 import { api } from '../api/client';
 import { ArtworkCard } from '../components/media/ArtworkCard';
 import InteractiveSearch from '../components/media/InteractiveSearch';
+import { ItemHistoryCard } from '../components/media/ItemHistoryCard';
 import { ImportFileField } from '../components/media/ImportFileField';
 import { MonitorButton } from '../components/media/MonitorButton';
 import { RemoveLibraryButton } from '../components/media/RemoveLibraryButton';
@@ -123,6 +124,7 @@ export default function AudiobookDetailPage() {
             }
           />
           <ArtworkCard kind="audiobook" id={audiobook.id} />
+          <ItemHistoryCard kind="audiobook" id={audiobook.id} />
         </div>
         <p className="text-sm text-[var(--text-secondary)]">
           {meta}

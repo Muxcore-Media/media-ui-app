@@ -30,5 +30,6 @@ describe('library tags', () => {
     expect(itemTagsPath('tv', 'show1')).toBe('/api/tv/show1/tags');
     expect(itemTagsPath('artist', 'ar1')).toBe('/api/music/ar1/tags');
     expect(itemTagsPath('music', 'ar1')).toBe('/api/music/ar1/tags');
+    expect(itemTagsPath('author', 'au1')).toBe('/api/books/au1/tags');
   });
 });

@@ -109,7 +109,7 @@ export function ArtworkCard({
               onChange={(e) => setKindType(e.target.value)}
             >
               <option value="poster">Poster</option>
-              {kind === 'artist' || kind === 'author' || kind === 'audiobook' ? null : (
+              {kind === 'artist' || kind === 'author' || kind === 'audiobook' || kind === 'series' ? null : (
                 <option value="background">Backdrop</option>
               )}
             </select>

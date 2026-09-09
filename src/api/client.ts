@@ -1785,7 +1785,7 @@ export const api = {
     });
   },
 
-  async listItemHistory(kind: 'movie' | 'tv', id: string, event?: string): Promise<ItemHistoryResponse> {
+  async listItemHistory(kind: 'movie' | 'tv' | 'artist' | 'music', id: string, event?: string): Promise<ItemHistoryResponse> {
     const q = event ? `?event=${encodeURIComponent(event)}` : '';
     return normalizeItemHistory(await getJSON<unknown>(`${historyPath(kind, id)}${q}`));
   },

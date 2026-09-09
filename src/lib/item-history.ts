@@ -54,8 +54,8 @@ export function normalizeItemHistory(raw: unknown): ItemHistoryResponse {
   };
 }
 
-export function historyPath(kind: 'movie' | 'tv', id: string): string {
-  const root = kind === 'tv' ? '/api/tv' : '/api/movies';
+export function historyPath(kind: 'movie' | 'tv' | 'artist' | 'music', id: string): string {
+  const root = kind === 'tv' ? '/api/tv' : kind === 'artist' || kind === 'music' ? '/api/music' : '/api/movies';
   return `${root}/${encodeURIComponent(id)}/history`;
 }
 

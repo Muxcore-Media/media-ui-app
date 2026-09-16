@@ -13,6 +13,7 @@ This doc was adopted into the existing `media-ui-app` repo (React + Vite + TS + 
 - Keep `src/api/client.ts`, `src/lib/userdata.ts`, auth/session flow, and existing test coverage intact while restyling — normalize new visual components on top of the existing typed data layer (`src/types/index.ts`), don't re-derive it.
 - Apply §2–§12 below incrementally: design tokens → primitives (`components/ui`) → layout/nav → media components (`PosterCard`, `HeroBanner`, `Shelf`) → page rebuilds — always preserving accessible names/hrefs existing tests assert on unless the tests are deliberately updated alongside the change.
 - **Shipped in this repo:** hero banners, horizontal shelves, skeleton loading states, `lucide-react` icons, custom video OSD, library URL filters, paginated browse grids, and server-authoritative userdata sync.
+- Open product/platform work belongs in workspace [`MASTER-ROADMAP.md`](../MASTER-ROADMAP.md) and umbrella GitHub Issues. Do not add `ROADMAP.md` / `TASKS.md` here. §12 is a per-feature UI DoD, not a backlog.
 
 ---
 

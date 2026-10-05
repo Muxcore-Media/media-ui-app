@@ -1354,89 +1354,20 @@ describe('Settings page', () => {
     expect(screen.queryByTestId('settings-backups')).not.toBeInTheDocument();
   });
 
-  it('adds a household wanted subtitle', async () => {
+  it('keeps personal subtitle preferences and hides operator controls', async () => {
     setCurrentRoles(['admin']);
     const { findByTestId } = renderSettings('/settings/subtitles');
     expect(await findByTestId('settings-subtitles')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Subtitles' })).toBeInTheDocument();
     expect(screen.getByLabelText('Text color')).toHaveValue('#ffffff');
     expect(screen.getByLabelText('Sync offset (ms)')).toHaveValue(0);
-    expect(await findByTestId('subtitle-wanted-list')).toHaveTextContent('Interstellar');
-    expect(await findByTestId('subtitle-provider-list')).toHaveTextContent('OpenSubtitles');
-    fireEvent.change(screen.getByLabelText('Wanted subtitle title'), { target: { value: 'Dune' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add wanted' }));
-    await waitFor(() => {
-      expect(createSubtitleWanted).toHaveBeenCalledWith({ title: 'Dune', language: 'eng' });
-    });
-    expect(await findByTestId('subtitle-ops-flash')).toHaveTextContent('Added to wanted');
-  });
-
-  it('adds a catalog language to a subtitle profile', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/subtitles');
-    expect(await findByTestId('subtitle-language-catalog')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Subtitle catalog language'), { target: { value: 'spa' } });
-    fireEvent.click(screen.getByLabelText('Hearing impaired'));
-    fireEvent.click(screen.getByRole('button', { name: 'Add language' }));
-    expect(screen.getByLabelText('Subtitle profile languages')).toHaveValue('eng, spa+hi');
-    fireEvent.change(screen.getByLabelText('Subtitle profile name'), { target: { value: 'English+Spanish HI' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
-    await waitFor(() => {
-      expect(upsertSubtitleProfile).toHaveBeenCalledWith({
-        name: 'English+Spanish HI',
-        languages: 'eng, spa+hi',
-        isDefault: true,
-      });
-    });
-  });
-
-  it('assigns a language profile to a subtitle library series', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/subtitles');
-    expect(await findByTestId('subtitle-library-list')).toHaveTextContent('Dune');
-    expect(await findByTestId('subtitle-library-list')).toHaveTextContent('Severance');
-    fireEvent.change(screen.getByLabelText('Language profile for Severance'), { target: { value: 'lp_hi' } });
-    await waitFor(() => {
-      expect(massEditSubtitleMedia).toHaveBeenCalledWith({
-        mediaIds: ['ep1', 'ep2'],
-        languageProfileId: 'lp_hi',
-        setMonitored: false,
-        monitored: undefined,
-      });
-    });
-    expect(await findByTestId('subtitle-ops-flash')).toHaveTextContent('Language profile assigned');
-  });
-
-  it('searches wanted subtitles for one library title', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/subtitles');
-    expect(await findByTestId('subtitle-library-search-movie:mov1')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('subtitle-library-search-movie:mov1'));
-    await waitFor(() => {
-      expect(searchSubtitleWanted).toHaveBeenCalledWith({ mediaIds: ['mov1'] });
-    });
-    expect(await findByTestId('subtitle-ops-flash')).toHaveTextContent('Searched 1, downloaded 0');
-  });
-
-  it('clears subtitle history', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/subtitles');
-    expect(await findByTestId('subtitle-history-list')).toHaveTextContent('Interstellar');
-    fireEvent.click(screen.getByRole('button', { name: 'Clear history' }));
-    await waitFor(() => {
-      expect(clearSubtitleHistory).toHaveBeenCalled();
-    });
-    expect(await findByTestId('subtitle-ops-flash')).toHaveTextContent('Subtitle history cleared');
-  });
-
-  it('removes a blacklisted subtitle release', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/subtitles');
-    expect(await findByTestId('subtitle-blacklist-list')).toHaveTextContent('Dune.2021.1080p');
-    fireEvent.click(screen.getByRole('button', { name: 'Allow again' }));
-    await waitFor(() => {
-      expect(removeSubtitleBlacklist).toHaveBeenCalledWith('bl1');
-    });
-    expect(await findByTestId('subtitle-ops-flash')).toHaveTextContent('Removed from blacklist');
+    expect(screen.queryByTestId('subtitle-wanted-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-provider-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-language-catalog')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-library-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-history-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('subtitle-blacklist-list')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add wanted' })).not.toBeInTheDocument();
   });
 
   it('saves a household Connect webhook', async () => {

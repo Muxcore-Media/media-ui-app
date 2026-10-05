@@ -1274,113 +1274,12 @@ describe('Settings page', () => {
     });
   });
 
-  it('lists TRaSH packs and syncs them', async () => {
-    const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
-    expect(await findByTestId('settings-quality')).toBeInTheDocument();
-    expect(await screen.findByText('Remux-1080p')).toBeInTheDocument();
-    expect(screen.getByText('HD Bluray + WEB')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('formats-sync-trash'));
-    expect(await screen.findByTestId('formats-sync-result')).toHaveTextContent('Imported 8 formats');
-    expect(syncTrashGuides).toHaveBeenCalledWith({
-      importProfiles: true,
-      services: ['radarr', 'sonarr'],
-      official: false,
-    });
-  });
-
-  it('parses a release name without scoring', async () => {
-    const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
-    expect(await findByTestId('settings-quality')).toBeInTheDocument();
-    fireEvent.change(await screen.findByTestId('formats-score-title'), {
-      target: { value: 'Dune.2021.1080p.BluRay.REMUX.HDR.mkv' },
-    });
-    fireEvent.click(screen.getByTestId('formats-parse'));
-    expect(await screen.findByTestId('formats-parse-result')).toHaveTextContent('1080p Remux');
-    expect(parseQuality).toHaveBeenCalledWith('Dune.2021.1080p.BluRay.REMUX.HDR.mkv');
-    expect(scoreRelease).not.toHaveBeenCalled();
-  });
-
-  it('lets admins sync official TRaSH Guides', async () => {
+  it('does not offer quality profiles or formats to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
-    expect(await findByTestId('formats-sync-official')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('formats-sync-official'));
-    await waitFor(() => {
-      expect(syncTrashGuides).toHaveBeenCalledWith({
-        importProfiles: true,
-        services: ['radarr', 'sonarr'],
-        official: true,
-      });
-    });
-  });
-
-  it('creates a household release restriction', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
-    expect(await findByTestId('release-profiles')).toBeInTheDocument();
-    expect(screen.getByText('Default Blocklist')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('New restriction name'), { target: { value: 'No CAM' } });
-    fireEvent.change(screen.getByLabelText('New restriction must not contain'), { target: { value: 'cam' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add restriction' }));
-    await waitFor(() => {
-      expect(createReleaseProfile).toHaveBeenCalledWith({
-        name: 'No CAM',
-        preferred: [],
-        mustContain: [],
-        mustNotContain: ['cam'],
-        preferredScore: 10,
-        enabled: true,
-      });
-    });
-  });
-
-  it('creates and saves a household quality profile', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
-    expect(await findByTestId('settings-quality')).toBeInTheDocument();
-    fireEvent.change(await screen.findByLabelText('Cutoff for HD Bluray + WEB'), { target: { value: '12000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => {
-      expect(updateQualityProfile).toHaveBeenCalledWith(
-        'qp1',
-        expect.objectContaining({ cutoffScore: 12000, name: 'HD Bluray + WEB' }),
-      );
-    });
-    fireEvent.change(screen.getByLabelText('New profile name'), { target: { value: 'UHD' } });
-    fireEvent.change(screen.getByLabelText('New profile cutoff'), { target: { value: '15000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create profile' }));
-    await waitFor(() => {
-      expect(createQualityProfile).toHaveBeenCalledWith(expect.objectContaining({ name: 'UHD', cutoffScore: 15000 }));
-    });
-  });
-
-  it('creates and saves a household custom format', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
-    expect(await findByTestId('settings-quality')).toBeInTheDocument();
-    fireEvent.change(await screen.findByLabelText('Score for Remux-1080p'), { target: { value: '2000' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save format' }));
-    await waitFor(() => {
-      expect(updateCustomFormat).toHaveBeenCalledWith(
-        'cf1',
-        expect.objectContaining({
-          name: 'Remux-1080p',
-          score: 2000,
-          rules: [{ field: 'title', op: 'contains', value: 'REMUX', negate: false }],
-        }),
-      );
-    });
-    fireEvent.change(screen.getByLabelText('New format name'), { target: { value: 'HDR' } });
-    fireEvent.change(screen.getByLabelText('New format score'), { target: { value: '500' } });
-    fireEvent.change(screen.getByLabelText('New format rules'), { target: { value: 'title|contains|HDR' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create format' }));
-    await waitFor(() => {
-      expect(createCustomFormat).toHaveBeenCalledWith({
-        name: 'HDR',
-        score: 500,
-        rules: [{ field: 'title', op: 'contains', value: 'HDR', negate: false }],
-      });
-    });
+    renderSettings('/settings/quality', ALL_CAPABILITIES);
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Quality' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-quality')).not.toBeInTheDocument();
   });
 
   it('edits torrent and usenet grab delays', async () => {

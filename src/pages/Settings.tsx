@@ -11,12 +11,11 @@ import {
   PlugZap,
   Shield,
   Subtitles,
-  Ticket,
   User,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
+import { canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -2273,107 +2272,6 @@ function NotificationsPane() {
   );
 }
 
-function RequestsPane() {
-  const [pending, setPending] = useState('0');
-  const [week, setWeek] = useState('0');
-  const [users, setUsers] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .getRequestPolicy()
-      .then((p) => {
-        if (cancelled) return;
-        setPending(String(p.maxPendingPerUser));
-        setWeek(String(p.maxPerWeek));
-        setUsers(p.autoApproveUsers.join(', '));
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load request policy');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setSaved(false);
-    try {
-      await api.updateRequestPolicy({
-        maxPendingPerUser: Number(pending) || 0,
-        maxPerWeek: Number(week) || 0,
-        autoApproveUsersCsv: users,
-      });
-      setSaved(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save request policy');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form className={paneClass} onSubmit={(e) => void onSubmit(e)} data-testid="settings-requests">
-      <h2 className="font-semibold text-[var(--text-primary)]">Requests</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Limit how many titles a household member can request, and skip approval for trusted users.
-        Zero means unlimited.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {saved ? (
-        <p className="text-sm text-[var(--success)]" role="status">
-          Request policy saved
-        </p>
-      ) : null}
-      <label className="block space-y-1 text-sm">
-        <span className="text-[var(--text-secondary)]">Max pending per person</span>
-        <input
-          className={inputClass}
-          type="number"
-          min={0}
-          value={pending}
-          onChange={(e) => setPending(e.target.value)}
-          data-testid="settings-max-pending"
-        />
-      </label>
-      <label className="block space-y-1 text-sm">
-        <span className="text-[var(--text-secondary)]">Max requests per week</span>
-        <input
-          className={inputClass}
-          type="number"
-          min={0}
-          value={week}
-          onChange={(e) => setWeek(e.target.value)}
-          data-testid="settings-max-week"
-        />
-      </label>
-      <label className="block space-y-1 text-sm">
-        <span className="text-[var(--text-secondary)]">Auto-approve user ids</span>
-        <input
-          className={inputClass}
-          value={users}
-          onChange={(e) => setUsers(e.target.value)}
-          placeholder="alice, sam"
-          data-testid="settings-auto-approve"
-        />
-      </label>
-      <button type="submit" disabled={busy} className={saveBtnClass}>
-        {busy ? 'Saving…' : 'Save'}
-      </button>
-    </form>
-  );
-}
-
 export default function Settings() {
   const { caps } = useCapabilities();
   const { pathname } = useLocation();
@@ -2391,12 +2289,8 @@ export default function Settings() {
   else if (pathname.endsWith('/debrid') && featureEnabled(caps, 'debrid')) pane = <DebridPane />;
   else if (pathname.endsWith('/acquisition')) pane = <AcquisitionPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
-  else if (pathname.endsWith('/requests') && canApproveRequests() && featureEnabled(caps, 'request')) {
-    pane = <RequestsPane />;
-  }
 
   const showDebrid = featureEnabled(caps, 'debrid');
-  const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
 
   return (
     <div className="space-y-6" data-testid="settings-page">
@@ -2452,12 +2346,6 @@ export default function Settings() {
           <PlugZap className="h-4 w-4" aria-hidden="true" />
           Acquisition
         </NavLink>
-        {showRequests && (
-          <NavLink to="/settings/requests" className={tabClass}>
-            <Ticket className="h-4 w-4" aria-hidden="true" />
-            Requests
-          </NavLink>
-        )}
       </nav>
       {pane}
     </div>

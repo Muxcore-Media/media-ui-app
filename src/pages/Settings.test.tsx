@@ -1236,11 +1236,12 @@ describe('Settings page', () => {
     expect(getPreferences().parental.pinEnabled).toBe(false);
   });
 
-  it('lets approvers edit household request quotas', async () => {
+  it('does not offer household request quotas to an approver', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/requests');
-    expect(await findByTestId('settings-requests')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    renderSettings('/settings/requests', ALL_CAPABILITIES);
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Requests' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-requests')).not.toBeInTheDocument();
   });
 
   it('shows live indexer and downloader peers', async () => {

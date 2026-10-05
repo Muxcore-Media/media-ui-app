@@ -614,6 +614,18 @@ function mergeCapabilities(raw: {
   return { libraries, features };
 }
 
+export type ViewerProfile = {
+  id: string;
+  name: string;
+  kids: boolean;
+  pin_set: boolean;
+};
+
+export type ViewerProfiles = {
+  active_id: string;
+  profiles: ViewerProfile[];
+};
+
 export const api = {
   async getCapabilities(): Promise<Capabilities> {
     return mergeCapabilities(await getJSON('/api/capabilities'));
@@ -2856,6 +2868,31 @@ export const api = {
   async deleteUser(id: string): Promise<{ removed: boolean; id: string }> {
     return getJSON<{ removed: boolean; id: string }>(`/api/users/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+    });
+  },
+
+  async listViewerProfiles(): Promise<ViewerProfiles> {
+    return getJSON<ViewerProfiles>('/api/profiles');
+  },
+
+  async createViewerProfile(input: {
+    name: string;
+    kids: boolean;
+    pin?: string;
+    current_pin?: string;
+  }): Promise<ViewerProfiles> {
+    return getJSON<ViewerProfiles>('/api/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+  },
+
+  async activateViewerProfile(id: string, pin?: string): Promise<ViewerProfiles> {
+    return getJSON<ViewerProfiles>('/api/profiles/active', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, pin: pin ?? '' }),
     });
   },
 

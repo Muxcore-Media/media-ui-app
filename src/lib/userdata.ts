@@ -795,6 +795,34 @@ function mergeProgressMaps(
   return out;
 }
 
+/** Replace the local cache with the active profile's server blob. */
+export async function replaceUserdataFromServer(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/userdata', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      setMeta({ serverAuthoritative: false });
+      return false;
+    }
+    const blob = (await res.json()) as ServerBlob;
+    writeJSON(KEYS.progress, blob.progress && typeof blob.progress === 'object' ? blob.progress : {});
+    writeJSON(KEYS.favorites, blob.favorites && typeof blob.favorites === 'object' ? blob.favorites : {});
+    writeJSON(KEYS.prefs, blob.prefs && typeof blob.prefs === 'object' ? blob.prefs : {});
+    writeJSON(KEYS.playlists, Array.isArray(blob.playlists) ? blob.playlists : []);
+    writeJSON(KEYS.wantToWatch, blob.wantToWatch && typeof blob.wantToWatch === 'object' ? blob.wantToWatch : {});
+    writeJSON(KEYS.queue, Array.isArray(blob.queue) ? blob.queue : []);
+    const blobUserId = userIdFromUnknown(blob);
+    if (blobUserId) setCurrentUserId(blobUserId);
+    else await refreshCurrentUserId();
+    const theme = (blob.prefs as UserPreferences | undefined)?.display?.theme;
+    if (theme) applyTheme(theme);
+    setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() });
+    return true;
+  } catch {
+    setMeta({ serverAuthoritative: false });
+    return false;
+  }
+}
+
 /** Pull server userdata into localStorage cache. Server wins on progress conflicts. */
 export async function pullUserdataFromServer(): Promise<boolean> {
   try {

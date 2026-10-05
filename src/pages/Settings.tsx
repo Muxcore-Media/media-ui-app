@@ -27,6 +27,7 @@ import {
   Users,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
+import { HouseholdProfiles } from '../components/HouseholdProfiles';
 import { canApproveRequests, canManageBackups, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
@@ -266,6 +267,7 @@ function ProfilePane() {
             : 'Synced with server'
           : 'Sync unavailable — using local data on this device'}
       </p>
+      <HouseholdProfiles />
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

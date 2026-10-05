@@ -146,6 +146,10 @@ const deleteMaintainerExclusion = vi.fn();
 const syncMaintainerExclusions = vi.fn();
 const exportMaintainerRules = vi.fn();
 const importMaintainerRules = vi.fn();
+const listViewerProfiles = vi.fn(async () => ({
+  active_id: 'primary',
+  profiles: [{ id: 'primary', name: 'Primary', kids: false, pin_set: false }],
+}));
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -291,6 +295,7 @@ vi.mock('../api/client', async () => {
       syncMaintainerExclusions: (...args: unknown[]) => syncMaintainerExclusions(...args),
       exportMaintainerRules: (...args: unknown[]) => exportMaintainerRules(...args),
       importMaintainerRules: (...args: unknown[]) => importMaintainerRules(...args),
+      listViewerProfiles: (...args: unknown[]) => listViewerProfiles(...args),
     },
   };
 });

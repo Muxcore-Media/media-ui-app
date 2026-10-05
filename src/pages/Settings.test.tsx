@@ -1316,41 +1316,12 @@ describe('Settings page', () => {
     expect(screen.queryByTestId('settings-tags')).not.toBeInTheDocument();
   });
 
-  it('saves a concurrent-stream playback-guard rule', async () => {
+  it('does not offer playback guard to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/guard');
-    expect(await findByTestId('settings-guard')).toBeInTheDocument();
-    expect(await findByTestId('guard-rules')).toHaveTextContent('Two streams');
-    expect(await findByTestId('guard-violations')).toHaveTextContent('pat has 3 active streams');
-    fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
-    await waitFor(() => {
-      expect(upsertGuardRule).toHaveBeenCalledWith({
-        type: 'concurrent_streams',
-        name: 'Two streams',
-        enabled: true,
-        params: { max_streams: '2' },
-      });
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge' }));
-    await waitFor(() => {
-      expect(ackGuardViolations).toHaveBeenCalledWith(['v1']);
-    });
-  });
-
-  it('merges duplicate playback-guard identities', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/guard');
-    expect(await findByTestId('guard-merge-form')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Guard merge source'), { target: { value: 'pat-tv' } });
-    fireEvent.change(screen.getByLabelText('Guard merge target'), { target: { value: 'pat' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Merge users' }));
-    await waitFor(() => {
-      expect(mergeGuardUsers).toHaveBeenCalledWith({
-        sourceUserName: 'pat-tv',
-        targetUserName: 'pat',
-      });
-    });
-    expect(await findByTestId('guard-flash')).toHaveTextContent('Merged identities');
+    renderSettings('/settings/guard');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Guard' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-guard')).not.toBeInTheDocument();
   });
 
   it('does not offer library maintainer to an admin', async () => {

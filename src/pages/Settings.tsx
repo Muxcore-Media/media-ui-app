@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageLibrary, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
+import { canApproveRequests, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -40,15 +40,6 @@ import {
   type HouseholdPasskey,
   type PasskeysResponse,
 } from '../lib/passkeys';
-import {
-  GUARD_RULE_TYPES,
-  guardParamsText,
-  guardRuleLabel,
-  guardRuleTypeLabel,
-  parseGuardParams,
-  type GuardCatalog,
-  type GuardRule,
-} from '../lib/guard';
 import { SUBTITLE_TEXT_COLORS } from '../lib/subtitle-offset';
 import { NOTIFY_CHANNELS, notifyChannelLabel, type NotifyChannel } from '../lib/notifications';
 import {
@@ -2493,277 +2484,6 @@ function RequestsPane() {
   );
 }
 
-function GuardPane() {
-  const [catalog, setCatalog] = useState<GuardCatalog | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [name, setName] = useState('Two streams');
-  const [type, setType] = useState<(typeof GUARD_RULE_TYPES)[number]>('concurrent_streams');
-  const [enabled, setEnabled] = useState(true);
-  const [paramsText, setParamsText] = useState('max_streams=2');
-  const [mergeSource, setMergeSource] = useState('');
-  const [mergeTarget, setMergeTarget] = useState('');
-
-  async function reload() {
-    const next = await api.getGuard();
-    setCatalog(next);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .getGuard()
-      .then((next) => {
-        if (!cancelled) {
-          setCatalog(next);
-          setError(null);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load playback guard');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function onSaveRule(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.upsertGuardRule({
-        type,
-        name,
-        enabled,
-        params: parseGuardParams(paramsText),
-      });
-      setFlash('Rule saved');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save rule');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onDeleteRule(id: string) {
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.deleteGuardRule(id);
-      setFlash('Rule removed');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete rule');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onAck(id: string) {
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.ackGuardViolations([id]);
-      setFlash('Violation acknowledged');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not acknowledge violation');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onResetTrust(row: GuardCatalog['trust'][number]) {
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.resetGuardTrust({ userId: row.userId, userName: row.userName });
-      setFlash('Trust score reset');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not reset trust');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onMergeUsers(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      const next = await api.mergeGuardUsers({
-        sourceUserName: mergeSource,
-        targetUserName: mergeTarget,
-      });
-      setFlash(`Merged identities · ${next.aliasesCreated} alias`);
-      setMergeSource('');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not merge users');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function editRule(rule: GuardRule) {
-    setName(rule.name);
-    if ((GUARD_RULE_TYPES as readonly string[]).includes(rule.type)) {
-      setType(rule.type as (typeof GUARD_RULE_TYPES)[number]);
-    }
-    setEnabled(rule.enabled);
-    setParamsText(guardParamsText(rule.params));
-  }
-
-  return (
-    <div className={`${paneClass} max-w-2xl`} data-testid="settings-guard">
-      <h2 className="font-semibold text-[var(--text-primary)]">Playback guard</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Limit concurrent streams, flag impossible travel, and review household violations. Needs the
-        optional playback-guard module.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {flash ? (
-        <p className="text-sm text-[var(--text-secondary)]" data-testid="guard-flash">
-          {flash}
-        </p>
-      ) : null}
-      {catalog && !catalog.available ? (
-        <p className="text-sm text-[var(--text-secondary)]">
-          Playback guard is not running. Enable the playback-guard compose profile or
-          MVP_ENABLE_PLAYBACK_GUARD=1.
-        </p>
-      ) : null}
-      <form className="space-y-3" onSubmit={(e) => void onSaveRule(e)} data-testid="guard-rule-form">
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Rule name</span>
-          <input className={inputClass} value={name} aria-label="Guard rule name" onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Rule type</span>
-          <select
-            className={inputClass}
-            value={type}
-            aria-label="Guard rule type"
-            onChange={(e) => setType(e.target.value as (typeof GUARD_RULE_TYPES)[number])}
-          >
-            {GUARD_RULE_TYPES.map((kind) => (
-              <option key={kind} value={kind}>
-                {guardRuleTypeLabel(kind)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <input type="checkbox" checked={enabled} aria-label="Guard rule enabled" onChange={(e) => setEnabled(e.target.checked)} />
-          Enabled
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Params (key=value)</span>
-          <textarea
-            className={inputClass}
-            rows={3}
-            value={paramsText}
-            aria-label="Guard rule params"
-            onChange={(e) => setParamsText(e.target.value)}
-          />
-        </label>
-        <button type="submit" disabled={busy || !name.trim()} className={saveBtnClass}>
-          {busy ? 'Working…' : 'Save rule'}
-        </button>
-      </form>
-      {catalog?.rules.length ? (
-        <ul className="space-y-2" data-testid="guard-rules">
-          {catalog.rules.map((row) => (
-            <li key={row.id || row.name} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2">
-              <p className="min-w-0 truncate text-sm text-[var(--text-primary)]">{guardRuleLabel(row)}</p>
-              <div className="flex shrink-0 gap-2">
-                <button type="button" className="text-xs font-semibold text-[var(--accent-color)]" onClick={() => editRule(row)}>
-                  Edit
-                </button>
-                <button type="button" className="text-xs font-semibold text-[var(--danger-color)]" onClick={() => void onDeleteRule(row.id)}>
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {catalog?.violations.length ? (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Violations</h3>
-          <ul className="space-y-2" data-testid="guard-violations">
-            {catalog.violations.map((row) => (
-              <li key={row.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2">
-                <p className="min-w-0 truncate text-sm text-[var(--text-primary)]">{row.summary || row.id}</p>
-                <button type="button" className="shrink-0 text-xs font-semibold text-[var(--accent-color)]" onClick={() => void onAck(row.id)}>
-                  Acknowledge
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      {catalog?.trust.length ? (
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Trust scores</h3>
-          <ul className="space-y-2" data-testid="guard-trust">
-            {catalog.trust.map((row) => (
-              <li key={row.userId || row.userName} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2">
-                <p className="min-w-0 truncate text-sm text-[var(--text-primary)]">
-                  {row.userName || row.userId} · {Math.round(row.score)}
-                </p>
-                <button type="button" className="shrink-0 text-xs font-semibold text-[var(--accent-color)]" onClick={() => void onResetTrust(row)}>
-                  Reset
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <form className="space-y-3 border-t border-[var(--border-subtle)] pt-4" onSubmit={(e) => void onMergeUsers(e)} data-testid="guard-merge-form">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Merge identities</h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Combine duplicate watchers so guard violations and trust scores follow one household name.
-        </p>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Source name</span>
-          <input
-            className={inputClass}
-            value={mergeSource}
-            aria-label="Guard merge source"
-            onChange={(e) => setMergeSource(e.target.value)}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Keep as</span>
-          <input
-            className={inputClass}
-            value={mergeTarget}
-            aria-label="Guard merge target"
-            onChange={(e) => setMergeTarget(e.target.value)}
-          />
-        </label>
-        <button type="submit" disabled={busy || !mergeSource.trim() || !mergeTarget.trim()} className={saveBtnClass}>
-          {busy ? 'Working…' : 'Merge users'}
-        </button>
-      </form>
-    </div>
-  );
-}
-
 export default function Settings() {
   const { caps } = useCapabilities();
   const { pathname } = useLocation();
@@ -2780,7 +2500,6 @@ export default function Settings() {
   else if (pathname.endsWith('/controls')) pane = <ControlsPane />;
   else if (pathname.endsWith('/debrid') && featureEnabled(caps, 'debrid')) pane = <DebridPane />;
   else if (pathname.endsWith('/acquisition')) pane = <AcquisitionPane />;
-  else if (pathname.endsWith('/guard') && canManageLibrary()) pane = <GuardPane />;
   else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
   else if (pathname.endsWith('/requests') && canApproveRequests() && featureEnabled(caps, 'request')) {
@@ -2789,7 +2508,6 @@ export default function Settings() {
 
   const showDebrid = featureEnabled(caps, 'debrid');
   const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
-  const showLibraries = canManageLibrary();
   const showDelay = featureEnabled(caps, 'activity');
 
   return (
@@ -2846,12 +2564,6 @@ export default function Settings() {
           <PlugZap className="h-4 w-4" aria-hidden="true" />
           Acquisition
         </NavLink>
-        {showLibraries && (
-          <NavLink to="/settings/guard" className={tabClass}>
-            <Shield className="h-4 w-4" aria-hidden="true" />
-            Guard
-          </NavLink>
-        )}
         {showDelay && (
           <NavLink to="/settings/delay" className={tabClass}>
             <Timer className="h-4 w-4" aria-hidden="true" />

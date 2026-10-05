@@ -26,7 +26,7 @@ import {
   User,
   Users,
 } from 'lucide-react';
-import { api } from '../api/client';
+import { api, signOut } from '../api/client';
 import { canApproveRequests, canManageBackups, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
@@ -267,13 +267,14 @@ function ProfilePane() {
           : 'Sync unavailable — using local data on this device'}
       </p>
       <div className="flex flex-wrap gap-2">
-        <a
-          href="/logout"
+        <button
+          type="button"
+          onClick={() => void signOut()}
           className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--accent-color)] hover:text-[var(--text-primary)]"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
           Log out
-        </a>
+        </button>
         <a
           href="/forgot-password"
           className="inline-flex items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--accent-color)] hover:text-[var(--text-primary)]"

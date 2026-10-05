@@ -1,7 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
-  Archive,
   HardDrive,
   KeyRound,
   CloudDownload,
@@ -28,7 +27,7 @@ import {
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageBackups, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
+import { canApproveRequests, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -124,7 +123,6 @@ import {
   type AutoTag,
   type AutoTagCatalog,
 } from '../lib/auto-tags';
-import { backupSizeLabel, type HouseholdBackup } from '../lib/backups';
 import { apiKeyLabel, type HouseholdAPIKey } from '../lib/keys';
 import {
   appendProfileLanguage,
@@ -5135,149 +5133,6 @@ function KeysPane() {
   );
 }
 
-function BackupsPane() {
-  const [backups, setBackups] = useState<HouseholdBackup[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [restoreDir, setRestoreDir] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function reload() {
-    const next = await api.listBackups();
-    setAvailable(next.available);
-    setRestoreDir(next.restoreDir);
-    setBackups(next.backups);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .listBackups()
-      .then((next) => {
-        if (cancelled) return;
-        setAvailable(next.available);
-        setRestoreDir(next.restoreDir);
-        setBackups(next.backups);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load backups');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function onCreate() {
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.createBackup();
-      setFlash('Backup created');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create backup');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRemove(id: string) {
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.deleteBackup(id);
-      setFlash('Backup removed');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete backup');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRestore(id: string) {
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      const next = await api.restoreBackup(id);
-      setFlash(`Restored ${next.filesRestored} files into ${next.restoreDir || restoreDir || 'the restore directory'}`);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not restore backup');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={paneClass} data-testid="settings-backups">
-      <h2 className="font-semibold text-[var(--text-primary)]">Backups</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Archive household auth, library databases, and userdata. Restore extracts into the
-        configured restore directory — it does not overwrite live files in place.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {flash ? (
-        <p className="text-sm text-[var(--text-secondary)]" data-testid="backup-flash">
-          {flash}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">
-          backup-local is not available. Enable the backup-local compose profile or
-          MVP_ENABLE_BACKUP_LOCAL=1.
-        </p>
-      ) : null}
-      {restoreDir ? (
-        <p className="text-sm text-[var(--text-tertiary)]">Restore directory: {restoreDir}</p>
-      ) : (
-        <p className="text-sm text-[var(--text-tertiary)]">
-          Restore is disabled until BACKUP_RESTORE_DIR is set on the media UI.
-        </p>
-      )}
-      <ul className="space-y-2" data-testid="backup-list">
-        {backups.map((row) => (
-          <li key={row.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate text-[var(--text-secondary)]">
-              {row.id}
-              {row.createdAt ? ` · ${row.createdAt}` : ''}
-              {` · ${backupSizeLabel(row.sizeBytes)}`}
-            </span>
-            <span className="flex shrink-0 gap-3">
-              <button
-                type="button"
-                disabled={busy || !restoreDir}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                onClick={() => void onRestore(row.id)}
-              >
-                Restore
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                className="text-[var(--text-tertiary)] hover:text-[var(--danger-color)]"
-                onClick={() => void onRemove(row.id)}
-              >
-                Remove
-              </button>
-            </span>
-          </li>
-        ))}
-      </ul>
-      <button type="button" disabled={busy} className={saveBtnClass} onClick={() => void onCreate()}>
-        {busy ? 'Working…' : 'Create backup'}
-      </button>
-    </div>
-  );
-}
 
 function NotificationsPane() {
   const [prefs, save] = usePrefs();
@@ -6873,7 +6728,6 @@ export default function Settings() {
   else if (pathname.endsWith('/invites') && canManageInvites()) pane = <InvitesPane />;
   else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/tags') && canManageTags()) pane = <TagsPane />;
-  else if (pathname.endsWith('/backups') && canManageBackups()) pane = <BackupsPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
   else if (pathname.endsWith('/requests') && canApproveRequests() && featureEnabled(caps, 'request')) {
     pane = <RequestsPane />;
@@ -6891,7 +6745,6 @@ export default function Settings() {
   const showInvites = canManageInvites();
   const showDelay = featureEnabled(caps, 'activity');
   const showTags = canManageTags();
-  const showBackups = canManageBackups();
 
   return (
     <div className="space-y-6" data-testid="settings-page">
@@ -6981,12 +6834,6 @@ export default function Settings() {
           <NavLink to="/settings/tags" className={tabClass}>
             <Tags className="h-4 w-4" aria-hidden="true" />
             Tags
-          </NavLink>
-        )}
-        {showBackups && (
-          <NavLink to="/settings/backups" className={tabClass}>
-            <Archive className="h-4 w-4" aria-hidden="true" />
-            Backups
           </NavLink>
         )}
         {showLists && (

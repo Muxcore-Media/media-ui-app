@@ -1845,16 +1845,12 @@ describe('Settings page', () => {
     expect(await findByTestId('auto-tag-classify-flash')).toHaveTextContent('Applied Kids');
   });
 
-  it('creates a household backup', async () => {
+  it('does not offer household backups to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/backups');
-    expect(await findByTestId('settings-backups')).toBeInTheDocument();
-    expect(await findByTestId('backup-list')).toHaveTextContent('backup_1');
-    fireEvent.click(screen.getByRole('button', { name: 'Create backup' }));
-    await waitFor(() => {
-      expect(createBackup).toHaveBeenCalled();
-    });
-    expect(await findByTestId('backup-flash')).toHaveTextContent('Backup created');
+    renderSettings('/settings/backups');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Backups' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-backups')).not.toBeInTheDocument();
   });
 
   it('adds a household wanted subtitle', async () => {

@@ -1405,54 +1405,16 @@ describe('Settings page', () => {
     expect(screen.queryByTestId('settings-keys')).not.toBeInTheDocument();
   });
 
-  it('saves an existing library root name and default', async () => {
+  it('does not offer libraries, import, or tags to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/libraries');
-    expect(await findByTestId('library-root-list')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Name for /data/movies'), { target: { value: '4K Movies' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    await waitFor(() => {
-      expect(updateRoot).toHaveBeenCalledWith('r1', {
-        name: '4K Movies',
-        mediaKind: 'movies',
-        isDefault: true,
-      });
-    });
-  });
-
-  it('tests the current folder before adding it', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/libraries');
-    expect(await findByTestId('settings-libraries')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'uhd/' }));
-    await waitFor(() => {
-      expect(browseRoots).toHaveBeenCalledWith('/data/uhd');
-    });
-    fireEvent.click(screen.getByTestId('library-probe'));
-    expect(await screen.findByTestId('library-probe-result')).toHaveTextContent('Folder is accessible');
-    expect(probeRoot).toHaveBeenCalledWith('/data/uhd');
-  });
-
-  it('adds a library root from the folder browser', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/libraries');
-    expect(await findByTestId('settings-libraries')).toBeInTheDocument();
-    expect(await screen.findByTestId('library-browse-path')).toHaveTextContent('/');
-    fireEvent.click(screen.getByRole('button', { name: 'uhd/' }));
-    await waitFor(() => {
-      expect(browseRoots).toHaveBeenCalledWith('/data/uhd');
-    });
-    expect(await screen.findByTestId('library-browse-path')).toHaveTextContent('/data/uhd');
-    fireEvent.change(screen.getByLabelText('Root folder name'), { target: { value: 'UHD' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add this folder' }));
-    await waitFor(() => {
-      expect(createRoot).toHaveBeenCalledWith({
-        path: '/data/uhd',
-        name: 'UHD',
-        mediaKind: 'movies',
-        isDefault: false,
-      });
-    });
+    renderSettings('/settings/libraries');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    for (const name of ['Libraries', 'Import', 'Tags']) {
+      expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByTestId('library-root-list')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-migrate')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-tags')).not.toBeInTheDocument();
   });
 
   it('scans library cleanup candidates from the maintainer pane', async () => {
@@ -1588,109 +1550,6 @@ describe('Settings page', () => {
     });
   });
 
-  it('scans watch folders from the libraries pane', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/libraries');
-    expect(await findByTestId('library-scan-status')).toHaveTextContent('imported 12');
-    fireEvent.click(screen.getByRole('button', { name: 'Scan watch folders' }));
-    await waitFor(() => {
-      expect(runLibraryScan).toHaveBeenCalledWith({ type: 'watch' });
-    });
-    expect(await findByTestId('library-scan-flash')).toHaveTextContent('watch scan complete');
-  });
-
-  it('adds the current folder as a watch directory', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/libraries');
-    expect(await findByTestId('watch-dirs')).toBeInTheDocument();
-    expect(screen.getByText('/downloads (both)')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'uhd/' }));
-    await waitFor(() => {
-      expect(browseRoots).toHaveBeenCalledWith('/data/uhd');
-    });
-    fireEvent.change(screen.getByLabelText('Watch folder kind'), { target: { value: 'movie' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Pause watch' }));
-    await waitFor(() => {
-      expect(updateWatchDir).toHaveBeenCalledWith('wd1', { enabled: false });
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Add current folder as watch' }));
-    await waitFor(() => {
-      expect(createWatchDir).toHaveBeenCalledWith({
-        path: '/data/uhd',
-        mediaType: 'movie',
-        libraryPath: '',
-      });
-    });
-  });
-
-  it('previews a Radarr library import', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/migrate');
-    expect(await findByTestId('settings-migrate')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Arr base URL'), { target: { value: 'http://radarr:7878' } });
-    fireEvent.change(screen.getByLabelText('Arr API key'), { target: { value: 'secret' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
-    await waitFor(() => {
-      expect(migrateArrLibrary).toHaveBeenCalledWith({
-        service: 'radarr',
-        baseUrl: 'http://radarr:7878',
-        apiKey: 'secret',
-        dryRun: true,
-        remapFrom: '',
-        remapTo: '',
-      });
-    });
-    expect(await findByTestId('migrate-result')).toHaveTextContent('would consider 1 titles');
-  });
-
-  it('previews a Tautulli history import', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/migrate');
-    expect(await findByTestId('settings-migrate')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Tautulli URL'), { target: { value: 'http://tautulli:8181' } });
-    fireEvent.change(screen.getByLabelText('Tautulli API key'), { target: { value: 'k' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview history' }));
-    await waitFor(() => {
-      expect(importTautulliHistory).toHaveBeenCalledWith({
-        tautulliUrl: 'http://tautulli:8181',
-        apiKey: 'k',
-        dryRun: true,
-      });
-    });
-    expect(await findByTestId('tautulli-import-result')).toHaveTextContent('Dry run');
-  });
-
-  it('previews a Jellystat history import', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/migrate');
-    expect(await findByTestId('settings-migrate')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Jellystat backup JSON'), { target: { value: '[{"Id":"1"}]' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Jellystat' }));
-    await waitFor(() => {
-      expect(importJellystatHistory).toHaveBeenCalledWith({
-        backupJson: '[{"Id":"1"}]',
-        dryRun: true,
-      });
-    });
-    expect(await findByTestId('jellystat-import-result')).toHaveTextContent('Dry run');
-  });
-
-  it('previews a Jellyfin library link sync', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/migrate');
-    expect(await findByTestId('settings-migrate')).toBeInTheDocument();
-    expect(await findByTestId('jellyfin-status')).toHaveTextContent('12 item links');
-    fireEvent.change(screen.getByLabelText('Jellyfin sync direction'), { target: { value: 'jellyfin' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview links' }));
-    await waitFor(() => {
-      expect(syncJellyfinLibrary).toHaveBeenCalledWith({
-        direction: 'jellyfin',
-        dryRun: true,
-      });
-    });
-    expect(await findByTestId('jellyfin-sync-result')).toHaveTextContent('Dry run');
-  });
-
   it('adds a household import list', async () => {
     setCurrentRoles(['admin']);
     const { findByTestId } = renderSettings('/settings/lists');
@@ -1790,55 +1649,6 @@ describe('Settings page', () => {
         dryRun: false,
       });
     });
-  });
-
-  it('creates a household library tag', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/tags');
-    expect(await findByTestId('settings-tags')).toBeInTheDocument();
-    expect(await findByTestId('tag-list')).toHaveTextContent('4K');
-    fireEvent.change(screen.getByLabelText('New tag label'), { target: { value: 'kids' } });
-    fireEvent.change(screen.getByLabelText('New tag library'), { target: { value: 'movie' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create tag' }));
-    await waitFor(() => {
-      expect(createTag).toHaveBeenCalledWith({ label: 'kids', media: 'movie' });
-    });
-  });
-
-  it('saves a media-tagging auto-tag rule', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/tags');
-    expect(await findByTestId('auto-tag-rules')).toHaveTextContent('Paw Patrol');
-    fireEvent.change(screen.getByLabelText('Auto-tag pattern'), { target: { value: 'Bluey' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save auto-tag rule' }));
-    await waitFor(() => {
-      expect(upsertTaggingRule).toHaveBeenCalledWith({
-        tagId: 't1',
-        field: 'title',
-        match: 'contains',
-        pattern: 'Bluey',
-        enabled: true,
-      });
-    });
-  });
-
-  it('runs auto-tag classify on one library title', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/tags');
-    expect(await findByTestId('auto-tag-classify-form')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Auto-tag library id'), { target: { value: 'm1' } });
-    fireEvent.change(screen.getByLabelText('Auto-tag title'), { target: { value: 'Paw Patrol' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Run auto-tag' }));
-    await waitFor(() => {
-      expect(classifyTagging).toHaveBeenCalledWith({
-        mediaId: 'm1',
-        title: 'Paw Patrol',
-        path: '',
-        mediaType: 'movie',
-        merge: true,
-      });
-    });
-    expect(await findByTestId('auto-tag-classify-flash')).toHaveTextContent('Applied Kids');
   });
 
   it('does not offer household backups to an admin', async () => {

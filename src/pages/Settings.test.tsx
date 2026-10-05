@@ -1599,56 +1599,13 @@ describe('Settings page', () => {
     expect(await screen.findByTestId('lists-sync-result')).toHaveTextContent('Found 4 titles');
   });
 
-  it('creates a household naming template', async () => {
+  it('does not offer naming or organize to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/naming');
-    expect(await findByTestId('settings-naming')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('New template name'), { target: { value: 'UHD' } });
-    fireEvent.change(screen.getByLabelText('New template media type'), { target: { value: 'tv' } });
-    fireEvent.change(screen.getByLabelText('New template pattern'), { target: { value: '{Title}/{Title}' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create template' }));
-    await waitFor(() => {
-      expect(createNamingTemplate).toHaveBeenCalledWith({
-        name: 'UHD',
-        mediaType: 'tv',
-        pattern: '{Title}/{Title}',
-        isDefault: false,
-      });
-    });
-  });
-
-  it('previews and applies household organize', async () => {
-    setCurrentRoles(['admin']);
-    organizeLibrary.mockImplementation(async (input: { directory: string; mediaType?: string; dryRun?: boolean }) => ({
-      available: true,
-      directory: input.directory,
-      mediaType: input.mediaType || 'movie',
-      dryRun: input.dryRun === true,
-      total: 1,
-      renamed: 1,
-      errors: 0,
-      items: [{ original: 'Fight.Club.1999.mkv', renamedTo: '/data/movies/Fight Club (1999).mkv', success: true, error: '' }],
-    }));
-    const { findByTestId } = renderSettings('/settings/naming');
-    expect(await findByTestId('settings-organize')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Organize folder'), { target: { value: '/data/movies' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Preview organize' }));
-    await waitFor(() => {
-      expect(organizeLibrary).toHaveBeenCalledWith({
-        directory: '/data/movies',
-        mediaType: 'movie',
-        dryRun: true,
-      });
-    });
-    expect(await findByTestId('organize-summary')).toHaveTextContent('Preview');
-    fireEvent.click(screen.getByRole('button', { name: 'Apply organize' }));
-    await waitFor(() => {
-      expect(organizeLibrary).toHaveBeenCalledWith({
-        directory: '/data/movies',
-        mediaType: 'movie',
-        dryRun: false,
-      });
-    });
+    renderSettings('/settings/naming');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Naming' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-naming')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-organize')).not.toBeInTheDocument();
   });
 
   it('does not offer household backups to an admin', async () => {

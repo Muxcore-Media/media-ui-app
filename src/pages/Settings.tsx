@@ -11,7 +11,6 @@ import {
   LogOut,
   Bell,
   Monitor,
-  Pencil,
   PlugZap,
   Shield,
   Subtitles,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageLibrary, canManageLists, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
+import { canApproveRequests, canManageLibrary, canManageLists, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -73,8 +72,6 @@ import {
   type GuardRule,
 } from '../lib/guard';
 import { rootLabel, type LibraryRoot } from '../lib/roots';
-import { namingTemplateLabel, type NamingTemplate } from '../lib/naming-templates';
-import { organizeFolderOptions, type OrganizeResult } from '../lib/organize';
 import { SUBTITLE_TEXT_COLORS } from '../lib/subtitle-offset';
 import {
   LIST_SOURCE_TYPES,
@@ -1749,299 +1746,6 @@ function AcquisitionPane() {
         Host install: set <code>MVP_ENABLE_ACQUISITION=1</code> to start the fixture indexer and
         torrent downloader. Compose: <code>--profile indexer-piratebay --profile downloader-torrent</code>.
       </p>
-    </div>
-  );
-}
-
-function NamingPane() {
-  const [templates, setTemplates] = useState<NamingTemplate[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState('movie');
-  const [pattern, setPattern] = useState('{Title} ({Year})/{Title} ({Year}) [{Quality}]');
-  const [isDefault, setIsDefault] = useState(false);
-  const [drafts, setDrafts] = useState<Record<string, NamingTemplate>>({});
-  const [folders, setFolders] = useState<string[]>([]);
-  const [organizeDir, setOrganizeDir] = useState('');
-  const [organizeKind, setOrganizeKind] = useState('movie');
-  const [organizePreview, setOrganizePreview] = useState<OrganizeResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function reload() {
-    const next = await api.listNamingTemplates();
-    setAvailable(next.available);
-    setTemplates(next.templates);
-    setDrafts(Object.fromEntries(next.templates.map((tpl) => [tpl.id, tpl])));
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([
-      api.listNamingTemplates(),
-      api.listRoots().catch(() => null),
-      api.listWatchDirs().catch(() => null),
-    ])
-      .then(([next, catalog, watches]) => {
-        if (cancelled) return;
-        setAvailable(next.available);
-        setTemplates(next.templates);
-        setDrafts(Object.fromEntries(next.templates.map((tpl) => [tpl.id, tpl])));
-        const nextFolders = organizeFolderOptions([
-          ...(catalog?.roots ?? []).map((root) => root.path),
-          ...(watches?.dirs ?? []).flatMap((dir) => [dir.path, dir.libraryPath]),
-        ]);
-        setFolders(nextFolders);
-        setOrganizeDir((cur) => cur || nextFolders[0] || '');
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load naming templates');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await api.createNamingTemplate({ name, mediaType: kind, pattern, isDefault });
-      setName('');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create template');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onSave(id: string) {
-    const draft = drafts[id];
-    if (!draft) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.updateNamingTemplate(id, {
-        name: draft.name,
-        pattern: draft.pattern,
-        isDefault: draft.isDefault,
-      });
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save template');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRemove(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.deleteNamingTemplate(id);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete template');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onOrganize(dryRun: boolean) {
-    if (!organizeDir) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await api.organizeLibrary({
-        directory: organizeDir,
-        mediaType: organizeKind,
-        dryRun,
-      });
-      setOrganizePreview(next);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not organize library');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const canApplyOrganize =
-    Boolean(organizeDir) &&
-    organizePreview?.directory === organizeDir &&
-    organizePreview.dryRun &&
-    organizePreview.available;
-
-  return (
-    <div className={`${paneClass} max-w-2xl`} data-testid="settings-naming">
-      <h2 className="font-semibold text-[var(--text-primary)]">Naming</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        File and folder patterns for Preview Rename. Tokens include {'{Title}'}, {'{Year}'}, {'{Quality}'},{' '}
-        {'{season:00}'}, {'{episode:00}'}, and {'{EpisodeTitle}'}.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">Rename module is not available.</p>
-      ) : null}
-      <ul className="space-y-4" data-testid="naming-template-list">
-        {templates.map((tpl) => {
-          const draft = drafts[tpl.id] || tpl;
-          return (
-            <li key={tpl.id} className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] p-3">
-              <p className="text-xs text-[var(--text-tertiary)]">{namingTemplateLabel(tpl)}</p>
-              <label className="block space-y-1 text-sm">
-                <span className="text-[var(--text-secondary)]">Name</span>
-                <input
-                  className={inputClass}
-                  value={draft.name}
-                  aria-label={`Name for ${tpl.name}`}
-                  onChange={(e) => setDrafts((cur) => ({ ...cur, [tpl.id]: { ...draft, name: e.target.value } }))}
-                />
-              </label>
-              <label className="block space-y-1 text-sm">
-                <span className="text-[var(--text-secondary)]">Pattern</span>
-                <textarea
-                  className={`${inputClass} font-mono`}
-                  rows={2}
-                  value={draft.pattern}
-                  aria-label={`Pattern for ${tpl.name}`}
-                  onChange={(e) => setDrafts((cur) => ({ ...cur, [tpl.id]: { ...draft, pattern: e.target.value } }))}
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <input
-                  type="checkbox"
-                  checked={draft.isDefault}
-                  aria-label={`Default for ${tpl.name}`}
-                  onChange={(e) => setDrafts((cur) => ({ ...cur, [tpl.id]: { ...draft, isDefault: e.target.checked } }))}
-                />
-                Default for {tpl.mediaType || 'movie'}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={busy} className={saveBtnClass} onClick={() => void onSave(tpl.id)}>
-                  Save
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="text-sm text-[var(--text-tertiary)] hover:text-[var(--danger-color)]"
-                  onClick={() => void onRemove(tpl.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <form className="space-y-3" onSubmit={(e) => void onCreate(e)}>
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">New template</h3>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Name</span>
-          <input className={inputClass} value={name} aria-label="New template name" onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Media type</span>
-          <select className={inputClass} value={kind} aria-label="New template media type" onChange={(e) => setKind(e.target.value)}>
-            <option value="movie">movie</option>
-            <option value="tv">tv</option>
-          </select>
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Pattern</span>
-          <textarea
-            className={`${inputClass} font-mono`}
-            rows={2}
-            value={pattern}
-            aria-label="New template pattern"
-            onChange={(e) => setPattern(e.target.value)}
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-          <input
-            type="checkbox"
-            checked={isDefault}
-            aria-label="Default new template"
-            onChange={(e) => setIsDefault(e.target.checked)}
-          />
-          Default for this media type
-        </label>
-        <button type="submit" disabled={busy || !name.trim() || !pattern.trim()} className={saveBtnClass}>
-          {busy ? 'Saving…' : 'Create template'}
-        </button>
-      </form>
-      <section className="space-y-3 border-t border-[var(--border-subtle)] pt-4" data-testid="settings-organize">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Organize library</h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Preview then apply file names for one configured root or watch folder. Paths outside those folders are rejected.
-        </p>
-        {folders.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">Add a library root or watch folder first.</p>
-        ) : (
-          <>
-            <label className="block space-y-1 text-sm">
-              <span className="text-[var(--text-secondary)]">Folder</span>
-              <select
-                className={inputClass}
-                value={organizeDir}
-                aria-label="Organize folder"
-                onChange={(e) => {
-                  setOrganizeDir(e.target.value);
-                  setOrganizePreview(null);
-                }}
-              >
-                {folders.map((path) => (
-                  <option key={path} value={path}>
-                    {path}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block space-y-1 text-sm">
-              <span className="text-[var(--text-secondary)]">Media type</span>
-              <select
-                className={inputClass}
-                value={organizeKind}
-                aria-label="Organize media type"
-                onChange={(e) => setOrganizeKind(e.target.value)}
-              >
-                <option value="movie">movie</option>
-                <option value="tv">tv</option>
-              </select>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={busy || !organizeDir}
-                className={saveBtnClass}
-                onClick={() => void onOrganize(true)}
-              >
-                Preview organize
-              </button>
-              <button
-                type="button"
-                disabled={busy || !canApplyOrganize}
-                className={saveBtnClass}
-                onClick={() => void onOrganize(false)}
-              >
-                Apply organize
-              </button>
-            </div>
-          </>
-        )}
-        {organizePreview ? (
-          <p className="text-sm text-[var(--text-secondary)]" data-testid="organize-summary">
-            {organizePreview.dryRun ? 'Preview' : 'Applied'}: {organizePreview.renamed} of {organizePreview.total} file
-            {organizePreview.total === 1 ? '' : 's'}
-            {organizePreview.errors ? ` · ${organizePreview.errors} error${organizePreview.errors === 1 ? '' : 's'}` : ''}
-          </p>
-        ) : null}
-      </section>
     </div>
   );
 }
@@ -4832,7 +4536,6 @@ export default function Settings() {
   else if (pathname.endsWith('/quality') && featureEnabled(caps, 'formats')) pane = <QualityPane />;
   else if (pathname.endsWith('/maintainer') && canManageLibrary()) pane = <MaintainerPane />;
   else if (pathname.endsWith('/guard') && canManageLibrary()) pane = <GuardPane />;
-  else if (pathname.endsWith('/naming') && canManageNaming()) pane = <NamingPane />;
   else if (pathname.endsWith('/lists') && canManageLists()) pane = <ListsPane />;
   else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
@@ -4844,7 +4547,6 @@ export default function Settings() {
   const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
   const showQuality = featureEnabled(caps, 'formats');
   const showLibraries = canManageLibrary();
-  const showNaming = canManageNaming();
   const showLists = canManageLists();
   const showDelay = featureEnabled(caps, 'activity');
 
@@ -4918,12 +4620,6 @@ export default function Settings() {
           <NavLink to="/settings/guard" className={tabClass}>
             <Shield className="h-4 w-4" aria-hidden="true" />
             Guard
-          </NavLink>
-        )}
-        {showNaming && (
-          <NavLink to="/settings/naming" className={tabClass}>
-            <Pencil className="h-4 w-4" aria-hidden="true" />
-            Naming
           </NavLink>
         )}
         {showLists && (

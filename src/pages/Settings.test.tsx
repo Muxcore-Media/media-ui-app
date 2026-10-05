@@ -1550,53 +1550,12 @@ describe('Settings page', () => {
     });
   });
 
-  it('adds a household import list', async () => {
+  it('does not offer import lists to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/lists');
-    expect(await findByTestId('settings-lists')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('New list name'), { target: { value: 'IMDb Top' } });
-    fireEvent.change(screen.getByLabelText('New list type'), { target: { value: 'imdb' } });
-    fireEvent.change(screen.getByLabelText('New list URL'), { target: { value: 'https://imdb.com/list/1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Pause list' }));
-    await waitFor(() => {
-      expect(updateListSource).toHaveBeenCalledWith('ls1', { enabled: false });
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Add list' }));
-    await waitFor(() => {
-      expect(createListSource).toHaveBeenCalledWith({
-        name: 'IMDb Top',
-        type: 'imdb',
-        listUrl: 'https://imdb.com/list/1',
-        apiKey: '',
-        qualityProfileId: '',
-        rootFolderPath: '',
-      });
-    });
-    expect(await findByTestId('lists-history-list')).toHaveTextContent('Trakt watchlist');
-    expect(await findByTestId('lists-item-list')).toHaveTextContent('Fight Club');
-  });
-
-  it('syncs a single import list', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/lists');
-    expect(await findByTestId('settings-lists')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('list-source-sync-ls1'));
-    await waitFor(() => {
-      expect(syncListSource).toHaveBeenCalledWith('ls1');
-    });
-    expect(await screen.findByTestId('lists-sync-result')).toHaveTextContent('Synced 4 titles');
-  });
-
-  it('tests an import list without syncing', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/lists');
-    expect(await findByTestId('settings-lists')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('list-source-test-ls1'));
-    await waitFor(() => {
-      expect(testListSource).toHaveBeenCalledWith('ls1');
-    });
-    expect(syncListSource).not.toHaveBeenCalled();
-    expect(await screen.findByTestId('lists-sync-result')).toHaveTextContent('Found 4 titles');
+    renderSettings('/settings/lists');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Lists' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-lists')).not.toBeInTheDocument();
   });
 
   it('does not offer naming or organize to an admin', async () => {

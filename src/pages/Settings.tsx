@@ -7,7 +7,6 @@ import {
   Home as HomeIcon,
   Keyboard,
   Layers,
-  List,
   LogOut,
   Bell,
   Monitor,
@@ -20,7 +19,7 @@ import {
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageLibrary, canManageLists, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
+import { canApproveRequests, canManageLibrary, canManageNotifications, canManageQuality, canManageSubtitles } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -71,17 +70,7 @@ import {
   type GuardCatalog,
   type GuardRule,
 } from '../lib/guard';
-import { rootLabel, type LibraryRoot } from '../lib/roots';
 import { SUBTITLE_TEXT_COLORS } from '../lib/subtitle-offset';
-import {
-  LIST_SOURCE_TYPES,
-  listSourceLabel,
-  listSyncItemLabel,
-  listSyncLogLabel,
-  type ListSource,
-  type ListSyncItem,
-  type ListSyncLog,
-} from '../lib/list-sources';
 import { NOTIFY_CHANNELS, notifyChannelLabel, type NotifyChannel } from '../lib/notifications';
 import {
   WATCH_NOTIFY_DESTINATION_TYPES,
@@ -1746,339 +1735,6 @@ function AcquisitionPane() {
         Host install: set <code>MVP_ENABLE_ACQUISITION=1</code> to start the fixture indexer and
         torrent downloader. Compose: <code>--profile indexer-piratebay --profile downloader-torrent</code>.
       </p>
-    </div>
-  );
-}
-
-function ListsPane() {
-  const [sources, setSources] = useState<ListSource[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [profiles, setProfiles] = useState<QualityProfile[]>([]);
-  const [roots, setRoots] = useState<LibraryRoot[]>([]);
-  const [name, setName] = useState('');
-  const [kind, setKind] = useState('trakt');
-  const [listUrl, setListUrl] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [qualityProfileId, setQualityProfileId] = useState('');
-  const [rootFolderPath, setRootFolderPath] = useState('');
-  const [history, setHistory] = useState<ListSyncLog[]>([]);
-  const [items, setItems] = useState<ListSyncItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function reload() {
-    const [next, logs, imported] = await Promise.all([
-      api.listListSources(),
-      api.listListHistory().catch(() => null),
-      api.listListItems().catch(() => null),
-    ]);
-    setAvailable(next.available);
-    setSources(next.sources);
-    if (logs) setHistory(logs.entries);
-    if (imported) setItems(imported.items);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([
-      api.listListSources(),
-      api.getFormats().catch(() => null),
-      api.listRoots().catch(() => null),
-      api.listListHistory().catch(() => null),
-      api.listListItems().catch(() => null),
-    ])
-      .then(([lists, catalog, catalogRoots, logs, imported]) => {
-        if (cancelled) return;
-        setAvailable(lists.available);
-        setSources(lists.sources);
-        setProfiles(catalog?.profiles ?? []);
-        setRoots(catalogRoots?.roots ?? []);
-        setHistory(logs?.entries ?? []);
-        setItems(imported?.items ?? []);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load import lists');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    setFlash(null);
-    try {
-      await api.createListSource({
-        name,
-        type: kind,
-        listUrl,
-        apiKey,
-        qualityProfileId,
-        rootFolderPath,
-      });
-      setName('');
-      setListUrl('');
-      setApiKey('');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add list');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRemove(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.deleteListSource(id);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not remove list');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onToggle(src: ListSource) {
-    if (!src.id) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await api.updateListSource(src.id, { enabled: !src.enabled });
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update list');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onSync() {
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await api.syncListSources();
-      setFlash(`Synced ${next.itemsFound} titles (${next.itemsNew} new).`);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sync failed');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onSyncOne(id: string) {
-    if (!id) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await api.syncListSource(id);
-      setFlash(`Synced ${next.itemsFound} titles (${next.itemsNew} new).`);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sync failed');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onTestOne(id: string) {
-    if (!id) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await api.testListSource(id);
-      if (next.ok) {
-        setFlash(next.message || `Found ${next.itemsFound} titles.`);
-      } else {
-        setError(next.message || 'List test failed');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'List test failed');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={`${paneClass} max-w-2xl`} data-testid="settings-lists">
-      <h2 className="font-semibold text-[var(--text-primary)]">Lists</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Import Trakt, IMDb, Plex, or Arr lists the way Seerr and Radarr do. Synced titles land on
-        Watchlist.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {flash ? (
-        <p className="text-sm text-[var(--text-secondary)]" data-testid="lists-sync-result">
-          {flash}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">List sync module is not available.</p>
-      ) : null}
-      <button type="button" disabled={busy} className={saveBtnClass} onClick={() => void onSync()}>
-        {busy ? 'Syncing…' : 'Sync lists now'}
-      </button>
-      <ul className="space-y-2" data-testid="list-source-list">
-        {sources.map((src) => (
-          <li key={src.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate text-[var(--text-secondary)]">
-              {listSourceLabel(src)}
-              {src.listUrl ? ` · ${src.listUrl}` : ''}
-            </span>
-            <span className="flex shrink-0 items-center gap-3">
-              <button
-                type="button"
-                disabled={busy || !src.id}
-                data-testid={`list-source-test-${src.id}`}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                onClick={() => void onTestOne(src.id)}
-              >
-                Test
-              </button>
-              <button
-                type="button"
-                disabled={busy || !src.id}
-                data-testid={`list-source-sync-${src.id}`}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                onClick={() => void onSyncOne(src.id)}
-              >
-                Sync
-              </button>
-              <button
-                type="button"
-                disabled={busy || !src.id}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                onClick={() => void onToggle(src)}
-              >
-                {src.enabled ? 'Pause list' : 'Resume list'}
-              </button>
-              <button
-                type="button"
-                disabled={busy || !src.id}
-                className="text-[var(--text-tertiary)] hover:text-[var(--danger-color)]"
-                onClick={() => void onRemove(src.id)}
-              >
-                Remove
-              </button>
-            </span>
-          </li>
-        ))}
-      </ul>
-      <form className="space-y-3" onSubmit={(e) => void onCreate(e)}>
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">New list</h3>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Name</span>
-          <input className={inputClass} value={name} aria-label="New list name" onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Type</span>
-          <select className={inputClass} value={kind} aria-label="New list type" onChange={(e) => setKind(e.target.value)}>
-            {LIST_SOURCE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">List URL</span>
-          <input
-            className={inputClass}
-            value={listUrl}
-            aria-label="New list URL"
-            placeholder="https://trakt.tv/users/you/watchlist"
-            onChange={(e) => setListUrl(e.target.value)}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">API token</span>
-          <input
-            className={inputClass}
-            type="password"
-            value={apiKey}
-            aria-label="New list API token"
-            autoComplete="off"
-            onChange={(e) => setApiKey(e.target.value)}
-          />
-        </label>
-        {profiles.length > 0 ? (
-          <label className="block space-y-1 text-sm">
-            <span className="text-[var(--text-secondary)]">Quality profile</span>
-            <select
-              className={inputClass}
-              value={qualityProfileId}
-              aria-label="New list quality profile"
-              onChange={(e) => setQualityProfileId(e.target.value)}
-            >
-              <option value="">—</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        {roots.length > 0 ? (
-          <label className="block space-y-1 text-sm">
-            <span className="text-[var(--text-secondary)]">Root folder</span>
-            <select
-              className={inputClass}
-              value={rootFolderPath}
-              aria-label="New list root folder"
-              onChange={(e) => setRootFolderPath(e.target.value)}
-            >
-              <option value="">—</option>
-              {roots.map((root) => (
-                <option key={root.id || root.path} value={root.path}>
-                  {rootLabel(root)}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <button type="submit" disabled={busy || !name.trim()} className={saveBtnClass}>
-          {busy ? 'Saving…' : 'Add list'}
-        </button>
-      </form>
-      <section className="space-y-2 border-t border-[var(--border-subtle)] pt-4" data-testid="lists-history">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sync history</h3>
-        {history.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">No list syncs yet.</p>
-        ) : (
-          <ul className="space-y-1" data-testid="lists-history-list">
-            {history.map((entry) => (
-              <li key={entry.id || entry.startedAt} className="text-sm text-[var(--text-secondary)]">
-                {listSyncLogLabel(entry)}
-                {entry.error ? ` · ${entry.error}` : ''}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <section className="space-y-2" data-testid="lists-items">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Imported titles</h3>
-        {items.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">No titles from lists yet.</p>
-        ) : (
-          <ul className="space-y-1" data-testid="lists-item-list">
-            {items.map((item) => (
-              <li key={item.id || item.title} className="text-sm text-[var(--text-secondary)]">
-                {listSyncItemLabel(item)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }
@@ -4536,7 +4192,6 @@ export default function Settings() {
   else if (pathname.endsWith('/quality') && featureEnabled(caps, 'formats')) pane = <QualityPane />;
   else if (pathname.endsWith('/maintainer') && canManageLibrary()) pane = <MaintainerPane />;
   else if (pathname.endsWith('/guard') && canManageLibrary()) pane = <GuardPane />;
-  else if (pathname.endsWith('/lists') && canManageLists()) pane = <ListsPane />;
   else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
   else if (pathname.endsWith('/requests') && canApproveRequests() && featureEnabled(caps, 'request')) {
@@ -4547,7 +4202,6 @@ export default function Settings() {
   const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
   const showQuality = featureEnabled(caps, 'formats');
   const showLibraries = canManageLibrary();
-  const showLists = canManageLists();
   const showDelay = featureEnabled(caps, 'activity');
 
   return (
@@ -4620,12 +4274,6 @@ export default function Settings() {
           <NavLink to="/settings/guard" className={tabClass}>
             <Shield className="h-4 w-4" aria-hidden="true" />
             Guard
-          </NavLink>
-        )}
-        {showLists && (
-          <NavLink to="/settings/lists" className={tabClass}>
-            <List className="h-4 w-4" aria-hidden="true" />
-            Lists
           </NavLink>
         )}
         {showDelay && (

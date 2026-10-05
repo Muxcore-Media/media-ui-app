@@ -58,7 +58,9 @@ npm test
 npm run build   # → dist-app/
 ```
 
-CI: [`.forgejo/workflows/ci.yml`](.forgejo/workflows/ci.yml) (`npm ci` + typecheck + test + build).
+The `Dockerfile` + `nginx.conf` in this repo are a dev-only static preview (standalone nginx proxying `/api` to request-media), not the production image; the product image is `_mvp/dockerfiles/media-ui.Dockerfile` with the BFF (umbrella `docs/architecture/SDD.md` §5).
+
+CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`npm ci` + typecheck + test + build).
 
 ## MVP wiring
 

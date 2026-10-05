@@ -5612,7 +5612,7 @@ function NotificationsPane() {
                   setError(null);
                   setFlash(null);
                   try {
-                    const config =
+                    const config: Record<string, string> =
                       destType === 'apprise' ? { urls: destUrl } : { webhook_url: destUrl };
                     await api.upsertWatchNotifyDestination({
                       name: destName,

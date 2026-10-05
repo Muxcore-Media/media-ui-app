@@ -162,7 +162,6 @@ import {
   normalizeCreatedAPIKey,
   normalizeKeys,
   type CreatedAPIKey,
-  type HouseholdAPIKey,
   type KeysResponse,
 } from '../lib/keys';
 import {

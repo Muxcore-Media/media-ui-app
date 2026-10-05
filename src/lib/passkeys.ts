@@ -83,23 +83,38 @@ export function credentialCreationOptions(raw: unknown): CredentialCreationOptio
   const root = asRecord(raw) ?? {};
   const publicKey = asRecord(root.publicKey) ?? root;
   const user = asRecord(publicKey.user) ?? {};
+  const rp = asRecord(publicKey.rp) ?? {};
   const exclude = Array.isArray(publicKey.excludeCredentials) ? publicKey.excludeCredentials : [];
+  const pubKeyCredParams = Array.isArray(publicKey.pubKeyCredParams)
+    ? publicKey.pubKeyCredParams.map((item): PublicKeyCredentialParameters => {
+        const param = asRecord(item) ?? {};
+        return {
+          ...param,
+          type: String(param.type ?? 'public-key') as PublicKeyCredentialType,
+          alg: Number(param.alg ?? 0),
+        };
+      })
+    : [];
+  // Server-provided extra fields (timeout, attestation, ...) pass through the
+  // spread; the WebAuthn-required members are rebuilt with explicit types.
   return {
     publicKey: {
-      ...(publicKey as PublicKeyCredentialCreationOptions),
+      ...publicKey,
+      rp: { ...rp, name: String(rp.name ?? '') },
       challenge: base64urlToBuffer(String(publicKey.challenge ?? '')),
+      pubKeyCredParams,
       user: {
-        ...(user as PublicKeyCredentialUserEntity),
+        ...user,
         id: base64urlToBuffer(String(user.id ?? '')),
         name: String(user.name ?? ''),
         displayName: String(user.displayName ?? user.name ?? ''),
       },
-      excludeCredentials: exclude.map((item) => {
+      excludeCredentials: exclude.map((item): PublicKeyCredentialDescriptor => {
         const cred = asRecord(item) ?? {};
         return {
-          ...(cred as PublicKeyCredentialDescriptor),
+          ...cred,
           id: base64urlToBuffer(String(cred.id ?? '')),
-          type: (String(cred.type ?? 'public-key') as PublicKeyCredentialType),
+          type: String(cred.type ?? 'public-key') as PublicKeyCredentialType,
         };
       }),
     },

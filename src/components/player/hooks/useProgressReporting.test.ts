@@ -28,6 +28,8 @@ const base = {
 describe('useProgressReporting', () => {
   beforeEach(() => {
     emitPlaybackSession.mockReset();
+    // The real emitPlaybackSession is async and resolves true when the server asked to stop.
+    emitPlaybackSession.mockResolvedValue(false);
     upsertProgress.mockReset();
   });
 

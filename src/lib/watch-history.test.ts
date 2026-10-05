@@ -84,6 +84,7 @@ describe('watch-history', () => {
           mediaId: 'm1',
           mediaType: 'movie',
           player: 'Jellyfin',
+          serverType: 'jellyfin',
           platform: 'tv',
           device: 'Living room',
           state: 'playing',

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import Search from './Search';
+import { axeOptions } from '../a11y/axe';
 import { CapabilitiesContext, DEFAULT_CAPABILITIES, type Capabilities } from '../lib/capabilities';
 
 const listMovies = vi.fn();
@@ -67,6 +69,24 @@ describe('Search page', () => {
       expect(search).toHaveBeenCalledWith('Fight Club');
     });
     expect(await screen.findByText('Fight Club')).toBeInTheDocument();
+  });
+
+  it('has no axe violations on the empty search page', async () => {
+    const { container } = render(
+      <main>
+        <CapabilitiesContext.Provider
+          value={{ caps: DEFAULT_CAPABILITIES, loading: false, error: null, retry: () => {} }}
+        >
+          <MemoryRouter initialEntries={['/search']}>
+            <Routes>
+              <Route path="/search" element={<Search />} />
+            </Routes>
+          </MemoryRouter>
+        </CapabilitiesContext.Provider>
+      </main>,
+    );
+    expect(await screen.findByRole('heading', { name: 'Search' })).toBeInTheDocument();
+    expect(await axe(container, axeOptions)).toHaveNoViolations();
   });
 
   it('filters scope to movies only', async () => {

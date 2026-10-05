@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll } from 'vitest';
+import { afterEach, beforeAll, expect } from 'vitest';
+import * as axeMatchers from 'vitest-axe/matchers';
+import 'vitest-axe/extend-expect';
+
+expect.extend(axeMatchers);
 
 function memoryStorage(): Storage {
   const mem = new Map<string, string>();
@@ -34,6 +38,17 @@ if (typeof globalThis.sessionStorage?.clear !== 'function') {
 }
 
 beforeAll(() => {
+  // axe-core probes canvas for icon ligatures; jsdom has no canvas implementation.
+  if (typeof HTMLCanvasElement !== 'undefined') {
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      configurable: true,
+      writable: true,
+      value: function getContext() {
+        return null;
+      },
+    });
+  }
+
   // jsdom does not implement media element load(); VideoPlayer calls it on src change.
   Object.defineProperty(HTMLMediaElement.prototype, 'load', {
     configurable: true,

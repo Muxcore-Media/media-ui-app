@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import Home from './Home';
 import * as userdata from '../lib/userdata';
+import { axeOptions } from '../a11y/axe';
 
 const listMovies = vi.fn();
 const listTVShows = vi.fn();
@@ -106,6 +108,18 @@ describe('Home page', () => {
     expect(shelf).toHaveTextContent('Fresh Movie');
     expect(shelf).toHaveTextContent('New Show');
     expect(shelf).toHaveTextContent('Added');
+  });
+
+  it('has no axe violations on the populated home', async () => {
+    const { container } = render(
+      <main>
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      </main>,
+    );
+    await screen.findByTestId('home-recently-added');
+    expect(await axe(container, axeOptions)).toHaveNoViolations();
   });
 
   it('hides recently added shelf when home preference is disabled', async () => {

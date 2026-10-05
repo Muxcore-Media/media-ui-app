@@ -1395,18 +1395,14 @@ describe('Settings page', () => {
     });
   });
 
-  it('creates a household invite link', async () => {
+  it('does not offer invites or API keys to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/invites');
-    expect(await findByTestId('settings-invites')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Invite role'), { target: { value: 'viewer' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create invite link' }));
-    await waitFor(() => {
-      expect(createInvite).toHaveBeenCalledWith({ role: 'viewer', maxUses: 1, ttlHours: 168 });
-    });
-    expect(await screen.findByTestId('invite-created-url')).toHaveTextContent(
-      'https://media.example/invite/tok',
-    );
+    renderSettings('/settings/invites');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Invites' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'API keys' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-invites')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-keys')).not.toBeInTheDocument();
   });
 
   it('saves an existing library root name and default', async () => {
@@ -1981,19 +1977,6 @@ describe('Settings page', () => {
     expect(await findByTestId('notify-flash')).toHaveTextContent('Watch alert saved');
   });
 
-  it('creates a household API key', async () => {
-    setCurrentRoles(['admin']);
-    setCurrentUserId('admin-1');
-    const { findByTestId } = renderSettings('/settings/keys');
-    expect(await findByTestId('settings-keys')).toBeInTheDocument();
-    expect(await findByTestId('key-list')).toHaveTextContent('laptop');
-    fireEvent.change(screen.getByLabelText('New API key name'), { target: { value: 'tv' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Create API key' }));
-    await waitFor(() => {
-      expect(createAPIKey).toHaveBeenCalledWith({ name: 'tv', userId: 'u1' });
-    });
-    expect(await findByTestId('key-secret')).toHaveTextContent('mct_copyonce');
-  });
 
   it('does not offer household user management to an admin', async () => {
     setCurrentRoles(['admin']);

@@ -2,7 +2,6 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   HardDrive,
-  KeyRound,
   CloudDownload,
   Folder,
   Gauge,
@@ -12,7 +11,6 @@ import {
   Layers,
   List,
   LogOut,
-  Mail,
   Bell,
   Tags,
   Monitor,
@@ -26,7 +24,7 @@ import {
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, getCurrentUserId } from '../lib/session';
+import { canApproveRequests, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -60,7 +58,6 @@ import {
   withDefaultDelayProfiles,
   type DelayProfile,
 } from '../lib/delay-profiles';
-import { inviteUsesLabel, type HouseholdInvite } from '../lib/invites';
 import { type HouseholdTOTP } from '../lib/totp';
 import {
   createBrowserPasskey,
@@ -120,7 +117,6 @@ import {
   type AutoTag,
   type AutoTagCatalog,
 } from '../lib/auto-tags';
-import { apiKeyLabel, type HouseholdAPIKey } from '../lib/keys';
 import {
   appendProfileLanguage,
   groupSubtitleLibrary,
@@ -3338,144 +3334,6 @@ function MigratePane() {
   );
 }
 
-function InvitesPane() {
-  const [invites, setInvites] = useState<HouseholdInvite[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [createdUrl, setCreatedUrl] = useState('');
-  const [role, setRole] = useState('user');
-  const [maxUses, setMaxUses] = useState('1');
-  const [ttlHours, setTtlHours] = useState('168');
-
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .listInvites()
-      .then((next) => {
-        if (cancelled) return;
-        setAvailable(next.available);
-        setInvites(next.invites);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load invites');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const invite = await api.createInvite({
-        role,
-        maxUses: Number(maxUses) || 0,
-        ttlHours: Number(ttlHours) || 168,
-      });
-      setCreatedUrl(invite.joinUrl);
-      setInvites((prev) => [invite, ...prev]);
-      setAvailable(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create invite');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={paneClass} data-testid="settings-invites">
-      <h2 className="font-semibold text-[var(--text-primary)]">Invites</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Send a household join link. Family signs up at the link — no admin account sharing.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">
-          Invite admin is not linked to auth-local for this session. Sign in again, then retry.
-        </p>
-      ) : null}
-      <form className="space-y-3" onSubmit={(e) => void onCreate(e)}>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Role</span>
-          <select className={inputClass} value={role} aria-label="Invite role" onChange={(e) => setRole(e.target.value)}>
-            <option value="user">user</option>
-            <option value="viewer">viewer</option>
-            <option value="manager">manager</option>
-          </select>
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Max uses (0 = unlimited)</span>
-          <input
-            className={inputClass}
-            type="number"
-            min={0}
-            value={maxUses}
-            aria-label="Invite max uses"
-            onChange={(e) => setMaxUses(e.target.value)}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Expires in hours</span>
-          <input
-            className={inputClass}
-            type="number"
-            min={1}
-            value={ttlHours}
-            aria-label="Invite TTL hours"
-            onChange={(e) => setTtlHours(e.target.value)}
-          />
-        </label>
-        <button type="submit" disabled={busy} className={saveBtnClass}>
-          {busy ? 'Creating…' : 'Create invite link'}
-        </button>
-      </form>
-      {createdUrl ? (
-        <p className="break-all text-sm text-[var(--text-primary)]" data-testid="invite-created-url">
-          {createdUrl}
-        </p>
-      ) : null}
-      <ul className="space-y-2" data-testid="invite-list">
-        {invites.map((invite) => (
-          <li key={invite.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate text-[var(--text-secondary)]">
-              {invite.role} · {invite.prefix || invite.id} · {inviteUsesLabel(invite)}
-              {invite.revoked ? ' · revoked' : ''}
-            </span>
-            {!invite.revoked ? (
-              <button
-                type="button"
-                className="shrink-0 text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-color)]"
-                aria-label={`Revoke invite ${invite.prefix || invite.id}`}
-                onClick={() => {
-                  void api
-                    .revokeInvite(invite.id)
-                    .then(() => {
-                      setInvites((prev) =>
-                        prev.map((row) => (row.id === invite.id ? { ...row, revoked: true } : row)),
-                      );
-                    })
-                    .catch((err) => {
-                      setError(err instanceof Error ? err.message : 'Could not revoke invite');
-                    });
-                }}
-              >
-                Revoke
-              </button>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function DelayPane() {
   const [profiles, setProfiles] = useState<DelayProfile[]>([]);
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -4661,163 +4519,6 @@ function TagsPane() {
     </div>
   );
 }
-
-function KeysPane() {
-  const me = getCurrentUserId();
-  const [keys, setKeys] = useState<HouseholdAPIKey[]>([]);
-  const [users, setUsers] = useState<{ id: string; username: string }[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [name, setName] = useState('');
-  const [userId, setUserId] = useState('');
-  const [secret, setSecret] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function reload() {
-    const next = await api.listAPIKeys();
-    setAvailable(next.available);
-    setKeys(next.keys);
-  }
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([api.listAPIKeys(), api.listUsers()])
-      .then(([next, household]) => {
-        if (cancelled) return;
-        setAvailable(next.available);
-        setKeys(next.keys);
-        setUsers(household.users.map((row) => ({ id: row.id, username: row.username })));
-        setUserId((prev) => {
-          if (prev) return prev;
-          if (me && household.users.some((row) => row.id === me)) return me;
-          return household.users[0]?.id || '';
-        });
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load API keys');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [me]);
-
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await api.createAPIKey({ name, userId });
-      setSecret(next.secret);
-      setName('');
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create API key');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRotate(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await api.rotateAPIKey(id);
-      setSecret(next.secret);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not rotate API key');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onRemove(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.deleteAPIKey(id);
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not revoke API key');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className={paneClass} data-testid="settings-keys">
-      <h2 className="font-semibold text-[var(--text-primary)]">API keys</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Issue a copy-once token for scripts and devices. The secret is shown once — store it, then
-        rotate if it leaks.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">
-          API keys are not linked to auth-local for this session. Sign in again, then retry.
-        </p>
-      ) : null}
-      {secret ? (
-        <p className="break-all rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-3 py-2 font-mono text-sm" data-testid="key-secret">
-          {secret}
-        </p>
-      ) : null}
-      <ul className="space-y-2" data-testid="key-list">
-        {keys.map((key) => (
-          <li key={key.id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate text-[var(--text-secondary)]">
-              {apiKeyLabel(key)}
-              {key.prefix ? ` · ${key.prefix}` : ''}
-            </span>
-            <span className="flex shrink-0 gap-3">
-              <button
-                type="button"
-                disabled={busy}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                onClick={() => void onRotate(key.id)}
-              >
-                Rotate
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                className="text-[var(--text-tertiary)] hover:text-[var(--danger-color)]"
-                onClick={() => void onRemove(key.id)}
-              >
-                Revoke
-              </button>
-            </span>
-          </li>
-        ))}
-      </ul>
-      <form className="space-y-3" onSubmit={(e) => void onCreate(e)}>
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">New key</h3>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Name</span>
-          <input className={inputClass} value={name} aria-label="New API key name" onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">User</span>
-          <select className={inputClass} value={userId} aria-label="New API key user" onChange={(e) => setUserId(e.target.value)}>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.username || user.id}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="submit" disabled={busy || !name.trim()} className={saveBtnClass}>
-          {busy ? 'Saving…' : 'Create API key'}
-        </button>
-      </form>
-    </div>
-  );
-}
-
 
 function NotificationsPane() {
   const [prefs, save] = usePrefs();
@@ -6408,8 +6109,6 @@ export default function Settings() {
   else if (pathname.endsWith('/naming') && canManageNaming()) pane = <NamingPane />;
   else if (pathname.endsWith('/lists') && canManageLists()) pane = <ListsPane />;
   else if (pathname.endsWith('/migrate') && canManageMigrate()) pane = <MigratePane />;
-  else if (pathname.endsWith('/keys') && canManageKeys()) pane = <KeysPane />;
-  else if (pathname.endsWith('/invites') && canManageInvites()) pane = <InvitesPane />;
   else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/tags') && canManageTags()) pane = <TagsPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
@@ -6424,8 +6123,6 @@ export default function Settings() {
   const showNaming = canManageNaming();
   const showLists = canManageLists();
   const showMigrate = canManageMigrate();
-  const showKeys = canManageKeys();
-  const showInvites = canManageInvites();
   const showDelay = featureEnabled(caps, 'activity');
   const showTags = canManageTags();
 
@@ -6529,18 +6226,6 @@ export default function Settings() {
           <NavLink to="/settings/migrate" className={tabClass}>
             <Import className="h-4 w-4" aria-hidden="true" />
             Import
-          </NavLink>
-        )}
-        {showKeys && (
-          <NavLink to="/settings/keys" className={tabClass}>
-            <KeyRound className="h-4 w-4" aria-hidden="true" />
-            API keys
-          </NavLink>
-        )}
-        {showInvites && (
-          <NavLink to="/settings/invites" className={tabClass}>
-            <Mail className="h-4 w-4" aria-hidden="true" />
-            Invites
           </NavLink>
         )}
         {showDelay && (

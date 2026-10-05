@@ -12,7 +12,6 @@ import {
   Shield,
   Subtitles,
   Ticket,
-  Timer,
   User,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
@@ -28,10 +27,6 @@ import {
 import { hashPin, validateParentalPIN } from '../lib/parental';
 import { featureEnabled, useCapabilities } from '../lib/capabilities';
 import { indexerCapabilityLabels, type AcquisitionStatus } from '../lib/acquisition-status';
-import {
-  withDefaultDelayProfiles,
-  type DelayProfile,
-} from '../lib/delay-profiles';
 import { type HouseholdTOTP } from '../lib/totp';
 import {
   createBrowserPasskey,
@@ -1709,111 +1704,6 @@ function AcquisitionPane() {
   );
 }
 
-function DelayPane() {
-  const [profiles, setProfiles] = useState<DelayProfile[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void api
-      .listDelayProfiles()
-      .then((next) => {
-        if (cancelled) return;
-        const rows = withDefaultDelayProfiles(next.profiles);
-        setAvailable(next.available);
-        setProfiles(rows);
-        setDrafts(Object.fromEntries(rows.map((p) => [p.protocol, String(p.waitMinutes)])));
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load delay profiles');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function save(protocol: string) {
-    const raw = drafts[protocol] ?? '0';
-    const waitMinutes = Number(raw);
-    if (!Number.isFinite(waitMinutes) || waitMinutes < 0 || waitMinutes > 10080) {
-      setError('Wait must be 0–10080 minutes');
-      return;
-    }
-    setSaving(protocol);
-    setError(null);
-    try {
-      const saved = await api.upsertDelayProfile({ protocol, waitMinutes: Math.round(waitMinutes) });
-      setProfiles((prev) =>
-        withDefaultDelayProfiles(prev.map((p) => (p.protocol === saved.protocol ? saved : p))),
-      );
-      setDrafts((prev) => ({ ...prev, [saved.protocol]: String(saved.waitMinutes) }));
-      setAvailable(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save delay profile');
-    } finally {
-      setSaving(null);
-    }
-  }
-
-  return (
-    <div className={paneClass} data-testid="settings-delay">
-      <h2 className="font-semibold text-[var(--text-primary)]">Delay</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Wait after a release first appears before grabbing it. Usenet is usually instant; torrent
-        often waits so a better copy can show up.
-      </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">Automation is not connected.</p>
-      ) : null}
-      <ul className="space-y-3" data-testid="delay-profiles">
-        {profiles.map((p) => (
-          <li
-            key={p.protocol}
-            className="flex flex-wrap items-end gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-2"
-          >
-            <label className="min-w-[7rem] text-sm text-[var(--text-primary)]">
-              <span className="mb-1 block text-xs text-[var(--text-tertiary)]">Protocol</span>
-              {p.protocol}
-            </label>
-            <label className="text-sm text-[var(--text-primary)]">
-              <span className="mb-1 block text-xs text-[var(--text-tertiary)]">Wait (minutes)</span>
-              <input
-                type="number"
-                min={0}
-                max={10080}
-                className={`${inputClass} w-28`}
-                value={drafts[p.protocol] ?? String(p.waitMinutes)}
-                onChange={(e) =>
-                  setDrafts((prev) => ({ ...prev, [p.protocol]: e.target.value }))
-                }
-                aria-label={`Wait minutes for ${p.protocol}`}
-                data-testid={`delay-wait-${p.protocol}`}
-              />
-            </label>
-            <button
-              type="button"
-              disabled={saving === p.protocol || available === false}
-              className={saveBtnClass}
-              onClick={() => void save(p.protocol)}
-              aria-label={`Save delay profile for ${p.protocol}`}
-            >
-              {saving === p.protocol ? 'Saving…' : 'Save'}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function NotificationsPane() {
   const [prefs, save] = usePrefs();
   const canEdit = canManageNotifications();
@@ -2500,7 +2390,6 @@ export default function Settings() {
   else if (pathname.endsWith('/controls')) pane = <ControlsPane />;
   else if (pathname.endsWith('/debrid') && featureEnabled(caps, 'debrid')) pane = <DebridPane />;
   else if (pathname.endsWith('/acquisition')) pane = <AcquisitionPane />;
-  else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
   else if (pathname.endsWith('/requests') && canApproveRequests() && featureEnabled(caps, 'request')) {
     pane = <RequestsPane />;
@@ -2508,7 +2397,6 @@ export default function Settings() {
 
   const showDebrid = featureEnabled(caps, 'debrid');
   const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
-  const showDelay = featureEnabled(caps, 'activity');
 
   return (
     <div className="space-y-6" data-testid="settings-page">
@@ -2564,12 +2452,6 @@ export default function Settings() {
           <PlugZap className="h-4 w-4" aria-hidden="true" />
           Acquisition
         </NavLink>
-        {showDelay && (
-          <NavLink to="/settings/delay" className={tabClass}>
-            <Timer className="h-4 w-4" aria-hidden="true" />
-            Delay
-          </NavLink>
-        )}
         {showRequests && (
           <NavLink to="/settings/requests" className={tabClass}>
             <Ticket className="h-4 w-4" aria-hidden="true" />

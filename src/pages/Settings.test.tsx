@@ -1282,16 +1282,12 @@ describe('Settings page', () => {
     expect(screen.queryByTestId('settings-quality')).not.toBeInTheDocument();
   });
 
-  it('edits torrent and usenet grab delays', async () => {
-    const { findByTestId } = renderSettings('/settings/delay', ALL_CAPABILITIES);
-    expect(await findByTestId('settings-delay')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Delay' })).toBeInTheDocument();
-    const torrent = await screen.findByTestId('delay-wait-torrent');
-    fireEvent.change(torrent, { target: { value: '30' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save delay profile for torrent' }));
-    await waitFor(() => {
-      expect(upsertDelayProfile).toHaveBeenCalledWith({ protocol: 'torrent', waitMinutes: 30 });
-    });
+  it('does not offer grab delay profiles to an admin', async () => {
+    setCurrentRoles(['admin']);
+    renderSettings('/settings/delay', ALL_CAPABILITIES);
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Delay' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-delay')).not.toBeInTheDocument();
   });
 
   it('does not offer invites or API keys to an admin', async () => {

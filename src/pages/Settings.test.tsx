@@ -295,7 +295,7 @@ vi.mock('../api/client', async () => {
       syncMaintainerExclusions: (...args: unknown[]) => syncMaintainerExclusions(...args),
       exportMaintainerRules: (...args: unknown[]) => exportMaintainerRules(...args),
       importMaintainerRules: (...args: unknown[]) => importMaintainerRules(...args),
-      listViewerProfiles: (...args: unknown[]) => listViewerProfiles(...args),
+      listViewerProfiles: () => listViewerProfiles(),
     },
   };
 });

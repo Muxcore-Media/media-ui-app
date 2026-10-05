@@ -16,7 +16,7 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('../lib/userdata', () => ({
-  replaceUserdataFromServer: (...args: unknown[]) => replaceUserdataFromServer(...args),
+  replaceUserdataFromServer: () => replaceUserdataFromServer(),
 }));
 
 describe('HouseholdProfiles', () => {

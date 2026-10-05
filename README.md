@@ -33,7 +33,7 @@ On the MuxCore reference stack (`_mvp` in a sibling workspace checkout):
 |-------|--------|
 | Listen | `mediauiprox` on `:5173` serves `dist-app` |
 | Login | Unauthenticated pages redirect to auth-local (`:9401`); callback `/auth/callback` |
-| Credentials (dev) | `admin` / `admin-dev-only` |
+| Credentials (dev) | user `admin`; the password is generated on first `run-host.sh up` (printed once, stored 0600 in `data/auth/admin.password`); set `MVP_ADMIN_PASSWORD` to override |
 | Logout | `GET /logout` clears the session cookie |
 | Stream | Browser `<video>` → `/stream/movies/{id}` → media-movies HTTP (range requests) |
 | Disable auth | `MEDIA_UI_REQUIRE_AUTH=0` (not for production) |

@@ -1995,57 +1995,12 @@ describe('Settings page', () => {
     expect(await findByTestId('key-secret')).toHaveTextContent('mct_copyonce');
   });
 
-  it('changes a household user role', async () => {
-    setCurrentRoles(['admin']);
-    setCurrentUserId('admin-1');
-    const { findByTestId } = renderSettings('/settings/users');
-    expect(await findByTestId('settings-users')).toBeInTheDocument();
-    fireEvent.change(await screen.findByLabelText('Role for pat'), { target: { value: 'viewer' } });
-    await waitFor(() => {
-      expect(setUserRole).toHaveBeenCalledWith('u1', 'viewer');
-    });
-  });
-
-  it('creates a household user', async () => {
-    setCurrentRoles(['admin']);
-    setCurrentUserId('admin-1');
-    const { findByTestId } = renderSettings('/settings/users');
-    expect(await findByTestId('household-user-create')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('New user username'), { target: { value: 'sam' } });
-    fireEvent.change(screen.getByLabelText('New user password'), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText('New user role'), { target: { value: 'viewer' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add user' }));
-    await waitFor(() => {
-      expect(createUser).toHaveBeenCalledWith({ username: 'sam', password: 'password123', role: 'viewer' });
-    });
-    expect(await findByTestId('household-user-list')).toHaveTextContent('sam');
-  });
-
-  it('sets a household user password', async () => {
+  it('does not offer household user management to an admin', async () => {
     setCurrentRoles(['admin']);
     setCurrentUserId('admin-1');
     renderSettings('/settings/users');
-    fireEvent.change(await screen.findByLabelText('Set password for pat'), { target: { value: 'newpass99' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save password' }));
-    await waitFor(() => {
-      expect(setUserPassword).toHaveBeenCalledWith('u1', 'newpass99');
-    });
-  });
-
-  it('sets a household password from the reset queue', async () => {
-    setCurrentRoles(['admin']);
-    setCurrentUserId('admin-1');
-    listPasswordResets.mockResolvedValue({
-      available: true,
-      count: 1,
-      requests: [{ id: 'req1', username: 'pat', note: 'lost phone', createdAt: '', userId: 'u1', user: true }],
-    });
-    const { findByTestId } = renderSettings('/settings/users');
-    expect(await findByTestId('password-reset-queue')).toBeInTheDocument();
-    fireEvent.change(await screen.findByLabelText('New password for pat'), { target: { value: 'newpass99' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Set password' }));
-    await waitFor(() => {
-      expect(setPasswordReset).toHaveBeenCalledWith('req1', 'newpass99');
-    });
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-users')).not.toBeInTheDocument();
   });
 });

@@ -23,11 +23,10 @@ import {
   Ticket,
   Timer,
   User,
-  Users,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
 import { HouseholdProfiles } from '../components/HouseholdProfiles';
-import { canApproveRequests, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
+import { canApproveRequests, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -62,7 +61,6 @@ import {
   type DelayProfile,
 } from '../lib/delay-profiles';
 import { inviteUsesLabel, type HouseholdInvite } from '../lib/invites';
-import { primaryRole, type HouseholdUser } from '../lib/users';
 import { type HouseholdTOTP } from '../lib/totp';
 import {
   createBrowserPasskey,
@@ -71,7 +69,6 @@ import {
   type HouseholdPasskey,
   type PasskeysResponse,
 } from '../lib/passkeys';
-import { type PasswordResetRequest } from '../lib/password-resets';
 import {
   GUARD_RULE_TYPES,
   guardParamsText,
@@ -3341,318 +3338,6 @@ function MigratePane() {
   );
 }
 
-function UsersPane() {
-  const me = getCurrentUserId();
-  const [users, setUsers] = useState<HouseholdUser[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState('');
-  const [resets, setResets] = useState<PasswordResetRequest[]>([]);
-  const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
-  const [userPasswords, setUserPasswords] = useState<Record<string, string>>({});
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newRole, setNewRole] = useState('user');
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([api.listUsers(), api.listPasswordResets()])
-      .then(([next, queue]) => {
-        if (cancelled) return;
-        setAvailable(next.available);
-        setUsers(next.users);
-        setResets(queue.requests);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Could not load users');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function reloadResets() {
-    const queue = await api.listPasswordResets();
-    setResets(queue.requests);
-  }
-
-  async function onRole(id: string, role: string) {
-    setBusyId(id);
-    setError(null);
-    try {
-      const next = await api.setUserRole(id, role);
-      setUsers((prev) => prev.map((row) => (row.id === id ? next : row)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not change role');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    const username = newUsername.trim();
-    const password = newPassword.trim();
-    if (!username || password.length < 8) {
-      setError('Username and a password of at least 8 characters are required');
-      return;
-    }
-    setBusyId('create');
-    setError(null);
-    try {
-      const created = await api.createUser({ username, password, role: newRole });
-      setUsers((prev) => [created, ...prev.filter((row) => row.id !== created.id)]);
-      setNewUsername('');
-      setNewPassword('');
-      setNewRole('user');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create user');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  async function onSetPassword(id: string) {
-    const password = (userPasswords[id] || '').trim();
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-    setBusyId(id);
-    setError(null);
-    try {
-      await api.setUserPassword(id, password);
-      setUserPasswords((prev) => ({ ...prev, [id]: '' }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not set password');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  async function onRemove(id: string) {
-    setBusyId(id);
-    setError(null);
-    try {
-      await api.deleteUser(id);
-      setUsers((prev) => prev.filter((row) => row.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not remove user');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  async function onDismissReset(id: string) {
-    setBusyId(id);
-    setError(null);
-    try {
-      await api.dismissPasswordReset(id);
-      await reloadResets();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not dismiss reset');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  async function onSetResetPassword(id: string) {
-    const password = (resetPasswords[id] || '').trim();
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-    setBusyId(id);
-    setError(null);
-    try {
-      await api.setPasswordReset(id, password);
-      setResetPasswords((prev) => ({ ...prev, [id]: '' }));
-      await reloadResets();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not set password');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  return (
-    <div className={`${paneClass} max-w-2xl`} data-testid="settings-users">
-      <h2 className="font-semibold text-[var(--text-primary)]">Users</h2>
-      <p className="text-sm text-[var(--text-secondary)]">
-        Add a household account, change a role, or set a password without opening admin-ui. Invites still work for self-serve join.
-      </p>
-      <form className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] p-3" onSubmit={(e) => void onCreate(e)} data-testid="household-user-create">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Add user</h3>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Username</span>
-          <input
-            className={inputClass}
-            value={newUsername}
-            autoComplete="off"
-            aria-label="New user username"
-            onChange={(e) => setNewUsername(e.target.value)}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Password</span>
-          <input
-            className={inputClass}
-            type="password"
-            value={newPassword}
-            autoComplete="new-password"
-            aria-label="New user password"
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-        </label>
-        <label className="block space-y-1 text-sm">
-          <span className="text-[var(--text-secondary)]">Role</span>
-          <select className={inputClass} value={newRole} aria-label="New user role" onChange={(e) => setNewRole(e.target.value)}>
-            <option value="user">user</option>
-            <option value="viewer">viewer</option>
-            <option value="approver">approver</option>
-            <option value="manager">manager</option>
-            <option value="admin">admin</option>
-          </select>
-        </label>
-        <button type="submit" disabled={Boolean(busyId) || !newUsername.trim() || newPassword.trim().length < 8} className={saveBtnClass}>
-          {busyId === 'create' ? 'Creating…' : 'Add user'}
-        </button>
-      </form>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {available === false ? (
-        <p className="text-sm text-[var(--text-tertiary)]">
-          User admin is not linked to auth-local for this session. Sign in again, then retry.
-        </p>
-      ) : null}
-      <ul className="space-y-3" data-testid="household-user-list">
-        {users.map((user) => {
-          const self = Boolean(me && user.id === me);
-          return (
-            <li key={user.id || user.username} className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium text-[var(--text-primary)]">{user.username || user.id}</p>
-                {user.totpEnabled ? (
-                  <span className="text-xs text-[var(--text-tertiary)]">TOTP on</span>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="min-w-0 flex-1 text-sm">
-                  <span className="sr-only">Role for {user.username}</span>
-                  <select
-                    className={inputClass}
-                    value={primaryRole(user)}
-                    disabled={Boolean(busyId) || self}
-                    aria-label={`Role for ${user.username || user.id}`}
-                    onChange={(e) => void onRole(user.id, e.target.value)}
-                  >
-                    <option value="user">user</option>
-                    <option value="viewer">viewer</option>
-                    <option value="approver">approver</option>
-                    <option value="manager">manager</option>
-                    <option value="admin">admin</option>
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  disabled={Boolean(busyId) || self || !user.id}
-                  className="shrink-0 text-sm text-[var(--text-tertiary)] hover:text-[var(--danger-color)] disabled:opacity-40"
-                  onClick={() => void onRemove(user.id)}
-                >
-                  {self ? 'You' : 'Remove'}
-                </button>
-              </div>
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="min-w-0 flex-1 space-y-1 text-sm">
-                  <span className="text-[var(--text-secondary)]">Set password</span>
-                  <input
-                    className={inputClass}
-                    type="password"
-                    autoComplete="new-password"
-                    value={userPasswords[user.id] || ''}
-                    aria-label={`Set password for ${user.username || user.id}`}
-                    onChange={(e) => setUserPasswords((prev) => ({ ...prev, [user.id]: e.target.value }))}
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={Boolean(busyId) || !user.id || (userPasswords[user.id] || '').trim().length < 8}
-                  className="shrink-0 text-sm text-[var(--text-primary)] disabled:opacity-40"
-                  onClick={() => void onSetPassword(user.id)}
-                >
-                  Save password
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <section className="space-y-3" data-testid="password-reset-queue">
-        <h3 className="font-semibold text-[var(--text-primary)]">Password reset queue</h3>
-        <p className="text-sm text-[var(--text-secondary)]">
-          Requests from Forgot password. Set a new password when the account exists, or dismiss stale rows.
-        </p>
-        {resets.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]" data-testid="password-reset-empty">
-            No pending password reset requests.
-          </p>
-        ) : (
-          <ul className="space-y-3" data-testid="password-reset-list">
-            {resets.map((row) => (
-              <li key={row.id || row.username} className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium text-[var(--text-primary)]">{row.username}</p>
-                  {row.note ? <span className="text-xs text-[var(--text-tertiary)]">{row.note}</span> : null}
-                </div>
-                {row.user ? (
-                  <label className="block space-y-1 text-sm">
-                    <span className="text-[var(--text-secondary)]">New password</span>
-                    <input
-                      className={inputClass}
-                      type="password"
-                      autoComplete="new-password"
-                      value={resetPasswords[row.id] || ''}
-                      aria-label={`New password for ${row.username}`}
-                      onChange={(e) => setResetPasswords((prev) => ({ ...prev, [row.id]: e.target.value }))}
-                    />
-                  </label>
-                ) : (
-                  <p className="text-xs text-[var(--text-tertiary)]">
-                    No matching user account — create the user first or dismiss this request.
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  {row.user ? (
-                    <button
-                      type="button"
-                      disabled={Boolean(busyId) || (resetPasswords[row.id] || '').trim().length < 8}
-                      className="text-sm text-[var(--text-primary)]"
-                      onClick={() => void onSetResetPassword(row.id)}
-                    >
-                      Set password
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    disabled={Boolean(busyId)}
-                    className="text-sm text-[var(--text-tertiary)] hover:text-[var(--danger-color)]"
-                    onClick={() => void onDismissReset(row.id)}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-}
-
 function InvitesPane() {
   const [invites, setInvites] = useState<HouseholdInvite[]>([]);
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -6723,7 +6408,6 @@ export default function Settings() {
   else if (pathname.endsWith('/naming') && canManageNaming()) pane = <NamingPane />;
   else if (pathname.endsWith('/lists') && canManageLists()) pane = <ListsPane />;
   else if (pathname.endsWith('/migrate') && canManageMigrate()) pane = <MigratePane />;
-  else if (pathname.endsWith('/users') && canManageUsers()) pane = <UsersPane />;
   else if (pathname.endsWith('/keys') && canManageKeys()) pane = <KeysPane />;
   else if (pathname.endsWith('/invites') && canManageInvites()) pane = <InvitesPane />;
   else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
@@ -6740,7 +6424,6 @@ export default function Settings() {
   const showNaming = canManageNaming();
   const showLists = canManageLists();
   const showMigrate = canManageMigrate();
-  const showUsers = canManageUsers();
   const showKeys = canManageKeys();
   const showInvites = canManageInvites();
   const showDelay = featureEnabled(caps, 'activity');
@@ -6846,12 +6529,6 @@ export default function Settings() {
           <NavLink to="/settings/migrate" className={tabClass}>
             <Import className="h-4 w-4" aria-hidden="true" />
             Import
-          </NavLink>
-        )}
-        {showUsers && (
-          <NavLink to="/settings/users" className={tabClass}>
-            <Users className="h-4 w-4" aria-hidden="true" />
-            Users
           </NavLink>
         )}
         {showKeys && (

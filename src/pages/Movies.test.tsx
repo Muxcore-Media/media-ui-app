@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import Movies from './Movies';
+import { axeOptions } from '../a11y/axe';
 import type { ListResponse, Movie } from '../types';
 
 const listMovies = vi.fn();
@@ -113,5 +115,25 @@ describe('Movies accessibility', () => {
     expect(screen.getByLabelText('Genre')).toBeInTheDocument();
     expect(screen.getByLabelText('Sort')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading movies' })).toBeInTheDocument();
+  });
+
+  it('has no axe violations on the empty library', async () => {
+    listMovies.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+    } satisfies ListResponse<Movie>);
+
+    const { container } = render(
+      <main>
+        <MemoryRouter>
+          <Movies />
+        </MemoryRouter>
+      </main>,
+    );
+
+    expect(await screen.findByText(/No movies ready to watch yet/i)).toBeInTheDocument();
+    expect(await axe(container, axeOptions)).toHaveNoViolations();
   });
 });

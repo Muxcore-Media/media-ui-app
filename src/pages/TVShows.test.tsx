@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import TVShows from './TVShows';
+import { axeOptions } from '../a11y/axe';
 import type { ListResponse, TVShow } from '../types';
 
 const listTVShows = vi.fn();
@@ -102,5 +104,25 @@ describe('TVShows accessibility', () => {
     expect(screen.getByLabelText('Genre')).toBeInTheDocument();
     expect(screen.getByLabelText('Sort')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading TV shows' })).toBeInTheDocument();
+  });
+
+  it('has no axe violations on the empty library', async () => {
+    listTVShows.mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 48,
+    } satisfies ListResponse<TVShow>);
+
+    const { container } = render(
+      <main>
+        <MemoryRouter>
+          <TVShows />
+        </MemoryRouter>
+      </main>,
+    );
+
+    expect(await screen.findByText(/No TV shows ready to watch yet/i)).toBeInTheDocument();
+    expect(await axe(container, axeOptions)).toHaveNoViolations();
   });
 });

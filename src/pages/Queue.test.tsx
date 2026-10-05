@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import Queue from './Queue';
+import { axeOptions } from '../a11y/axe';
 import { updatePreferences } from '../lib/userdata';
 
 const listQueue = vi.fn();
@@ -80,6 +82,19 @@ describe('Queue page', () => {
     expect(screen.getByTestId('queue-empty')).toBeInTheDocument();
     expect(screen.getByText('Queue empty')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Search' })).toHaveAttribute('href', '/search');
+  });
+
+  it('has no axe violations on the empty queue', async () => {
+    const { container } = render(
+      <main>
+        <MemoryRouter>
+          <Queue />
+        </MemoryRouter>
+      </main>,
+    );
+    expect(await screen.findByRole('heading', { name: 'Queue' })).toBeInTheDocument();
+    expect(screen.getByTestId('queue-empty')).toBeInTheDocument();
+    expect(await axe(container, axeOptions)).toHaveNoViolations();
   });
 
   it('labels suggestion list for screen readers when queue is empty', () => {

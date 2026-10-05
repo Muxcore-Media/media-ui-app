@@ -1,7 +1,9 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { axe } from 'vitest-axe';
 import Settings from './Settings';
+import { axeOptions } from '../a11y/axe';
 import * as client from '../api/client';
 import { ALL_CAPABILITIES, CapabilitiesContext, DEFAULT_CAPABILITIES } from '../lib/capabilities';
 import { getPreferences } from '../lib/userdata';
@@ -1124,6 +1126,25 @@ describe('Settings page', () => {
     signOutSpy.mockRestore();
     expect(await screen.findByTestId('settings-totp')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enable authenticator' })).toBeInTheDocument();
+  });
+
+  it('has no axe violations on the profile pane', async () => {
+    const { container } = render(
+      <main>
+        <CapabilitiesContext.Provider
+          value={{ caps: DEFAULT_CAPABILITIES, loading: false, error: null, retry: () => {} }}
+        >
+          <MemoryRouter initialEntries={['/settings']}>
+            <Routes>
+              <Route path="/settings/*" element={<Settings />} />
+            </Routes>
+          </MemoryRouter>
+        </CapabilitiesContext.Provider>
+      </main>,
+    );
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(await screen.findByTestId('settings-totp')).toBeInTheDocument();
+    expect(await axe(container, axeOptions)).toHaveNoViolations();
   });
 
   it('enables and verifies a household authenticator', async () => {

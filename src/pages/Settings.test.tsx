@@ -1316,78 +1316,6 @@ describe('Settings page', () => {
     expect(screen.queryByTestId('settings-tags')).not.toBeInTheDocument();
   });
 
-  it('scans library cleanup candidates from the maintainer pane', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/maintainer');
-    expect(await findByTestId('settings-maintainer')).toBeInTheDocument();
-    expect(await findByTestId('maintainer-candidates')).toHaveTextContent('Old Movie');
-    expect(await findByTestId('maintainer-storage')).toHaveTextContent('/data/movies');
-    fireEvent.click(screen.getByRole('button', { name: 'Dry-run scan' }));
-    await waitFor(() => {
-      expect(scanMaintainer).toHaveBeenCalledWith({ dryRun: true });
-    });
-    expect(await findByTestId('maintainer-flash')).toHaveTextContent('Dry-run scan found 2 candidates');
-    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
-    await waitFor(() => {
-      expect(maintainerCandidateAction).toHaveBeenCalledWith('c1', 'approve');
-    });
-  });
-
-  it('saves a household maintainer cleanup rule', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/maintainer');
-    expect(await findByTestId('maintainer-rules')).toHaveTextContent('Unwatched 90d');
-    fireEvent.change(screen.getByLabelText('Maintainer rule days'), { target: { value: '120' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
-    await waitFor(() => {
-      expect(upsertMaintainerRule).toHaveBeenCalledWith({
-        name: 'Stale unwatched movies',
-        preset: 'stale_unwatched',
-        days: 120,
-        scope: 'movie',
-        action: 'delete',
-        collectionId: '',
-      });
-    });
-    expect(await findByTestId('maintainer-flash')).toHaveTextContent('Rule saved');
-  });
-
-  it('protects a title from maintainer cleanup', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/maintainer');
-    expect(await findByTestId('maintainer-protections')).toHaveTextContent('Fight Club');
-    fireEvent.change(screen.getByLabelText('Protected title'), { target: { value: 'Dune' } });
-    fireEvent.change(screen.getByLabelText('Protected item id'), { target: { value: 'm2' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Protect title' }));
-    await waitFor(() => {
-      expect(upsertMaintainerProtection).toHaveBeenCalledWith({
-        itemId: 'm2',
-        title: 'Dune',
-        scope: 'movie',
-        reason: 'Household favorite',
-      });
-    });
-    expect(await findByTestId('maintainer-flash')).toHaveTextContent('Title protected from cleanup');
-  });
-
-  it('saves a leaving-soon maintainer collection', async () => {
-    setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/maintainer');
-    expect(await findByTestId('maintainer-collections')).toHaveTextContent('Leaving soon');
-    fireEvent.change(screen.getByLabelText('Leaving-soon collection name'), { target: { value: 'Leaving soon movies' } });
-    fireEvent.change(screen.getByLabelText('Leaving-soon grace days'), { target: { value: '14' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save collection' }));
-    await waitFor(() => {
-      expect(upsertMaintainerCollection).toHaveBeenCalledWith({
-        name: 'Leaving soon movies',
-        graceDays: 14,
-        action: 'delete',
-        leavingSoonEnabled: true,
-      });
-    });
-    expect(await findByTestId('maintainer-flash')).toHaveTextContent('Leaving-soon collection saved');
-  });
-
   it('saves a concurrent-stream playback-guard rule', async () => {
     setCurrentRoles(['admin']);
     const { findByTestId } = renderSettings('/settings/guard');
@@ -1425,28 +1353,12 @@ describe('Settings page', () => {
     expect(await findByTestId('guard-flash')).toHaveTextContent('Merged identities');
   });
 
-  it('saves a local maintainer exclusion list', async () => {
+  it('does not offer library maintainer to an admin', async () => {
     setCurrentRoles(['admin']);
-    const { findByTestId } = renderSettings('/settings/maintainer');
-    expect(await findByTestId('maintainer-exclusions')).toHaveTextContent('Favorites');
-    fireEvent.change(screen.getByLabelText('Exclusion list name'), { target: { value: 'Never delete' } });
-    fireEvent.change(screen.getByLabelText('Exclusion TMDB ids'), { target: { value: '550, 603' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save exclusion list' }));
-    await waitFor(() => {
-      expect(upsertMaintainerExclusion).toHaveBeenCalledWith({
-        name: 'Never delete',
-        type: 'local',
-        listUrl: '',
-        apiKey: '',
-        tmdbIdsText: '550, 603',
-      });
-    });
-    expect(await findByTestId('maintainer-flash')).toHaveTextContent('Exclusion list saved');
-    fireEvent.change(screen.getByLabelText('Maintainer rules YAML'), { target: { value: 'name: Unwatched 90d\n' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Import rules' }));
-    await waitFor(() => {
-      expect(importMaintainerRules).toHaveBeenCalledWith({ rulesYaml: 'name: Unwatched 90d\n' });
-    });
+    renderSettings('/settings/maintainer');
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Maintainer' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('settings-maintainer')).not.toBeInTheDocument();
   });
 
   it('does not offer import lists to an admin', async () => {

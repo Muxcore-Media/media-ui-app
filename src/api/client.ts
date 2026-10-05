@@ -280,6 +280,21 @@ export function friendlyFetchError(err: unknown, fallback = 'Something went wron
   return err instanceof Error ? err.message : fallback;
 }
 
+/**
+ * End the BFF session. The BFF requires POST /logout (same-origin, CSRF-checked);
+ * GET only renders a confirm page. On success go to the login page; if the POST
+ * fails, fall back to the GET confirm page, which carries its own POST form.
+ */
+export async function signOut(): Promise<void> {
+  try {
+    const res = await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`logout failed: ${res.status}`);
+    window.location.assign('/login');
+  } catch {
+    window.location.assign('/logout');
+  }
+}
+
 async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {

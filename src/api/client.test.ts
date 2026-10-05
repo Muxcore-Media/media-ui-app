@@ -16,6 +16,7 @@ import {
   fetchTrickplaySprite,
   reportPlaybackSession,
   normalizeRequestPolicy,
+  signOut,
 } from './client';
 import { normalizeAcquisitionStatus } from '../lib/acquisition-status';
 
@@ -2349,5 +2350,37 @@ describe('api smoke (library + request + auth errors)', () => {
 
     const url = String(fetchMock.mock.calls[0][0]);
     expect(url).toContain('id=tmdb%3Atv%3A1396');
+  });
+});
+
+describe('signOut', () => {
+  const assign = vi.fn();
+  beforeEach(() => {
+    assign.mockReset();
+    vi.stubGlobal('location', { ...window.location, assign });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('POSTs /logout same-origin then navigates to /login', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal('fetch', fetchMock);
+    await signOut();
+    expect(fetchMock).toHaveBeenCalledWith('/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+    expect(assign).toHaveBeenCalledWith('/login');
+  });
+
+  it('falls back to the GET confirm page when the POST fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
+    await signOut();
+    expect(assign).toHaveBeenCalledWith('/logout');
+    assign.mockReset();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('network')));
+    await signOut();
+    expect(assign).toHaveBeenCalledWith('/logout');
   });
 });

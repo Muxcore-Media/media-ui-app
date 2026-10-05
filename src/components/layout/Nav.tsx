@@ -17,6 +17,7 @@ import {
   Tv,
   X,
 } from 'lucide-react';
+import { signOut } from '../../api/client';
 import { cn } from '../../lib/cn';
 import { useCapabilities } from '../../lib/capabilities';
 import {
@@ -205,8 +206,9 @@ export default function Nav() {
               <Settings className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Settings</span>
             </NavLink>
-            <a
-              href="/logout"
+            <button
+              type="button"
+              onClick={() => void signOut()}
               aria-label="Sign out"
               className={cn(
                 'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--text-primary)]',
@@ -215,7 +217,7 @@ export default function Nav() {
             >
               <LogOut className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Logout</span>
-            </a>
+            </button>
           </div>
         </div>
       </header>
@@ -243,13 +245,14 @@ export default function Nav() {
                 {item.label}
               </NavLink>
             ))}
-            <a
-              href="/logout"
+            <button
+              type="button"
+              onClick={() => void signOut()}
               aria-label="Sign out"
-              className="rounded-[var(--radius-sm)] px-3 py-2 text-sm text-[var(--text-secondary)]"
+              className="rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--text-secondary)]"
             >
               Logout
-            </a>
+            </button>
           </div>
         </nav>
       )}

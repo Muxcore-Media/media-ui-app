@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Layout from './Layout';
+import * as client from '../api/client';
 import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../lib/capabilities';
 import { NowPlayingProvider, useNowPlaying } from '../lib/nowPlaying';
 
@@ -42,10 +43,15 @@ function renderLayout(caps = DEFAULT_CAPABILITIES) {
 }
 
 describe('Layout (session / login shell)', () => {
-  it('exposes BFF logout so auth-local session cookie can be cleared', () => {
+  it('signs out via POST /logout button so auth-local session cookie can be cleared', () => {
+    const spy = vi.spyOn(client, 'signOut').mockResolvedValue();
     renderLayout();
-    const logout = screen.getByRole('link', { name: 'Sign out' });
-    expect(logout).toHaveAttribute('href', '/logout');
+    const logout = screen.getByRole('button', { name: 'Sign out' });
+    expect(logout).toHaveAttribute('type', 'button');
+    expect(screen.queryByRole('link', { name: 'Sign out' })).not.toBeInTheDocument();
+    fireEvent.click(logout);
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
   });
 
   it('renders only enabled library sections in primary nav', () => {

@@ -997,7 +997,7 @@ describe('VideoPlayer Cast and AirPlay controls', () => {
     }
   });
 
-  it('shows a disabled Cast stub when the Remote Playback API is not available', async () => {
+  it('renders no Cast control at all when the Remote Playback API is not available (FR-PLAY-009)', async () => {
     render(
       <MemoryRouter>
         <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
@@ -1005,10 +1005,9 @@ describe('VideoPlayer Cast and AirPlay controls', () => {
     );
     await waitForResolvedVideo();
 
-    const castBtn = screen.getByRole('button', {
-      name: 'Cast (not supported in this browser)',
-    });
-    expect(castBtn).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /cast/i })).toBeNull();
+    expect(screen.queryByLabelText(/cast/i)).toBeNull();
+    expect(screen.queryByTitle(/cast/i)).toBeNull();
   });
 
   it('shows an enabled Cast button and invokes remote.prompt() when Remote Playback API is available', async () => {
@@ -1038,7 +1037,7 @@ describe('VideoPlayer Cast and AirPlay controls', () => {
     expect(prompt).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a disabled AirPlay stub when webkitShowPlaybackTargetPicker is not available', async () => {
+  it('renders no AirPlay control at all when webkitShowPlaybackTargetPicker is not available (FR-PLAY-009)', async () => {
     render(
       <MemoryRouter>
         <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
@@ -1046,10 +1045,9 @@ describe('VideoPlayer Cast and AirPlay controls', () => {
     );
     await waitForResolvedVideo();
 
-    const airPlayBtn = screen.getByRole('button', {
-      name: 'AirPlay (not supported in this browser)',
-    });
-    expect(airPlayBtn).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /airplay/i })).toBeNull();
+    expect(screen.queryByLabelText(/airplay/i)).toBeNull();
+    expect(screen.queryByTitle(/airplay/i)).toBeNull();
   });
 
   it('shows an enabled AirPlay button and invokes the picker when webkitShowPlaybackTargetPicker is available', async () => {

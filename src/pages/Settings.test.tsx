@@ -2047,4 +2047,465 @@ describe('Settings page', () => {
       expect(setPasswordReset).toHaveBeenCalledWith('req1', 'newpass99');
     });
   });
+
+  describe('FR-ADM-010: operator-only settings gating', () => {
+    describe('non-operator role (viewer)', () => {
+      beforeEach(() => {
+        setCurrentRoles(['viewer']);
+      });
+
+      it('hides Libraries nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /Libraries/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Libraries pane when viewer tries to access directly', () => {
+        renderSettings('/settings/libraries');
+        expect(screen.queryByTestId('settings-libraries')).not.toBeInTheDocument();
+        // Should fall back to profile pane
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Maintainer nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /Maintainer/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Maintainer pane when viewer tries to access directly', () => {
+        renderSettings('/settings/maintainer');
+        expect(screen.queryByTestId('settings-maintainer')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Guard nav link for viewer', () => {
+        renderSettings('/settings');
+        const guardLinks = screen.queryAllByRole('link', { name: /Guard/i });
+        const settingsGuardLink = guardLinks.find(link => link.getAttribute('href') === '/settings/guard');
+        expect(settingsGuardLink).toBeUndefined();
+      });
+
+      it('hides Guard pane when viewer tries to access directly', () => {
+        renderSettings('/settings/guard');
+        expect(screen.queryByTestId('settings-guard')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Naming nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /Naming/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Naming pane when viewer tries to access directly', () => {
+        renderSettings('/settings/naming');
+        expect(screen.queryByTestId('settings-naming')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Lists nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /^Lists$/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Lists pane when viewer tries to access directly', () => {
+        renderSettings('/settings/lists');
+        expect(screen.queryByTestId('settings-lists')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Import (Migrate) nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /Import/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Import (Migrate) pane when viewer tries to access directly', () => {
+        renderSettings('/settings/migrate');
+        expect(screen.queryByTestId('settings-migrate')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Users nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /^Users$/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Users pane when viewer tries to access directly', () => {
+        renderSettings('/settings/users');
+        expect(screen.queryByTestId('settings-users')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides API keys nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /API keys/i })).not.toBeInTheDocument();
+      });
+
+      it('hides API keys pane when viewer tries to access directly', () => {
+        renderSettings('/settings/keys');
+        expect(screen.queryByTestId('settings-keys')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Invites nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /Invites/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Invites pane when viewer tries to access directly', () => {
+        renderSettings('/settings/invites');
+        expect(screen.queryByTestId('settings-invites')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Tags nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /^Tags$/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Tags pane when viewer tries to access directly', () => {
+        renderSettings('/settings/tags');
+        expect(screen.queryByTestId('settings-tags')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Backups nav link for viewer', () => {
+        renderSettings('/settings');
+        expect(screen.queryByRole('link', { name: /Backups/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Backups pane when viewer tries to access directly', () => {
+        renderSettings('/settings/backups');
+        expect(screen.queryByTestId('settings-backups')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('hides Requests nav link for viewer without approver role', () => {
+        const caps = { ...DEFAULT_CAPABILITIES, request: true };
+        renderSettings('/settings', caps);
+        expect(screen.queryByRole('link', { name: /Requests/i })).not.toBeInTheDocument();
+      });
+
+      it('hides Requests pane when viewer tries to access directly', () => {
+        const caps = { ...DEFAULT_CAPABILITIES, request: true };
+        renderSettings('/settings/requests', caps);
+        expect(screen.queryByTestId('settings-requests')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+      });
+
+      it('shows all personal settings panes and nav links for viewer', () => {
+        renderSettings('/settings');
+        
+        // Personal settings should all be visible in nav
+        expect(screen.getByRole('link', { name: /Profile/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Display/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Home/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Playback/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Parental/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Subtitles/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Controls/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Notifications/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Acquisition/i })).toBeInTheDocument();
+      });
+
+      it('allows viewer to access Profile pane', () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+        expect(screen.getByTestId('settings-page')).toBeInTheDocument();
+      });
+
+      it('allows viewer to access Display pane', () => {
+        renderSettings('/settings/display');
+        expect(screen.getByRole('heading', { name: 'Display' })).toBeInTheDocument();
+      });
+
+      it('allows viewer to access Home pane', () => {
+        renderSettings('/settings/home');
+        expect(screen.getByRole('heading', { name: 'Home feed' })).toBeInTheDocument();
+      });
+
+      it('allows viewer to access Playback pane', () => {
+        renderSettings('/settings/playback');
+        expect(screen.getByRole('heading', { name: 'Playback' })).toBeInTheDocument();
+      });
+
+      it('allows viewer to access Parental pane', () => {
+        renderSettings('/settings/parental');
+        expect(screen.getByRole('heading', { name: 'Parental' })).toBeInTheDocument();
+      });
+
+      it('allows viewer to access Controls pane', () => {
+        renderSettings('/settings/controls');
+        expect(screen.getByRole('heading', { name: 'Controls' })).toBeInTheDocument();
+      });
+    });
+
+    describe('operator role (admin)', () => {
+      beforeEach(() => {
+        setCurrentRoles(['admin']);
+        setCurrentUserId('admin-1');
+        // Mock required API calls for operator panes
+        listRoots.mockResolvedValue({ available: true, roots: [] });
+        listInvites.mockResolvedValue({ available: true, invites: [] });
+        listUsers.mockResolvedValue({
+          available: true,
+          users: [],
+          passwordResets: { available: true, requests: [] },
+        });
+        listNamingTemplates.mockResolvedValue({ available: true, templates: [] });
+        listListSources.mockResolvedValue({ available: true, sources: [] });
+        listTags.mockResolvedValue({ available: true, tags: [] });
+        listBackups.mockResolvedValue({ available: true, backups: [] });
+        listAPIKeys.mockResolvedValue({ available: true, keys: [] });
+        getMaintainer.mockResolvedValue({
+          available: true,
+          stats: { totalMedia: 0, totalProtected: 0, totalViolations: 0 },
+          rules: [],
+          protections: [],
+          collections: [],
+          exclusions: [],
+          storage: [],
+        });
+        getGuard.mockResolvedValue({
+          available: true,
+          rules: [],
+          violations: [],
+          untrusted: [],
+          trust: [],
+        });
+      });
+
+      it('shows Libraries nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /Libraries/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/libraries');
+        expect(await screen.findByTestId('settings-libraries')).toBeInTheDocument();
+      });
+
+      it('shows Maintainer nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /Maintainer/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/maintainer');
+        expect(await screen.findByTestId('settings-maintainer')).toBeInTheDocument();
+      });
+
+      it('shows Guard nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        const guardLinks = screen.queryAllByRole('link', { name: /Guard/i });
+        const settingsGuardLink = guardLinks.find(link => link.getAttribute('href') === '/settings/guard');
+        expect(settingsGuardLink).toBeDefined();
+        
+        renderSettings('/settings/guard');
+        expect(await screen.findByTestId('settings-guard')).toBeInTheDocument();
+      });
+
+      it('shows Naming nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /Naming/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/naming');
+        expect(await screen.findByTestId('settings-naming')).toBeInTheDocument();
+      });
+
+      it('shows Lists nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /^Lists$/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/lists');
+        expect(await screen.findByTestId('settings-lists')).toBeInTheDocument();
+      });
+
+      it('shows Import (Migrate) nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /Import/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/migrate');
+        expect(await screen.findByTestId('settings-migrate')).toBeInTheDocument();
+      });
+
+      it('shows Users nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /^Users$/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/users');
+        expect(await screen.findByTestId('settings-users')).toBeInTheDocument();
+      });
+
+      it('shows API keys nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /API keys/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/keys');
+        expect(await screen.findByTestId('settings-keys')).toBeInTheDocument();
+      });
+
+      it('shows Invites nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /Invites/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/invites');
+        expect(await screen.findByTestId('settings-invites')).toBeInTheDocument();
+      });
+
+      it('shows Tags nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /^Tags$/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/tags');
+        expect(await screen.findByTestId('settings-tags')).toBeInTheDocument();
+      });
+
+      it('shows Backups nav link and pane for admin', async () => {
+        renderSettings('/settings');
+        expect(screen.getByRole('link', { name: /Backups/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/backups');
+        expect(await screen.findByTestId('settings-backups')).toBeInTheDocument();
+      });
+
+      it('shows Requests nav link and pane for admin when feature enabled', async () => {
+        const caps = { ...DEFAULT_CAPABILITIES, request: true };
+        getRequestPolicy.mockResolvedValue({
+          available: true,
+          mode: 'auto',
+          allowMode: true,
+          allowWatchlist: false,
+          allowGuestSearch: false,
+        });
+        
+        renderSettings('/settings', caps);
+        expect(screen.getByRole('link', { name: /Requests/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/requests', caps);
+        expect(await screen.findByTestId('settings-requests')).toBeInTheDocument();
+      });
+
+      it('admin can still access all personal settings', () => {
+        renderSettings('/settings');
+        
+        expect(screen.getByRole('link', { name: /Profile/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Display/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Home/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Playback/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Parental/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Subtitles/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Controls/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Notifications/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Acquisition/i })).toBeInTheDocument();
+      });
+    });
+
+    describe('operator role (manager)', () => {
+      beforeEach(() => {
+        setCurrentRoles(['manager']);
+        setCurrentUserId('mgr-1');
+        listRoots.mockResolvedValue({ available: true, roots: [] });
+        listInvites.mockResolvedValue({ available: true, invites: [] });
+        listUsers.mockResolvedValue({
+          available: true,
+          users: [],
+          passwordResets: { available: true, requests: [] },
+        });
+        listNamingTemplates.mockResolvedValue({ available: true, templates: [] });
+        listListSources.mockResolvedValue({ available: true, sources: [] });
+        listTags.mockResolvedValue({ available: true, tags: [] });
+        listBackups.mockResolvedValue({ available: true, backups: [] });
+        listAPIKeys.mockResolvedValue({ available: true, keys: [] });
+        getMaintainer.mockResolvedValue({
+          available: true,
+          stats: { totalMedia: 0, totalProtected: 0, totalViolations: 0 },
+          rules: [],
+          protections: [],
+          collections: [],
+          exclusions: [],
+          storage: [],
+        });
+        getGuard.mockResolvedValue({
+          available: true,
+          rules: [],
+          violations: [],
+          untrusted: [],
+          trust: [],
+        });
+      });
+
+      it('shows operator panes for manager role', async () => {
+        renderSettings('/settings');
+        
+        // Check a sample of operator links
+        expect(screen.getByRole('link', { name: /Libraries/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Users/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Naming/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Backups/i })).toBeInTheDocument();
+      });
+
+      it('manager can access Libraries pane', async () => {
+        renderSettings('/settings/libraries');
+        expect(await screen.findByTestId('settings-libraries')).toBeInTheDocument();
+      });
+
+      it('manager can access Users pane', async () => {
+        renderSettings('/settings/users');
+        expect(await screen.findByTestId('settings-users')).toBeInTheDocument();
+      });
+    });
+
+    describe('approver role', () => {
+      beforeEach(() => {
+        setCurrentRoles(['approver']);
+        getRequestPolicy.mockResolvedValue({
+          available: true,
+          mode: 'auto',
+          allowMode: true,
+          allowWatchlist: false,
+          allowGuestSearch: false,
+        });
+      });
+
+      it('shows Requests pane for approver when feature enabled', async () => {
+        const caps = { ...DEFAULT_CAPABILITIES, request: true };
+        renderSettings('/settings', caps);
+        expect(screen.getByRole('link', { name: /Requests/i })).toBeInTheDocument();
+        
+        renderSettings('/settings/requests', caps);
+        expect(await screen.findByTestId('settings-requests')).toBeInTheDocument();
+      });
+
+      it('hides other operator panes for approver-only role', () => {
+        renderSettings('/settings');
+        
+        expect(screen.queryByRole('link', { name: /Libraries/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Users/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Naming/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Backups/i })).not.toBeInTheDocument();
+      });
+    });
+
+    describe('no role (empty roles array)', () => {
+      beforeEach(() => {
+        setCurrentRoles([]);
+      });
+
+      it('hides all operator panes when no roles assigned', () => {
+        renderSettings('/settings');
+        
+        expect(screen.queryByRole('link', { name: /Libraries/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Maintainer/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Users/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Naming/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /API keys/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Invites/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /^Tags$/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: /Backups/i })).not.toBeInTheDocument();
+      });
+
+      it('shows personal settings when no roles assigned', () => {
+        renderSettings('/settings');
+        
+        expect(screen.getByRole('link', { name: /Profile/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Display/i })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /Playback/i })).toBeInTheDocument();
+      });
+    });
+  });
 });

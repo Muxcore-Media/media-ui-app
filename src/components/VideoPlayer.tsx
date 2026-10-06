@@ -348,6 +348,13 @@ export default function VideoPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSegment]);
 
+  // Cancel a pending sync-offset toast timer on unmount so it never fires after teardown.
+  useEffect(() => {
+    return () => {
+      if (offsetToastTimerRef.current) window.clearTimeout(offsetToastTimerRef.current);
+    };
+  }, []);
+
   function seekAbsolute(sec: number) {
     const target = Math.max(0, absoluteDurationSec > 0 ? Math.min(absoluteDurationSec, sec) : sec);
     const relative = target - source.transcodeOffsetSec;

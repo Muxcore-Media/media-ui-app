@@ -399,6 +399,33 @@ describe('VideoPlayer OSD', () => {
     expect(screen.getByTestId('subtitle-offset-toast')).toHaveTextContent('Subtitles +0.25s');
   });
 
+  it('cancels the pending offset toast timer on unmount', async () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    const setSpy = vi.spyOn(window, 'setTimeout');
+    const clearSpy = vi.spyOn(window, 'clearTimeout');
+    try {
+      fireEvent.keyDown(window, { code: 'KeyH' });
+      expect(screen.getByTestId('subtitle-offset-toast')).toBeInTheDocument();
+
+      const idx = setSpy.mock.calls.findIndex((c) => c[1] === 800);
+      expect(idx).toBeGreaterThanOrEqual(0);
+      const timerId = setSpy.mock.results[idx].value;
+
+      clearSpy.mockClear();
+      unmount();
+      expect(clearSpy).toHaveBeenCalledWith(timerId);
+    } finally {
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    }
+  });
+
   it('track selection — graceful empty state when no audio or subtitle tracks exist', async () => {
     stubFetch({
       analysis: {

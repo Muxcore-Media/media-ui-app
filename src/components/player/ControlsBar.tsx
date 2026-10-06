@@ -288,17 +288,7 @@ export default function ControlsBar(props: Props) {
               >
                 <Cast className="h-4 w-4" aria-hidden="true" />
               </button>
-            ) : (
-              <button
-                type="button"
-                aria-label="Cast (not supported in this browser)"
-                disabled
-                title="Remote casting is not supported in this browser"
-                className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-40 sm:flex"
-              >
-                <Cast className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
+            ) : null}
             {props.airPlaySupported ? (
               <button
                 type="button"
@@ -309,17 +299,7 @@ export default function ControlsBar(props: Props) {
               >
                 <Airplay className="h-4 w-4" aria-hidden="true" />
               </button>
-            ) : (
-              <button
-                type="button"
-                aria-label="AirPlay (not supported in this browser)"
-                disabled
-                title="AirPlay is not supported in this browser"
-                className="hidden h-10 w-10 cursor-not-allowed items-center justify-center rounded-full text-[var(--player-fg-subtle)] opacity-40 sm:flex"
-              >
-                <Airplay className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
+            ) : null}
             <button
               type="button"
               aria-label={props.fullscreen ? 'Exit fullscreen' : 'Fullscreen'}

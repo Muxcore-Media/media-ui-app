@@ -1,6 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
   canApproveRequests,
+  canManageAcquisition,
+  canManageRequestPolicy,
   canManageInvites,
   canManageLibrary,
   canManageNaming,
@@ -59,6 +61,26 @@ describe('current user id cache', () => {
     expect(getCurrentUserId()).toBe('alice');
     setCurrentUserId('');
     expect(getCurrentUserId()).toBe('');
+  });
+
+  it.each([
+    { roles: ['admin'], allowed: true },
+    { roles: ['manager'], allowed: true },
+    { roles: ['viewer', ' Manager '], allowed: true },
+    { roles: ['approver'], allowed: false },
+    { roles: ['user'], allowed: false },
+    { roles: ['viewer'], allowed: false },
+    { roles: [], allowed: false },
+  ])('shared acquisition and request policy access for $roles is $allowed', ({ roles, allowed }) => {
+    setCurrentRoles(roles);
+    expect(canManageAcquisition()).toBe(allowed);
+    expect(canManageRequestPolicy()).toBe(allowed);
+  });
+
+  it('keeps approver-only request approval separate from household policy management', () => {
+    setCurrentRoles(['approver']);
+    expect(canApproveRequests()).toBe(true);
+    expect(canManageRequestPolicy()).toBe(false);
   });
 
   it('round-trips cached roles and privileged approve check', () => {

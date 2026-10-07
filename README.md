@@ -25,6 +25,19 @@ The polluted dump [`Muxcore-Media/media-ui`](https://github.com/Muxcore-Media/me
 - Auth via auth-local (login redirect + session cookie on the BFF)
 - **Logout** header link → `/logout`
 
+## Operator settings
+
+Acquisition, Quality, Delay, and request-policy Settings links and direct routes
+require an `admin` or `manager` role and the matching feature capability. An
+`approver` can still approve or deny individual requests, but cannot edit shared
+request quotas or auto-approval policy. Household members retain acquisition
+readiness messages and request-quota information on consumer pages; the readiness
+banner's settings link follows the Acquisition role and capability gate.
+
+These are UI presentation and routing guards. Server authorization is unchanged
+and remains authoritative, including stricter permissions on some mutations.
+FR-ADM-010 remains partial until operator controls migrate to admin-ui.
+
 ## Auth + stream (MVP host)
 
 On the MuxCore reference stack (`_mvp` in a sibling workspace checkout):

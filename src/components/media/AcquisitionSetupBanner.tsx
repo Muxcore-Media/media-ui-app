@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { TriangleAlert } from 'lucide-react';
 import { api } from '../../api/client';
 import { featureEnabled, useCapabilities } from '../../lib/capabilities';
+import { canManageAcquisition } from '../../lib/session';
 import {
   acquisitionFallbackMessage,
   type AcquisitionStatus,
@@ -53,10 +54,15 @@ export function AcquisitionSetupBanner() {
     >
       <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--warning-color,#f5a623)]" aria-hidden="true" />
       <p>
-        {message}{' '}
-        <Link to="/settings/acquisition" className="text-[var(--accent-color)] hover:underline">
-          Check acquisition
-        </Link>
+        {message}
+        {canManageAcquisition() && featureEnabled(caps, 'acquisition') && (
+          <>
+            {' '}
+            <Link to="/settings/acquisition" className="text-[var(--accent-color)] hover:underline">
+              Check acquisition
+            </Link>
+          </>
+        )}
       </p>
     </div>
   );

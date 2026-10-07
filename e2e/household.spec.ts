@@ -1,5 +1,6 @@
 import type { Page, TestInfo } from '@playwright/test';
 import { test, expect, movies } from './fixtures';
+import { DEFAULT_CAPABILITIES } from '../src/lib/capabilities';
 
 async function assertLayout(page: Page, testInfo: TestInfo, name: string) {
   await expect(page.getByTestId('userdata-sync-warning')).toHaveCount(0);
@@ -57,6 +58,32 @@ test('Personal settings remain accessible and operator policy links stay hidden'
   await expect(page.getByRole('heading', { name: 'Playback', exact: true })).toBeVisible();
   await assertLayout(page, testInfo, 'settings');
 });
+
+for (const role of ['viewer', 'approver']) {
+  test.describe(`${role} policy access`, () => {
+    test.use({ sessionRoles: [role] });
+
+    test('connected operator settings stay hidden on direct navigation', async ({ page }) => {
+      await page.route('http://127.0.0.1:4173/api/capabilities', (route) => route.fulfill({
+        json: {
+          ...DEFAULT_CAPABILITIES,
+          features: { ...DEFAULT_CAPABILITIES.features, acquisition: true, request: true },
+        },
+      }));
+      for (const path of ['acquisition', 'requests']) {
+        await page.goto(`/settings/${path}`);
+        await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('muxcore.session.roles.v1') || '[]'))).toEqual([role]);
+        await expect(page.getByRole('heading', { name: 'Profile', exact: true, level: 2 })).toBeVisible();
+        await expect(page.getByTestId(`settings-${path}`)).toHaveCount(0);
+        const sections = page.getByRole('navigation', { name: 'Settings sections' });
+        await expect(sections.getByRole('link', { name: 'Acquisition', exact: true })).toHaveCount(0);
+        await expect(sections.getByRole('link', { name: 'Requests', exact: true })).toHaveCount(0);
+      }
+      // The strict fixture has no acquisition/request-policy response: either
+      // settings pane loading its API would also fail fixture teardown.
+    });
+  });
+}
 
 test('Invite form submits the fixture request and presents the sign-in handoff', async ({ page, fixtureApi }, testInfo) => {
   await page.goto('/invite/fixture-invite');

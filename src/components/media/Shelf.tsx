@@ -34,7 +34,8 @@ export function Shelf({
   const scrollBy = (dir: 1 | -1) => {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: reducedMotion ? 'auto' : 'smooth' });
   };
 
   return (
@@ -61,30 +62,37 @@ export function Shelf({
         >
           {children}
         </div>
-        {canScrollLeft && (
-          <button
-            type="button"
-            aria-label="Scroll left"
-            onClick={() => scrollBy(-1)}
-            className="absolute inset-y-0 left-0 hidden w-10 items-center justify-center bg-gradient-to-r from-[var(--bg-base)] to-transparent opacity-0 transition-opacity group-hover/shelf:opacity-100 sm:flex"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-overlay)] text-[var(--text-primary)] shadow-lg">
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            </span>
-          </button>
-        )}
-        {canScrollRight && (
-          <button
-            type="button"
-            aria-label="Scroll right"
-            onClick={() => scrollBy(1)}
-            className="absolute inset-y-0 right-0 hidden w-10 items-center justify-center bg-gradient-to-l from-[var(--bg-base)] to-transparent opacity-0 transition-opacity group-hover/shelf:opacity-100 sm:flex"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-overlay)] text-[var(--text-primary)] shadow-lg">
-              <ChevronRight className="h-5 w-5" aria-hidden="true" />
-            </span>
-          </button>
-        )}
+        {/* Keep endpoint controls mounted so keyboard scrolling never removes focus. */}
+        <button
+          type="button"
+          aria-label="Scroll left"
+          aria-disabled={!canScrollLeft}
+          tabIndex={canScrollLeft ? 0 : -1}
+          onClick={() => { if (canScrollLeft) scrollBy(-1); }}
+          className={cn(
+            'absolute inset-y-0 left-0 hidden w-10 items-center justify-center bg-gradient-to-r from-[var(--bg-base)] to-transparent opacity-0 transition-opacity group-hover/shelf:opacity-100 focus-visible:visible focus-visible:opacity-100 sm:flex',
+            !canScrollLeft && 'invisible',
+          )}
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-overlay)] text-[var(--text-primary)] shadow-lg">
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+          </span>
+        </button>
+        <button
+          type="button"
+          aria-label="Scroll right"
+          aria-disabled={!canScrollRight}
+          tabIndex={canScrollRight ? 0 : -1}
+          onClick={() => { if (canScrollRight) scrollBy(1); }}
+          className={cn(
+            'absolute inset-y-0 right-0 hidden w-10 items-center justify-center bg-gradient-to-l from-[var(--bg-base)] to-transparent opacity-0 transition-opacity group-hover/shelf:opacity-100 focus-visible:visible focus-visible:opacity-100 sm:flex',
+            !canScrollRight && 'invisible',
+          )}
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-overlay)] text-[var(--text-primary)] shadow-lg">
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+          </span>
+        </button>
       </div>
     </section>
   );

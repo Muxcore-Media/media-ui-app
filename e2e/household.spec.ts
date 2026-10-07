@@ -101,6 +101,7 @@ test('Invite form submits the fixture request and presents the sign-in handoff',
 test('Invalid invite cannot submit an account', async ({ page, fixtureApi }) => {
   await page.goto('/invite/invalid-fixture');
   await expect(page.getByTestId('invite-join-invalid')).toHaveText('Invite not valid');
+  await expect(page.getByRole('alert')).toHaveText('Invite not valid');
   await expect(page.getByRole('button', { name: 'Create account' })).toHaveCount(0);
   expect(fixtureApi.redemptions).toEqual([]);
 });

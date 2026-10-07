@@ -106,6 +106,11 @@ export function canManageAcquisition(roles: string[] = getCurrentRoles()): boole
   return hasAdminOrManager(roles);
 }
 
+/** True when the session may create, update, or delete indexers (BFF admin-only writes). */
+export function canManageIndexers(roles: string[] = getCurrentRoles()): boolean {
+  return roles.some((role) => role.trim().toLowerCase() === 'admin');
+}
+
 /** True when the household session may change request quotas and auto-approval policy. */
 export function canManageRequestPolicy(roles: string[] = getCurrentRoles()): boolean {
   return hasAdminOrManager(roles);

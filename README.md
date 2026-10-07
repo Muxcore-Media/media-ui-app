@@ -33,6 +33,9 @@ require an `admin` or `manager` role and the matching feature capability. An
 request quotas or auto-approval policy. Household members retain acquisition
 readiness messages and request-quota information on consumer pages; the readiness
 banner's settings link follows the Acquisition role and capability gate.
+Within Acquisition, adding, enabling/disabling, and removing indexers requires
+`admin`, matching the BFF's indexer mutation rules. Managers retain readiness and
+catalog reads without those controls.
 
 These are UI presentation and routing guards. Server authorization is unchanged
 and remains authoritative, including stricter permissions on some mutations.
@@ -93,6 +96,9 @@ respects reduced motion; the browser projects request that preference.
 The tests in `e2e/` intercept BFF
 HTTP calls with local fixtures; unexpected API calls and external requests fail.
 No live indexers, media sources, credentials, or backend services are used.
+Indexer action scenarios first load the fixture identity, then verify manager
+reads and admin mutations on direct Settings navigation. Fresh-session Settings
+role hydration remains a separate known issue.
 
 An existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e`.

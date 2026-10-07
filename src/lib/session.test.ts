@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import {
   canApproveRequests,
   canManageAcquisition,
+  canManageIndexers,
   canManageRequestPolicy,
   canManageInvites,
   canManageLibrary,
@@ -81,6 +82,21 @@ describe('current user id cache', () => {
     setCurrentRoles(['approver']);
     expect(canApproveRequests()).toBe(true);
     expect(canManageRequestPolicy()).toBe(false);
+  });
+
+  it.each([
+    { roles: ['admin'], allowed: true },
+    { roles: ['manager', ' AdMiN '], allowed: true },
+    { roles: ['manager'], allowed: false },
+    { roles: ['manager', 'approver'], allowed: false },
+    { roles: ['approver'], allowed: false },
+    { roles: ['user'], allowed: false },
+    { roles: ['viewer'], allowed: false },
+    { roles: [], allowed: false },
+  ])('indexer mutations for $roles are $allowed', ({ roles, allowed }) => {
+    setCurrentRoles(roles);
+    expect(canManageIndexers()).toBe(allowed);
+    expect(canManageIndexers(roles)).toBe(allowed);
   });
 
   it('round-trips cached roles and privileged approve check', () => {

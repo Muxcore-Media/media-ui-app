@@ -96,9 +96,12 @@ respects reduced motion; the browser projects request that preference.
 The tests in `e2e/` intercept BFF
 HTTP calls with local fixtures; unexpected API calls and external requests fail.
 No live indexers, media sources, credentials, or backend services are used.
-Indexer action scenarios first load the fixture identity, then verify manager
-reads and admin mutations on direct Settings navigation. Fresh-session Settings
-role hydration remains a separate known issue.
+Indexer action scenarios verify manager reads and admin mutations on fresh direct
+Settings navigation. Delayed identity scenarios cover fresh roles, cached-role
+downgrades, expired sessions, userdata failures, unsaved personal form state, and
+the sign-out handoff. Cached identity is cosmetic: a completed session refresh
+updates visible controls, explicit authentication denial clears it, and transient
+network failures may retain it. Server authorization remains the BFF's responsibility.
 
 An existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e`.

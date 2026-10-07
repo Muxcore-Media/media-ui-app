@@ -19,6 +19,7 @@ import {
   signOut,
 } from './client';
 import { normalizeAcquisitionStatus } from '../lib/acquisition-status';
+import { clearCurrentSession, getSessionSnapshot, setCurrentRoles, setCurrentUserId } from '../lib/session';
 
 describe('posterURL', () => {
   it('passes through absolute and /images paths', () => {
@@ -2357,9 +2358,12 @@ describe('signOut', () => {
   const assign = vi.fn();
   beforeEach(() => {
     assign.mockReset();
+    setCurrentUserId('cached-admin');
+    setCurrentRoles(['admin']);
     vi.stubGlobal('location', { ...window.location, assign });
   });
   afterEach(() => {
+    clearCurrentSession();
     vi.unstubAllGlobals();
   });
 
@@ -2372,15 +2376,18 @@ describe('signOut', () => {
       credentials: 'same-origin',
     });
     expect(assign).toHaveBeenCalledWith('/login');
+    expect(getSessionSnapshot()).toEqual({ userId: '', roles: [] });
   });
 
   it('falls back to the GET confirm page when the POST fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 403 }));
     await signOut();
     expect(assign).toHaveBeenCalledWith('/logout');
+    expect(getSessionSnapshot()).toEqual({ userId: 'cached-admin', roles: ['admin'] });
     assign.mockReset();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('network')));
     await signOut();
     expect(assign).toHaveBeenCalledWith('/logout');
+    expect(getSessionSnapshot()).toEqual({ userId: 'cached-admin', roles: ['admin'] });
   });
 });

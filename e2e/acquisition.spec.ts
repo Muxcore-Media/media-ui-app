@@ -1,68 +1,12 @@
-import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { DEFAULT_CAPABILITIES } from '../src/lib/capabilities';
-
-type Mutation = { method: string; path: string; body: unknown };
-
-async function openAcquisitionForSession(page: Page, roles: string[]) {
-  // Exercise an established identity through the real session-refresh path.
-  // Fresh direct Settings role hydration is a separate rendering regression.
-  await page.goto('/');
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('muxcore.session.roles.v1') || '[]'))).toEqual(roles);
-  await page.goto('/settings/acquisition');
-}
-
-async function acquisitionFixture(page: Page) {
-  const state = {
-    indexers: [{ id: 17, name: 'Fixture indexer', protocol: 'torrent', language: 'en', configured: true }],
-    reads: 0,
-    mutations: [] as Mutation[],
-  };
-  page.on('request', (request) => {
-    const path = new URL(request.url()).pathname;
-    if ((path === '/api/indexers' || path.startsWith('/api/indexers/')) && request.method() !== 'GET') {
-      state.mutations.push({ method: request.method(), path, body: request.postData() ? request.postDataJSON() : null });
-    }
-  });
-  await page.route('http://127.0.0.1:4173/api/capabilities', (route) => route.fulfill({
-    json: {
-      ...DEFAULT_CAPABILITIES,
-      features: { ...DEFAULT_CAPABILITIES.features, acquisition: true },
-    },
-  }));
-  await page.route('http://127.0.0.1:4173/api/acquisition', (route) => {
-    if (route.request().method() !== 'GET') return route.fallback();
-    state.reads++;
-    return route.fulfill({
-      json: {
-        ready: true,
-        hasIndexer: true,
-        hasDownloader: true,
-        message: 'Fixture indexer and downloader are connected.',
-        live_grab_allowed: true,
-        indexer_mode: 'fixture',
-        downloader_mode: 'fixture',
-        vpn: { configured: false, conf_present: false },
-        peers: [
-          { id: 'fixture-indexer', kind: 'indexer', label: 'Fixture catalog', live: true },
-          { id: 'fixture-downloader', kind: 'downloader', label: 'Fixture downloader', live: true },
-        ],
-        indexers_available: true,
-        indexers: state.indexers,
-        capabilities_available: true,
-        capabilities: { supports_search: true, supports_movie_search: true, supports_season_pack: true },
-      },
-    });
-  });
-  return state;
-}
+import { acquisitionFixture } from './acquisition-fixture';
 
 test.describe('manager Acquisition access', () => {
   test.use({ sessionRoles: ['manager'] });
 
-  test('direct settings navigation keeps readiness and catalog reads without indexer writes', async ({ page, sessionRoles }) => {
+  test('direct settings navigation keeps readiness and catalog reads without indexer writes', async ({ page }) => {
     const state = await acquisitionFixture(page);
-    await openAcquisitionForSession(page, sessionRoles);
+    await page.goto('/settings/acquisition');
     const pane = page.getByTestId('settings-acquisition');
     await expect(pane.getByTestId('indexer-list')).toContainText('Fixture indexer');
     await expect(pane.getByTestId('acquisition-message')).toHaveText('Fixture indexer and downloader are connected.');
@@ -81,7 +25,7 @@ test.describe('manager Acquisition access', () => {
 test.describe('admin Acquisition actions', () => {
   test.use({ sessionRoles: ['admin'] });
 
-  test('indexer create, toggle and remove use the expected HTTP mutations', async ({ page, sessionRoles }) => {
+  test('indexer create, toggle and remove use the expected HTTP mutations', async ({ page }) => {
     const state = await acquisitionFixture(page);
     await page.route(/^http:\/\/127\.0\.0\.1:4173\/api\/indexers(?:\/\d+)?$/, (route) => {
       const request = route.request();
@@ -102,7 +46,7 @@ test.describe('admin Acquisition actions', () => {
       }
       return route.fallback();
     });
-    await openAcquisitionForSession(page, sessionRoles);
+    await page.goto('/settings/acquisition');
     const pane = page.getByTestId('settings-acquisition');
     await pane.getByRole('button', { name: 'Disable', exact: true }).click();
     await expect(pane.getByTestId('indexer-list')).toContainText('Disabled');

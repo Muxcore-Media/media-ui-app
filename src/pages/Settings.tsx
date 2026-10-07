@@ -27,7 +27,7 @@ import {
   Users,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
-import { canManageAcquisition, canManageBackups, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageRequestPolicy, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
+import { canManageAcquisition, canManageBackups, canManageIndexers, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageRequestPolicy, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -1539,7 +1539,7 @@ function AcquisitionPane() {
   const [apiKey, setApiKey] = useState('');
   const [implementation, setImplementation] = useState('torznab');
   const [busy, setBusy] = useState(false);
-  const canEdit = canManageAcquisition();
+  const canEdit = canManageIndexers();
 
   async function reload() {
     setStatus(await api.getAcquisition());

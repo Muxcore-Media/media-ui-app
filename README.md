@@ -62,6 +62,33 @@ The `Dockerfile` + `nginx.conf` in this repo are a dev-only static preview (stan
 
 CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`npm ci` + typecheck + test + build).
 
+## Browser fixtures
+
+```bash
+npm ci
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
+
+Playwright builds and serves the production SPA on loopback, then checks Home,
+movie browse/detail keyboard navigation, personal settings, and valid/invalid
+invite forms at 375, 768, 1280, and 1920 px. Each page gets a layout check and a
+screenshot attachment in `playwright-report/`. The tests in `e2e/` intercept BFF
+HTTP calls with local fixtures; unexpected API calls and external requests fail.
+No live indexers, media sources, credentials, or backend services are used.
+
+An existing Chromium binary can be selected with
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e`.
+[Browser fixtures CI](.github/workflows/browser.yml) uses Playwright's pinned
+Chromium and uploads reports, screenshots, and failure traces.
+
+This is partial T-M4-06 / NFR-A11Y-002 evidence. It verifies consumer rendering
+and interactions, including the invite form's sign-in handoff. Full J-02 still
+requires real invite creation, redemption, login, and session establishment;
+J-03 requires fixture acquisition/import, notification, playback, and resume;
+J-08 requires server-enforced parental restrictions. Those integrated journeys
+must run against the household backend stack. These fixtures do not prove them.
+
 ## MVP wiring
 
 | Piece | Location |

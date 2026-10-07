@@ -9,3 +9,5 @@ dist-app/
 *.log
 .vite/
 coverage/
+playwright-report/
+test-results/

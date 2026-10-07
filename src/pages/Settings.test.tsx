@@ -1269,11 +1269,12 @@ describe('Settings page', () => {
     });
   });
 
-  it('lists TRaSH packs and syncs them', async () => {
+  it('lets admins list TRaSH packs and sync them', async () => {
+    setCurrentRoles(['admin']);
     const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
     expect(await findByTestId('settings-quality')).toBeInTheDocument();
     expect(await screen.findByText('Remux-1080p')).toBeInTheDocument();
-    expect(screen.getByText('HD Bluray + WEB')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('HD Bluray + WEB')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('formats-sync-trash'));
     expect(await screen.findByTestId('formats-sync-result')).toHaveTextContent('Imported 8 formats');
     expect(syncTrashGuides).toHaveBeenCalledWith({
@@ -1283,7 +1284,8 @@ describe('Settings page', () => {
     });
   });
 
-  it('parses a release name without scoring', async () => {
+  it('lets managers parse a release name without scoring', async () => {
+    setCurrentRoles(['manager']);
     const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);
     expect(await findByTestId('settings-quality')).toBeInTheDocument();
     fireEvent.change(await screen.findByTestId('formats-score-title'), {
@@ -1378,7 +1380,8 @@ describe('Settings page', () => {
     });
   });
 
-  it('edits torrent and usenet grab delays', async () => {
+  it.each(['admin', 'manager'])('lets %s edit torrent and usenet grab delays', async (role) => {
+    setCurrentRoles([role]);
     const { findByTestId } = renderSettings('/settings/delay', ALL_CAPABILITIES);
     expect(await findByTestId('settings-delay')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Delay' })).toBeInTheDocument();
@@ -2049,6 +2052,48 @@ describe('Settings page', () => {
   });
 
   describe('FR-ADM-010: operator-only settings gating', () => {
+    describe.each([
+      { name: 'Quality', path: 'quality', capability: 'formats' as const, load: getFormats },
+      { name: 'Delay', path: 'delay', capability: 'activity' as const, load: listDelayProfiles },
+    ])('$name acquisition policy', ({ name, path, capability, load }) => {
+      it.each([
+        { role: 'viewer', roles: ['viewer'] },
+        { role: 'user', roles: ['user'] },
+        { role: 'approver', roles: ['approver'] },
+        { role: 'no role', roles: [] },
+      ])('hides the link and direct route for $role even when the peer is connected', ({ roles }) => {
+        setCurrentRoles(roles);
+        renderSettings(`/settings/${path}`, ALL_CAPABILITIES);
+
+        expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+        expect(screen.queryByTestId(`settings-${path}`)).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+        expect(load).not.toHaveBeenCalled();
+      });
+
+      it.each(['admin', 'manager'])('shows the link and direct route for %s with the peer connected', async (role) => {
+        setCurrentRoles([role]);
+        renderSettings(`/settings/${path}`, ALL_CAPABILITIES);
+
+        expect(screen.getByRole('link', { name })).toHaveAttribute('href', `/settings/${path}`);
+        expect(await screen.findByTestId(`settings-${path}`)).toBeInTheDocument();
+        expect(load).toHaveBeenCalledOnce();
+      });
+
+      it.each(['admin', 'manager'])('hides the link and direct route for %s when the peer is absent', (role) => {
+        setCurrentRoles([role]);
+        renderSettings(`/settings/${path}`, {
+          ...ALL_CAPABILITIES,
+          features: { ...ALL_CAPABILITIES.features, [capability]: false },
+        });
+
+        expect(screen.queryByRole('link', { name })).not.toBeInTheDocument();
+        expect(screen.queryByTestId(`settings-${path}`)).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+        expect(load).not.toHaveBeenCalled();
+      });
+    });
+
     describe('non-operator role (viewer)', () => {
       beforeEach(() => {
         setCurrentRoles(['viewer']);

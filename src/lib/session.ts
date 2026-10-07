@@ -121,7 +121,7 @@ export function canManageNaming(roles: string[] = getCurrentRoles()): boolean {
   return hasAdminOrManager(roles);
 }
 
-/** True when the household session may create/edit/delete quality profiles. */
+/** True when the household session may manage shared quality and grab-delay profiles. */
 export function canManageQuality(roles: string[] = getCurrentRoles()): boolean {
   return hasAdminOrManager(roles);
 }

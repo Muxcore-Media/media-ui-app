@@ -20,5 +20,5 @@
       "media-ui": ["./src/lib.ts"]
     }
   },
-  "include": ["src", ".design-sync/previews"]
+  "include": ["src", ".design-sync/previews", "e2e", "playwright.config.ts"]
 }

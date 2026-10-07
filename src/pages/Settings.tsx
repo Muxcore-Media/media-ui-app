@@ -6859,7 +6859,7 @@ export default function Settings() {
   else if (pathname.endsWith('/controls')) pane = <ControlsPane />;
   else if (pathname.endsWith('/debrid') && featureEnabled(caps, 'debrid')) pane = <DebridPane />;
   else if (pathname.endsWith('/acquisition')) pane = <AcquisitionPane />;
-  else if (pathname.endsWith('/quality') && featureEnabled(caps, 'formats')) pane = <QualityPane />;
+  else if (pathname.endsWith('/quality') && canManageQuality() && featureEnabled(caps, 'formats')) pane = <QualityPane />;
   else if (pathname.endsWith('/libraries') && canManageLibrary()) pane = <LibrariesPane />;
   else if (pathname.endsWith('/maintainer') && canManageLibrary()) pane = <MaintainerPane />;
   else if (pathname.endsWith('/guard') && canManageLibrary()) pane = <GuardPane />;
@@ -6869,7 +6869,7 @@ export default function Settings() {
   else if (pathname.endsWith('/users') && canManageUsers()) pane = <UsersPane />;
   else if (pathname.endsWith('/keys') && canManageKeys()) pane = <KeysPane />;
   else if (pathname.endsWith('/invites') && canManageInvites()) pane = <InvitesPane />;
-  else if (pathname.endsWith('/delay') && featureEnabled(caps, 'activity')) pane = <DelayPane />;
+  else if (pathname.endsWith('/delay') && canManageQuality() && featureEnabled(caps, 'activity')) pane = <DelayPane />;
   else if (pathname.endsWith('/tags') && canManageTags()) pane = <TagsPane />;
   else if (pathname.endsWith('/backups') && canManageBackups()) pane = <BackupsPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
@@ -6879,7 +6879,7 @@ export default function Settings() {
 
   const showDebrid = featureEnabled(caps, 'debrid');
   const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
-  const showQuality = featureEnabled(caps, 'formats');
+  const showQuality = canManageQuality() && featureEnabled(caps, 'formats');
   const showLibraries = canManageLibrary();
   const showNaming = canManageNaming();
   const showLists = canManageLists();
@@ -6887,7 +6887,7 @@ export default function Settings() {
   const showUsers = canManageUsers();
   const showKeys = canManageKeys();
   const showInvites = canManageInvites();
-  const showDelay = featureEnabled(caps, 'activity');
+  const showDelay = canManageQuality() && featureEnabled(caps, 'activity');
   const showTags = canManageTags();
   const showBackups = canManageBackups();
 

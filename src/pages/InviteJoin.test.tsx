@@ -30,7 +30,7 @@ describe('InviteJoin page', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByTestId('invite-join-invalid')).toBeInTheDocument();
-    expect(screen.getByText(/expired/i)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('expired');
   });
 
   it('renders signup form for valid invite', async () => {

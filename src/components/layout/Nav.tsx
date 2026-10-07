@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Baby,
@@ -63,6 +63,11 @@ export default function Nav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreInitialFocus = useRef<'first' | 'last'>('first');
+  const mobileButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLElement>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -78,12 +83,32 @@ export default function Nav() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!moreOpen) return;
+    if (moreOpen) {
+      const items = moreMenuRef.current?.querySelectorAll<HTMLAnchorElement>('[role="menuitem"]');
+      items?.[moreInitialFocus.current === 'last' ? items.length - 1 : 0]?.focus();
+    }
+  }, [moreOpen]);
+
+  useEffect(() => {
+    if (mobileOpen) mobileMenuRef.current?.querySelector<HTMLAnchorElement>('a')?.focus();
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!moreOpen && !mobileOpen) return;
     const onClick = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
+      if (moreOpen && moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
     };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMoreOpen(false);
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      if (moreOpen) {
+        setMoreOpen(false);
+        moreButtonRef.current?.focus();
+      }
+      if (mobileOpen) {
+        setMobileOpen(false);
+        mobileButtonRef.current?.focus();
+      }
     };
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKeyDown);
@@ -91,7 +116,33 @@ export default function Nav() {
       document.removeEventListener('mousedown', onClick);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [moreOpen]);
+  }, [moreOpen, mobileOpen]);
+
+  function onMoreMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Tab') {
+      // Continue the normal tab sequence from the trigger when leaving the menu.
+      setMoreOpen(false);
+      moreButtonRef.current?.focus();
+      return;
+    }
+    const items = Array.from(moreMenuRef.current?.querySelectorAll<HTMLAnchorElement>('[role="menuitem"]') || []);
+    if (!items.length) return;
+    const current = items.indexOf(document.activeElement as HTMLAnchorElement);
+    if (event.key === ' ' && current >= 0) {
+      event.preventDefault();
+      items[current].click();
+      return;
+    }
+    const next = event.key === 'Home' ? 0
+      : event.key === 'End' ? items.length - 1
+      : event.key === 'ArrowDown' ? (current + 1) % items.length
+      : event.key === 'ArrowUp' ? (current - 1 + items.length) % items.length
+      : null;
+    if (next !== null) {
+      event.preventDefault();
+      items[next].focus();
+    }
+  }
 
   return (
     <>
@@ -128,8 +179,19 @@ export default function Nav() {
             {showDesktopMore && (
               <div className="relative shrink-0" ref={moreRef}>
                 <button
+                  ref={moreButtonRef}
                   type="button"
-                  onClick={() => setMoreOpen((v) => !v)}
+                  onClick={() => {
+                    moreInitialFocus.current = 'first';
+                    setMoreOpen((v) => !v);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      moreInitialFocus.current = event.key === 'ArrowUp' ? 'last' : 'first';
+                      setMoreOpen(true);
+                    }
+                  }}
                   aria-expanded={moreOpen}
                   aria-haspopup="menu"
                   aria-controls="desktop-more-menu"
@@ -145,8 +207,11 @@ export default function Nav() {
                 </button>
                 {moreOpen && (
                   <div
+                    ref={moreMenuRef}
                     id="desktop-more-menu"
                     role="menu"
+                    aria-label="More navigation"
+                    onKeyDown={onMoreMenuKeyDown}
                     className="absolute left-0 top-full z-50 mt-2 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 shadow-xl"
                   >
                     {visibleOverflowNav(caps).map((item) => (
@@ -154,6 +219,7 @@ export default function Nav() {
                         key={item.to}
                         to={item.to}
                         role="menuitem"
+                        tabIndex={-1}
                         onClick={() => setMoreOpen(false)}
                         className={({ isActive }) =>
                           cn(
@@ -224,6 +290,8 @@ export default function Nav() {
 
       {showMobileMore && mobileOpen && (
         <nav
+          ref={mobileMenuRef}
+          id="mobile-more-menu"
           aria-label="More navigation"
           className="fixed inset-x-0 bottom-16 z-40 max-h-[60vh] overflow-y-auto border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-2xl lg:hidden"
         >
@@ -258,6 +326,7 @@ export default function Nav() {
       )}
 
       <MobileTabBar
+        moreButtonRef={mobileButtonRef}
         open={mobileOpen}
         onToggleMore={() => setMobileOpen((v) => !v)}
         showMore={showMobileMore}
@@ -274,10 +343,12 @@ const MOBILE_TABS: { to: string; label: string; icon: React.ReactNode; end?: boo
 
 /** Bottom tab bar for thumb reach on small screens (AGENTS.md §4.1): Home/Search/Library/More. */
 function MobileTabBar({
+  moreButtonRef,
   open,
   onToggleMore,
   showMore,
 }: {
+  moreButtonRef: RefObject<HTMLButtonElement>;
   open: boolean;
   onToggleMore: () => void;
   showMore: boolean;
@@ -305,9 +376,11 @@ function MobileTabBar({
       ))}
       {showMore && (
         <button
+          ref={moreButtonRef}
           type="button"
           onClick={onToggleMore}
           aria-expanded={open}
+          aria-controls="mobile-more-menu"
           aria-label={open ? 'Close menu' : 'More'}
           className={cn(
             'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition',

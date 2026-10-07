@@ -27,7 +27,7 @@ import {
   Users,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
-import { canApproveRequests, canManageBackups, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
+import { canManageAcquisition, canManageBackups, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageRequestPolicy, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
   getPreferences,
@@ -1539,7 +1539,7 @@ function AcquisitionPane() {
   const [apiKey, setApiKey] = useState('');
   const [implementation, setImplementation] = useState('torznab');
   const [busy, setBusy] = useState(false);
-  const canEdit = canManageQuality();
+  const canEdit = canManageAcquisition();
 
   async function reload() {
     setStatus(await api.getAcquisition());
@@ -6858,7 +6858,7 @@ export default function Settings() {
   else if (pathname.endsWith('/subtitles')) pane = <SubtitlesPane />;
   else if (pathname.endsWith('/controls')) pane = <ControlsPane />;
   else if (pathname.endsWith('/debrid') && featureEnabled(caps, 'debrid')) pane = <DebridPane />;
-  else if (pathname.endsWith('/acquisition')) pane = <AcquisitionPane />;
+  else if (pathname.endsWith('/acquisition') && canManageAcquisition() && featureEnabled(caps, 'acquisition')) pane = <AcquisitionPane />;
   else if (pathname.endsWith('/quality') && canManageQuality() && featureEnabled(caps, 'formats')) pane = <QualityPane />;
   else if (pathname.endsWith('/libraries') && canManageLibrary()) pane = <LibrariesPane />;
   else if (pathname.endsWith('/maintainer') && canManageLibrary()) pane = <MaintainerPane />;
@@ -6873,12 +6873,13 @@ export default function Settings() {
   else if (pathname.endsWith('/tags') && canManageTags()) pane = <TagsPane />;
   else if (pathname.endsWith('/backups') && canManageBackups()) pane = <BackupsPane />;
   else if (pathname.endsWith('/notifications')) pane = <NotificationsPane />;
-  else if (pathname.endsWith('/requests') && canApproveRequests() && featureEnabled(caps, 'request')) {
+  else if (pathname.endsWith('/requests') && canManageRequestPolicy() && featureEnabled(caps, 'request')) {
     pane = <RequestsPane />;
   }
 
   const showDebrid = featureEnabled(caps, 'debrid');
-  const showRequests = canApproveRequests() && featureEnabled(caps, 'request');
+  const showRequests = canManageRequestPolicy() && featureEnabled(caps, 'request');
+  const showAcquisition = canManageAcquisition() && featureEnabled(caps, 'acquisition');
   const showQuality = canManageQuality() && featureEnabled(caps, 'formats');
   const showLibraries = canManageLibrary();
   const showNaming = canManageNaming();
@@ -6941,10 +6942,12 @@ export default function Settings() {
             Debrid
           </NavLink>
         )}
-        <NavLink to="/settings/acquisition" className={tabClass}>
-          <PlugZap className="h-4 w-4" aria-hidden="true" />
-          Acquisition
-        </NavLink>
+        {showAcquisition && (
+          <NavLink to="/settings/acquisition" className={tabClass}>
+            <PlugZap className="h-4 w-4" aria-hidden="true" />
+            Acquisition
+          </NavLink>
+        )}
         {showQuality && (
           <NavLink to="/settings/quality" className={tabClass}>
             <Layers className="h-4 w-4" aria-hidden="true" />

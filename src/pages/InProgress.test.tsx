@@ -221,8 +221,8 @@ describe('InProgress page', () => {
     );
   });
 
-  it('lets privileged household users approve a pending request', async () => {
-    setCurrentRoles(['admin']);
+  it.each(['admin', 'manager', 'approver'])('lets %s approve a pending request', async (role) => {
+    setCurrentRoles([role]);
     const pending = {
       id: 'r-pend',
       itemType: 'movie',
@@ -276,8 +276,8 @@ describe('InProgress page', () => {
     expect(screen.queryByRole('button', { name: 'Deny' })).not.toBeInTheDocument();
   });
 
-  it('denies a pending request with an optional reason', async () => {
-    setCurrentRoles(['manager']);
+  it.each(['admin', 'manager', 'approver'])('lets %s deny a pending request with an optional reason', async (role) => {
+    setCurrentRoles([role]);
     const pending = {
       id: 'r-deny',
       itemType: 'tv',

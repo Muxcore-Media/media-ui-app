@@ -1231,15 +1231,29 @@ describe('Settings page', () => {
     expect(getPreferences().parental.pinEnabled).toBe(false);
   });
 
-  it('lets approvers edit household request quotas', async () => {
-    setCurrentRoles(['admin']);
+  it.each(['admin', 'manager'])('lets %s save household request policy', async (role) => {
+    setCurrentRoles([role]);
     const { findByTestId } = renderSettings('/settings/requests');
     expect(await findByTestId('settings-requests')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('sam')).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId('settings-max-pending'), { target: { value: '3' } });
+    fireEvent.change(screen.getByTestId('settings-max-week'), { target: { value: '6' } });
+    fireEvent.change(screen.getByTestId('settings-auto-approve'), { target: { value: 'sam, alex' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(updateRequestPolicy).toHaveBeenCalledWith({
+        maxPendingPerUser: 3,
+        maxPerWeek: 6,
+        autoApproveUsersCsv: 'sam, alex',
+      });
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('Request policy saved');
   });
 
-  it('shows live indexer and downloader peers', async () => {
-    const { findByTestId } = renderSettings('/settings/acquisition');
+  it.each(['admin', 'manager'])('shows acquisition peers to %s when the capability is enabled', async (role) => {
+    setCurrentRoles([role]);
+    const { findByTestId } = renderSettings('/settings/acquisition', ALL_CAPABILITIES);
     expect(await findByTestId('settings-acquisition')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Acquisition' })).toBeInTheDocument();
     expect(await screen.findByText('Pirate Bay indexer')).toBeInTheDocument();
@@ -1253,7 +1267,7 @@ describe('Settings page', () => {
 
   it('lets admins add a Prowlarr Torznab indexer', async () => {
     setCurrentRoles(['admin']);
-    renderSettings('/settings/acquisition');
+    renderSettings('/settings/acquisition', ALL_CAPABILITIES);
     fireEvent.change(await screen.findByLabelText('Indexer name'), { target: { value: 'Knaben' } });
     fireEvent.change(screen.getByLabelText('Indexer URL'), { target: { value: 'https://knaben.example/api' } });
     fireEvent.change(screen.getByLabelText('Indexer API key'), { target: { value: 'secret' } });
@@ -2055,7 +2069,9 @@ describe('Settings page', () => {
     describe.each([
       { name: 'Quality', path: 'quality', capability: 'formats' as const, load: getFormats },
       { name: 'Delay', path: 'delay', capability: 'activity' as const, load: listDelayProfiles },
-    ])('$name acquisition policy', ({ name, path, capability, load }) => {
+      { name: 'Acquisition', path: 'acquisition', capability: 'acquisition' as const, load: getAcquisition },
+      { name: 'Requests', path: 'requests', capability: 'request' as const, load: getRequestPolicy },
+    ])('$name operator settings', ({ name, path, capability, load }) => {
       it.each([
         { role: 'viewer', roles: ['viewer'] },
         { role: 'user', roles: ['user'] },
@@ -2224,13 +2240,13 @@ describe('Settings page', () => {
       });
 
       it('hides Requests nav link for viewer without approver role', () => {
-        const caps = { ...DEFAULT_CAPABILITIES, request: true };
+        const caps = { ...DEFAULT_CAPABILITIES, features: { ...DEFAULT_CAPABILITIES.features, request: true } };
         renderSettings('/settings', caps);
         expect(screen.queryByRole('link', { name: /Requests/i })).not.toBeInTheDocument();
       });
 
       it('hides Requests pane when viewer tries to access directly', () => {
-        const caps = { ...DEFAULT_CAPABILITIES, request: true };
+        const caps = { ...DEFAULT_CAPABILITIES, features: { ...DEFAULT_CAPABILITIES.features, request: true } };
         renderSettings('/settings/requests', caps);
         expect(screen.queryByTestId('settings-requests')).not.toBeInTheDocument();
         expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
@@ -2248,7 +2264,6 @@ describe('Settings page', () => {
         expect(screen.getByRole('link', { name: /Subtitles/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Controls/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Notifications/i })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /Acquisition/i })).toBeInTheDocument();
       });
 
       it('allows viewer to access Profile pane', () => {
@@ -2409,14 +2424,7 @@ describe('Settings page', () => {
       });
 
       it('shows Requests nav link and pane for admin when feature enabled', async () => {
-        const caps = { ...DEFAULT_CAPABILITIES, request: true };
-        getRequestPolicy.mockResolvedValue({
-          available: true,
-          mode: 'auto',
-          allowMode: true,
-          allowWatchlist: false,
-          allowGuestSearch: false,
-        });
+        const caps = { ...DEFAULT_CAPABILITIES, features: { ...DEFAULT_CAPABILITIES.features, request: true } };
         
         renderSettings('/settings', caps);
         expect(screen.getByRole('link', { name: /Requests/i })).toBeInTheDocument();
@@ -2436,7 +2444,6 @@ describe('Settings page', () => {
         expect(screen.getByRole('link', { name: /Subtitles/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Controls/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Notifications/i })).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /Acquisition/i })).toBeInTheDocument();
       });
     });
 
@@ -2498,22 +2505,14 @@ describe('Settings page', () => {
     describe('approver role', () => {
       beforeEach(() => {
         setCurrentRoles(['approver']);
-        getRequestPolicy.mockResolvedValue({
-          available: true,
-          mode: 'auto',
-          allowMode: true,
-          allowWatchlist: false,
-          allowGuestSearch: false,
-        });
       });
 
-      it('shows Requests pane for approver when feature enabled', async () => {
-        const caps = { ...DEFAULT_CAPABILITIES, request: true };
-        renderSettings('/settings', caps);
-        expect(screen.getByRole('link', { name: /Requests/i })).toBeInTheDocument();
-        
-        renderSettings('/settings/requests', caps);
-        expect(await screen.findByTestId('settings-requests')).toBeInTheDocument();
+      it('hides request policy from an approver even when the feature is enabled', () => {
+        renderSettings('/settings/requests', ALL_CAPABILITIES);
+        expect(screen.queryByRole('link', { name: /Requests/i })).not.toBeInTheDocument();
+        expect(screen.queryByTestId('settings-requests')).not.toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+        expect(getRequestPolicy).not.toHaveBeenCalled();
       });
 
       it('hides other operator panes for approver-only role', () => {

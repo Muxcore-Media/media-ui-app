@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../../lib/capabilities';
 import { AcquisitionSetupBanner } from './AcquisitionSetupBanner';
+import { setCurrentRoles } from '../../lib/session';
 
 const getAcquisition = vi.fn();
 
@@ -30,15 +31,21 @@ function renderBanner(caps = DEFAULT_CAPABILITIES) {
 }
 
 describe('AcquisitionSetupBanner', () => {
-  it('asks to connect a downloader when peers are down', async () => {
-    getAcquisition.mockResolvedValueOnce({
+  beforeEach(() => {
+    setCurrentRoles([]);
+    getAcquisition.mockReset();
+    getAcquisition.mockResolvedValue({
       ready: false,
       hasIndexer: false,
       hasDownloader: false,
       peers: [],
       message: 'No indexer or downloader is running.',
     });
-    renderBanner();
+  });
+
+  it.each(['admin', 'manager'])('links %s to acquisition settings when the capability is enabled', async (role) => {
+    setCurrentRoles([role]);
+    renderBanner(ALL_CAPABILITIES);
     expect(await screen.findByTestId('acquisition-setup')).toHaveTextContent(
       'No indexer or downloader is running.',
     );
@@ -46,6 +53,27 @@ describe('AcquisitionSetupBanner', () => {
       'href',
       '/settings/acquisition',
     );
+  });
+
+  it.each([
+    { role: 'viewer', roles: ['viewer'] },
+    { role: 'user', roles: ['user'] },
+    { role: 'approver', roles: ['approver'] },
+    { role: 'no role', roles: [] },
+  ])('keeps readiness visible to $role without an operator settings link', async ({ roles }) => {
+    setCurrentRoles(roles);
+    renderBanner(ALL_CAPABILITIES);
+    expect(await screen.findByTestId('acquisition-setup')).toHaveTextContent('No indexer or downloader is running.');
+    expect(screen.queryByRole('link', { name: 'Check acquisition' })).not.toBeInTheDocument();
+    expect(getAcquisition).toHaveBeenCalledOnce();
+  });
+
+  it.each(['admin', 'manager'])('omits the settings link for %s when acquisition is disabled', async (role) => {
+    setCurrentRoles([role]);
+    renderBanner({ ...ALL_CAPABILITIES, features: { ...ALL_CAPABILITIES.features, acquisition: false } });
+    expect(await screen.findByTestId('acquisition-setup')).toHaveTextContent('No indexer or downloader is running.');
+    expect(screen.queryByRole('link', { name: 'Check acquisition' })).not.toBeInTheDocument();
+    expect(getAcquisition).toHaveBeenCalledOnce();
   });
 
   it('hides when indexer and downloader are live', async () => {

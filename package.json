@@ -13,7 +13,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview": "vite preview --outDir dist-app"
+    "preview": "vite preview --outDir dist-app",
+    "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -25,10 +26,12 @@
     "react-router-dom": "^6.30.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.1.6",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.5",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

@@ -38,8 +38,10 @@ test('Browse to movie details using the keyboard', async ({ page }, testInfo) =>
   await card.focus();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(`/movies/${movies[0].id}`);
-  await expect(page.getByRole('heading', { name: movies[0].title })).toBeVisible();
-  await expect(page.getByRole('link', { name: `Play ${movies[0].title}`, exact: true })).toHaveAttribute('href', /\/player\?/);
+  // The URL can settle while the previous library cards are still rendering.
+  const detail = page.getByTestId('movie-detail-page');
+  await expect(detail.getByRole('heading', { name: movies[0].title, exact: true, level: 1 })).toBeVisible();
+  await expect(detail.getByRole('link', { name: `Play ${movies[0].title}`, exact: true })).toHaveAttribute('href', /\/player\?/);
   await assertLayout(page, testInfo, 'movie-detail');
 });
 

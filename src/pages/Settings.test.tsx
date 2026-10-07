@@ -1283,6 +1283,41 @@ describe('Settings page', () => {
     });
   });
 
+  it.each([{ roles: ['manager'] }, { roles: ['manager', 'approver'] }])('keeps acquisition readable without indexer mutations for $roles', async ({ roles }) => {
+    setCurrentRoles(roles);
+    renderSettings('/settings/acquisition', ALL_CAPABILITIES);
+    expect(await screen.findByTestId('indexer-list')).toHaveTextContent('Knaben');
+    expect(screen.getByTestId('indexer-list')).toHaveTextContent('Enabled');
+    expect(screen.getByTestId('acquisition-message')).toHaveTextContent('An indexer is up');
+    expect(screen.getByRole('link', { name: 'Acquisition' })).toHaveAttribute('href', '/settings/acquisition');
+    expect(screen.queryByTestId('indexer-add-form')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(Enable|Disable|Remove|Add indexer)/ })).not.toBeInTheDocument();
+    expect(getAcquisition).toHaveBeenCalledOnce();
+    expect(createIndexer).not.toHaveBeenCalled();
+    expect(updateIndexer).not.toHaveBeenCalled();
+    expect(deleteIndexer).not.toHaveBeenCalled();
+  });
+
+  it('lets admins disable an indexer and reload the catalog', async () => {
+    setCurrentRoles(['admin']);
+    renderSettings('/settings/acquisition', ALL_CAPABILITIES);
+    fireEvent.click(await screen.findByRole('button', { name: 'Disable' }));
+    await waitFor(() => expect(updateIndexer).toHaveBeenCalledWith(3, { enable: false }));
+    await waitFor(() => expect(getAcquisition).toHaveBeenCalledTimes(2));
+    expect(createIndexer).not.toHaveBeenCalled();
+    expect(deleteIndexer).not.toHaveBeenCalled();
+  });
+
+  it('lets admins remove an indexer and reload the catalog', async () => {
+    setCurrentRoles(['admin']);
+    renderSettings('/settings/acquisition', ALL_CAPABILITIES);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Knaben' }));
+    await waitFor(() => expect(deleteIndexer).toHaveBeenCalledWith(3));
+    await waitFor(() => expect(getAcquisition).toHaveBeenCalledTimes(2));
+    expect(createIndexer).not.toHaveBeenCalled();
+    expect(updateIndexer).not.toHaveBeenCalled();
+  });
+
   it('lets admins list TRaSH packs and sync them', async () => {
     setCurrentRoles(['admin']);
     const { findByTestId } = renderSettings('/settings/quality', ALL_CAPABILITIES);

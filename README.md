@@ -85,8 +85,12 @@ npm run test:e2e
 
 Playwright builds and serves the production SPA on loopback, then checks Home,
 movie browse/detail keyboard navigation, personal settings, and valid/invalid
-invite forms at 375, 768, 1280, and 1920 px. Each page gets a layout check and a
-screenshot attachment in `playwright-report/`. The tests in `e2e/` intercept BFF
+invite forms at 375, 768, 1280, and 1920 px. The main journey checks include layout
+assertions and screenshot attachments in `playwright-report/`. Keyboard regressions
+also cover More navigation entry/traversal/Escape focus return, visible shelf
+controls, and invite success/error focus with a usable retry. Shelf scrolling
+respects reduced motion; the browser projects request that preference.
+The tests in `e2e/` intercept BFF
 HTTP calls with local fixtures; unexpected API calls and external requests fail.
 No live indexers, media sources, credentials, or backend services are used.
 
@@ -101,6 +105,8 @@ requires real invite creation, redemption, login, and session establishment;
 J-03 requires fixture acquisition/import, notification, playback, and resume;
 J-08 requires server-enforced parental restrictions. Those integrated journeys
 must run against the household backend stack. These fixtures do not prove them.
+The keyboard checks are partial NFR-A11Y-001 evidence: they do not establish full
+WCAG conformance, contrast compliance, or actual screen-reader announcements.
 
 ## MVP wiring
 

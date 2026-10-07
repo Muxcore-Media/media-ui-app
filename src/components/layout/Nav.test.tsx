@@ -38,6 +38,10 @@ describe('Nav More menu', () => {
       'href',
       '/collections',
     );
+    expect(screen.getAllByRole('menuitem')[0]).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(within(primaryNav).getByRole('button', { name: 'More' })).toHaveFocus();
   });
 
   it('opens mobile sheet when More is tapped', () => {
@@ -50,5 +54,22 @@ describe('Nav More menu', () => {
       'href',
       '/collections',
     );
+    expect(within(sheet).getByRole('link', { name: 'TV' })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(screen.queryByRole('navigation', { name: 'More navigation' })).not.toBeInTheDocument();
+    expect(within(mobileNav).getByRole('button', { name: 'More' })).toHaveFocus();
+  });
+
+  it('activates a desktop menu link with Space', () => {
+    renderNav();
+    const primaryNav = screen.getByRole('navigation', { name: 'Primary navigation' });
+    const trigger = within(primaryNav).getByRole('button', { name: 'More' });
+    fireEvent.click(trigger);
+    const collections = screen.getByRole('menuitem', { name: 'Collections' });
+    collections.focus();
+    fireEvent.keyDown(collections, { key: ' ' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menuitem', { name: 'Collections' })).toHaveAttribute('aria-current', 'page');
   });
 });

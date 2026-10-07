@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 
@@ -22,6 +22,16 @@ export default function InviteJoin() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [invalid, setInvalid] = useState(false);
+  const loginRef = useRef<HTMLAnchorElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (done) loginRef.current?.focus();
+  }, [done]);
+
+  useEffect(() => {
+    if (error && !busy && !invalid) errorRef.current?.focus();
+  }, [error, busy, invalid]);
 
   useEffect(() => {
     if (!token) {
@@ -106,7 +116,7 @@ export default function InviteJoin() {
       </div>
 
       {loading && (
-        <p className="text-sm text-[var(--text-secondary)]" data-testid="invite-join-loading">
+        <p role="status" className="text-sm text-[var(--text-secondary)]" data-testid="invite-join-loading">
           Checking invite…
         </p>
       )}
@@ -116,11 +126,13 @@ export default function InviteJoin() {
           className="space-y-3 rounded-[var(--radius-md)] border border-[var(--success)]/40 bg-[var(--bg-elevated)] p-4 text-sm"
           data-testid="invite-join-success"
         >
-          <p className="font-medium text-[var(--success)]">
+          <p id="invite-join-success-message" role="status" className="font-medium text-[var(--success)]">
             Account created — you can sign in now.
           </p>
           <a
+            ref={loginRef}
             href="/login"
+            aria-describedby="invite-join-success-message"
             className="inline-flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-4 py-2 font-semibold text-black transition hover:bg-[var(--accent-hover)]"
           >
             Go to login
@@ -130,6 +142,7 @@ export default function InviteJoin() {
 
       {!loading && !done && invalid && (
         <div
+          role="alert"
           className="rounded-[var(--radius-md)] border border-[var(--danger-color)]/40 bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--danger-color)]"
           data-testid="invite-join-invalid"
         >
@@ -148,7 +161,7 @@ export default function InviteJoin() {
             <span className="font-medium text-[var(--text-primary)]">{role}</span>.
           </p>
           {error && (
-            <p className="rounded-[var(--radius-sm)] border border-[var(--danger-color)]/40 px-3 py-2 text-sm text-[var(--danger-color)]">
+            <p ref={errorRef} role="alert" tabIndex={-1} className="rounded-[var(--radius-sm)] border border-[var(--danger-color)]/40 px-3 py-2 text-sm text-[var(--danger-color)]">
               {error}
             </p>
           )}

@@ -19,8 +19,9 @@ export const movies = Array.from({ length: 12 }, (_, index) => ({
 
 // These are BFF HTTP response fixtures, not substitutes for backend journey tests.
 // Unknown API calls and all external traffic fail the test instead of reaching peers.
-export const test = base.extend<{ fixtureApi: { redemptions: unknown[] } }>({
-  fixtureApi: [async ({ context }, use) => {
+export const test = base.extend<{ fixtureApi: { redemptions: unknown[] }; sessionRoles: string[] }>({
+  sessionRoles: [['viewer'], { option: true }],
+  fixtureApi: [async ({ context, sessionRoles }, use) => {
     const unexpected: string[] = [];
     const runtimeErrors: string[] = [];
     context.on('weberror', (error) => runtimeErrors.push(error.error().message));
@@ -68,8 +69,10 @@ export const test = base.extend<{ fixtureApi: { redemptions: unknown[] } }>({
       if (!path.startsWith('/api/') && !path.startsWith('/stream/')) return route.continue();
       if (method === 'GET') {
         if (path === '/api/capabilities') return json(capabilities);
-        if (path === '/api/session' || path === '/api/me') return json({ user_id: 'fixture-viewer', roles: ['viewer'] });
+        if (path === '/api/session' || path === '/api/me') return json({ user_id: 'fixture-member', roles: sessionRoles });
         if (path === '/api/userdata') return json(userdata);
+        if (path === '/api/totp') return json({ available: false, enabled: false });
+        if (path === '/api/passkeys') return json({ available: false, passkeys: [] });
         if (path === '/api/movies') return json({ items: movies, total: movies.length, page: 1, page_size: 48 });
         const movie = movies.find((item) => path === `/api/movies/${item.id}`);
         if (movie) return json({ movie });

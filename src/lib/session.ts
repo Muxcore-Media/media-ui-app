@@ -101,6 +101,16 @@ function hasAdminOrManager(roles: string[]): boolean {
   });
 }
 
+/** True when the household session may access shared acquisition settings. */
+export function canManageAcquisition(roles: string[] = getCurrentRoles()): boolean {
+  return hasAdminOrManager(roles);
+}
+
+/** True when the household session may change request quotas and auto-approval policy. */
+export function canManageRequestPolicy(roles: string[] = getCurrentRoles()): boolean {
+  return hasAdminOrManager(roles);
+}
+
 /** True when the household session may create/revoke invite links (Wizarr-style). */
 export function canManageInvites(roles: string[] = getCurrentRoles()): boolean {
   return hasAdminOrManager(roles);

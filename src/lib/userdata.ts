@@ -1,7 +1,7 @@
 /** Server-authoritative userdata: BFF/userdata-local is source of truth; localStorage is cache/offline. */
 
 import { buildEpisodePlayerHref } from './playHref';
-import { refreshCurrentUserId, setCurrentUserId, userIdFromUnknown } from './session';
+import { getSessionGeneration, refreshCurrentUserId, setCurrentUserId, userIdFromUnknown } from './session';
 import { clampAudioOffsetMs } from './audio-offset';
 import { clampSubtitleOffsetMs, normalizeSubtitleTextColor } from './subtitle-offset';
 
@@ -797,6 +797,7 @@ function mergeProgressMaps(
 
 /** Pull server userdata into localStorage cache. Server wins on progress conflicts. */
 export async function pullUserdataFromServer(): Promise<boolean> {
+  const sessionGeneration = getSessionGeneration();
   try {
     const res = await fetch('/api/userdata', { headers: { Accept: 'application/json' } });
     if (!res.ok) {
@@ -825,9 +826,12 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     if (Array.isArray(blob.queue)) {
       writeJSON(KEYS.queue, blob.queue);
     }
-    const blobUserId = userIdFromUnknown(blob);
-    if (blobUserId) setCurrentUserId(blobUserId);
-    else await refreshCurrentUserId();
+    // A response started before logout must neither restore an ID nor start a new refresh.
+    if (sessionGeneration === getSessionGeneration()) {
+      const blobUserId = userIdFromUnknown(blob);
+      if (blobUserId) setCurrentUserId(blobUserId);
+      else await refreshCurrentUserId();
+    }
     setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() });
     return true;
   } catch {

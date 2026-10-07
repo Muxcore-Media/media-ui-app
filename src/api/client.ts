@@ -27,6 +27,7 @@ import type {
 } from '../types';
 import type { Capabilities, FeatureKey, LibraryKey } from '../lib/capabilities';
 import { DEFAULT_CAPABILITIES } from '../lib/capabilities';
+import { clearCurrentSession } from '../lib/session';
 import {
   normalizeAcquisitionStatus,
   normalizeHouseholdIndexer,
@@ -289,6 +290,7 @@ export async function signOut(): Promise<void> {
   try {
     const res = await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
     if (!res.ok) throw new Error(`logout failed: ${res.status}`);
+    clearCurrentSession();
     window.location.assign('/login');
   } catch {
     window.location.assign('/logout');

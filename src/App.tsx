@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import CapabilitiesProvider from './components/CapabilitiesProvider';
 import Layout from './components/Layout';
@@ -19,6 +19,7 @@ import {
 import { applyTheme, getPreferences, pullUserdataFromServer } from './lib/userdata';
 import { featureEnabled, libraryEnabled, useCapabilities } from './lib/capabilities';
 import { useReadyNotifications } from './lib/useReadyNotifications';
+import { getSessionSnapshot, refreshCurrentUserId, subscribeSession } from './lib/session';
 
 const Player = lazy(() => import('./pages/Player'));
 const LiveTV = lazy(() => import('./pages/LiveTV'));
@@ -605,9 +606,14 @@ function AppRoutes() {
 
 export default function App() {
   const [userdataSyncFailed, setUserdataSyncFailed] = useState(false);
+  // Re-render active permission consumers without replacing the router or page state.
+  useSyncExternalStore(subscribeSession, getSessionSnapshot, getSessionSnapshot);
 
   useEffect(() => {
     applyTheme(getPreferences().display.theme);
+    // Identity must load even when userdata contains an ID or cannot be fetched.
+    // The userdata fallback still awaits this shared request for parental PIN salts.
+    void refreshCurrentUserId();
     void pullUserdataFromServer().then((ok) => {
       setUserdataSyncFailed(!ok);
       applyTheme(getPreferences().display.theme);

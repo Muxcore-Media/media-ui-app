@@ -4,6 +4,71 @@ const USER_ID_KEY = 'muxcore.session.userId.v1';
 const ROLES_KEY = 'muxcore.session.roles.v1';
 
 const IDENTITY_PATHS = ['/api/session', '/api/me'] as const;
+const sessionListeners = new Set<() => void>();
+let identityGeneration = 0;
+let pendingIdentity: Promise<string> | null = null;
+
+export type SessionSnapshot = Readonly<{ userId: string; roles: readonly string[] }>;
+let snapshot: SessionSnapshot = Object.freeze({ userId: '', roles: Object.freeze([] as string[]) });
+let snapshotUserId = '';
+let snapshotRoles = '';
+
+function notifySession() {
+  for (const listener of sessionListeners) listener();
+}
+
+function invalidateIdentityRefresh() {
+  identityGeneration++;
+  pendingIdentity = null;
+}
+
+/** Capture this before an async identity writer; logout or cross-tab changes invalidate it. */
+export function getSessionGeneration(): number {
+  return identityGeneration;
+}
+
+/** Observe same-document updates and other tabs without triggering another refresh. */
+export function subscribeSession(listener: () => void): () => void {
+  sessionListeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== null && event.key !== USER_ID_KEY && event.key !== ROLES_KEY) return;
+    invalidateIdentityRefresh();
+    listener();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    sessionListeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+function readRolesCache(): string {
+  try {
+    return localStorage.getItem(ROLES_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function parseRolesCache(raw: string): string[] {
+  try {
+    return rolesFromUnknown({ roles: raw ? JSON.parse(raw) : [] });
+  } catch {
+    return [];
+  }
+}
+
+/** Stable immutable snapshot for React's external-store subscription. */
+export function getSessionSnapshot(): SessionSnapshot {
+  const userId = getCurrentUserId();
+  const roles = readRolesCache();
+  if (userId !== snapshotUserId || roles !== snapshotRoles) {
+    snapshotUserId = userId;
+    snapshotRoles = roles;
+    snapshot = Object.freeze({ userId, roles: Object.freeze(parseRolesCache(roles)) });
+  }
+  return snapshot;
+}
 
 /** Read the cached auth-local / BFF user id used as the parental PIN salt. */
 export function getCurrentUserId(): string {
@@ -16,6 +81,11 @@ export function getCurrentUserId(): string {
 
 /** Persist the current user id (tests and identity refresh). Empty clears the cache. */
 export function setCurrentUserId(userId: string): void {
+  writeUserId(userId);
+  notifySession();
+}
+
+function writeUserId(userId: string): void {
   try {
     const id = userId.trim();
     if (!id) {
@@ -48,18 +118,16 @@ export function rolesFromUnknown(raw: unknown): string[] {
 
 /** Cached household roles from the last identity refresh. */
 export function getCurrentRoles(): string[] {
-  try {
-    const raw = localStorage.getItem(ROLES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return rolesFromUnknown({ roles: parsed });
-  } catch {
-    return [];
-  }
+  return parseRolesCache(readRolesCache());
 }
 
 /** Persist household roles (tests and identity refresh). Empty clears the cache. */
 export function setCurrentRoles(roles: string[]): void {
+  writeRoles(roles);
+  notifySession();
+}
+
+function writeRoles(roles: string[]): void {
   try {
     const clean = roles.map((r) => r.trim()).filter(Boolean);
     if (clean.length === 0) {
@@ -70,6 +138,14 @@ export function setCurrentRoles(roles: string[]): void {
   } catch {
     /* private mode / unavailable storage */
   }
+}
+
+/** Clear cosmetic identity state and prevent an older request from restoring it. */
+export function clearCurrentSession(): void {
+  invalidateIdentityRefresh();
+  writeUserId('');
+  writeRoles([]);
+  notifySession();
 }
 
 /**
@@ -192,24 +268,41 @@ export function userIdFromUnknown(raw: unknown): string {
 
 /**
  * Best-effort identity refresh. Tries BFF `/api/session` then `/api/me`.
- * Cached id is kept when neither endpoint yields a user id.
+ * Cached identity is kept on transient failures; explicit auth denial clears it.
+ * This cache only controls presentation. The BFF remains the authorization boundary.
  */
-export async function refreshCurrentUserId(): Promise<string> {
-  const cached = getCurrentUserId();
+export function refreshCurrentUserId(): Promise<string> {
+  if (pendingIdentity) return pendingIdentity;
+  const request = refreshIdentity(identityGeneration).finally(() => {
+    if (pendingIdentity === request) pendingIdentity = null;
+  });
+  pendingIdentity = request;
+  return request;
+}
+
+async function refreshIdentity(generation: number): Promise<string> {
   for (const path of IDENTITY_PATHS) {
     try {
       const res = await fetch(path, { headers: { Accept: 'application/json' } });
+      if (generation !== identityGeneration) return getCurrentUserId();
+      if (res.status === 401 || res.status === 403) {
+        clearCurrentSession();
+        return '';
+      }
       if (!res.ok) continue;
       const body = await res.json();
+      if (generation !== identityGeneration) return getCurrentUserId();
       const id = userIdFromUnknown(body);
       if (id) {
-        setCurrentUserId(id);
-        setCurrentRoles(rolesFromUnknown(body));
+        writeUserId(id);
+        writeRoles(rolesFromUnknown(body));
+        notifySession();
         return id;
       }
     } catch {
       /* try next path */
     }
+    if (generation !== identityGeneration) return getCurrentUserId();
   }
-  return cached;
+  return getCurrentUserId();
 }

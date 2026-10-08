@@ -20,6 +20,7 @@ import {
 import { signOut } from '../../api/client';
 import { cn } from '../../lib/cn';
 import { useCapabilities } from '../../lib/capabilities';
+import { useRestrictedEntryPoints } from '../../lib/restricted-routes';
 import {
   mobileMoreMenuItems,
   showDesktopMoreMenu,
@@ -54,10 +55,12 @@ function withIcons(items: NavItem[]): (NavItem & { icon?: React.ReactNode })[] {
 
 export default function Nav() {
   const { caps } = useCapabilities();
-  const primary = withIcons(visiblePrimaryNav(caps));
-  const mobileMenuItems = mobileMoreMenuItems(caps);
-  const showDesktopMore = showDesktopMoreMenu(caps);
-  const showMobileMore = showMobileMoreMenu(caps);
+  // Entry points the BFF already refused with parental.restricted_route (cosmetic; ADR-0031).
+  const restricted = useRestrictedEntryPoints();
+  const primary = withIcons(visiblePrimaryNav(caps, restricted));
+  const mobileMenuItems = mobileMoreMenuItems(caps, restricted);
+  const showDesktopMore = showDesktopMoreMenu(caps, restricted);
+  const showMobileMore = showMobileMoreMenu(caps, restricted);
 
   const [scrolled, setScrolled] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -214,7 +217,7 @@ export default function Nav() {
                     onKeyDown={onMoreMenuKeyDown}
                     className="absolute left-0 top-full z-50 mt-2 w-56 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 shadow-xl"
                   >
-                    {visibleOverflowNav(caps).map((item) => (
+                    {visibleOverflowNav(caps, restricted).map((item) => (
                       <NavLink
                         key={item.to}
                         to={item.to}
@@ -239,7 +242,9 @@ export default function Nav() {
             )}
           </nav>
 
-          <HeaderSearch className="hidden min-w-[6rem] flex-1 sm:flex lg:max-w-sm" />
+          {!restricted.has('/search') && (
+            <HeaderSearch className="hidden min-w-[6rem] flex-1 sm:flex lg:max-w-sm" />
+          )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <NavLink
@@ -330,6 +335,7 @@ export default function Nav() {
         open={mobileOpen}
         onToggleMore={() => setMobileOpen((v) => !v)}
         showMore={showMobileMore}
+        hidden={restricted}
       />
     </>
   );
@@ -347,18 +353,20 @@ function MobileTabBar({
   open,
   onToggleMore,
   showMore,
+  hidden,
 }: {
   moreButtonRef: RefObject<HTMLButtonElement>;
   open: boolean;
   onToggleMore: () => void;
   showMore: boolean;
+  hidden: ReadonlySet<string>;
 }) {
   return (
     <nav
       aria-label="Mobile primary navigation"
       className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-[var(--border-subtle)] bg-[var(--bg-overlay)] pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
-      {MOBILE_TABS.map((item) => (
+      {MOBILE_TABS.filter((item) => !hidden.has(item.to)).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

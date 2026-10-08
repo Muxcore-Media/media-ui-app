@@ -5,6 +5,7 @@ import {
   resolvePlayback,
   type PlaybackSubtitleTrack,
 } from '../../../api/client';
+import { parentalCodeOf, type ParentalCode } from '../../../api/errors';
 import { QUALITY_OPTIONS } from '../../../lib/player/types';
 import { toHlsPlaySrc, transcodePlaySrc } from '../../../lib/player/hls';
 import { resolveOfflinePlaySrc } from '../../../lib/offline-library';
@@ -12,6 +13,8 @@ import { resolveOfflinePlaySrc } from '../../../lib/offline-library';
 export type PlaybackSourceState = {
   loading: boolean;
   error: string | null;
+  /** Set when `error` is a server-side parental outcome (ADR-0031); null otherwise. */
+  parentalCode: ParentalCode | null;
   playSrc: string;
   playMode: 'direct' | 'transcode' | string;
   remoteTracks: PlaybackSubtitleTrack[];
@@ -32,6 +35,7 @@ export type PlaybackSourceState = {
 const INITIAL_STATE: PlaybackSourceState = {
   loading: false,
   error: null,
+  parentalCode: null,
   playSrc: '',
   playMode: 'direct',
   remoteTracks: [],
@@ -92,7 +96,7 @@ export function usePlaybackSource(src: string) {
       if (opts?.subtitleStreamIndex !== undefined) {
         subtitleStreamIndexRef.current = opts.subtitleStreamIndex;
       }
-      setState((s) => ({ ...s, loading: true, error: null }));
+      setState((s) => ({ ...s, loading: true, error: null, parentalCode: null }));
       try {
         const cached = await resolveOfflinePlaySrc(src);
         if (cached) {
@@ -103,6 +107,7 @@ export function usePlaybackSource(src: string) {
           setState({
             loading: false,
             error: null,
+            parentalCode: null,
             playSrc: cached,
             playMode: 'direct',
             remoteTracks: subs.tracks ?? [],
@@ -166,6 +171,7 @@ export function usePlaybackSource(src: string) {
         setState({
           loading: false,
           error: null,
+          parentalCode: null,
           playSrc: streamUrl,
           playMode: mode,
           remoteTracks: subs.tracks ?? [],
@@ -183,6 +189,7 @@ export function usePlaybackSource(src: string) {
           ...s,
           loading: false,
           error: friendlyPlaybackError(err),
+          parentalCode: parentalCodeOf(err),
           playSrc: '',
           remoteTracks: [],
         }));

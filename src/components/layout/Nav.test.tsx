@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Nav from './Nav';
-import { CapabilitiesContext, DEFAULT_CAPABILITIES } from '../../lib/capabilities';
+import { ALL_CAPABILITIES, CapabilitiesContext, DEFAULT_CAPABILITIES } from '../../lib/capabilities';
+import { recordRestrictedRoute, resetRestrictedRoutes } from '../../lib/restricted-routes';
 
 function renderNav(caps = DEFAULT_CAPABILITIES, initialEntries: string[] = ['/']) {
   return render(
@@ -71,5 +72,45 @@ describe('Nav More menu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     fireEvent.click(trigger);
     expect(screen.getByRole('menuitem', { name: 'Collections' })).toHaveAttribute('aria-current', 'page');
+  });
+});
+
+describe('Nav entry points the BFF refused (parental.restricted_route)', () => {
+  afterEach(() => {
+    act(() => resetRestrictedRoutes());
+  });
+
+  it('hides search and refused destinations, and leaves the rest', () => {
+    renderNav(ALL_CAPABILITIES);
+    const primaryNav = screen.getByRole('navigation', { name: 'Primary navigation' });
+    expect(screen.getByTestId('header-search')).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Mobile primary navigation' })).getByRole('link', { name: 'Search' })).toBeInTheDocument();
+
+    act(() => {
+      recordRestrictedRoute('/api/search?q=x', 'parental.restricted_route');
+      recordRestrictedRoute('/api/music', 'parental.restricted_route');
+      recordRestrictedRoute('/api/discover/trending', 'parental.restricted_route');
+    });
+
+    expect(screen.queryByTestId('header-search')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: 'Mobile primary navigation' })).queryByRole('link', { name: 'Search' }),
+    ).not.toBeInTheDocument();
+    expect(within(primaryNav).queryByRole('link', { name: 'Music' })).not.toBeInTheDocument();
+    expect(within(primaryNav).getByRole('link', { name: 'Movies' })).toBeInTheDocument();
+    fireEvent.click(within(primaryNav).getByRole('button', { name: 'More' }));
+    expect(screen.queryByRole('menuitem', { name: 'Discover' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Collections' })).toBeInTheDocument();
+  });
+
+  it('does not hide anything for other parental codes', () => {
+    renderNav(ALL_CAPABILITIES);
+    act(() => {
+      recordRestrictedRoute('/api/search?q=x', 'parental.blocked');
+      recordRestrictedRoute('/api/search?q=x', 'parental.policy_unavailable');
+    });
+    expect(
+      within(screen.getByRole('navigation', { name: 'Mobile primary navigation' })).getByRole('link', { name: 'Search' }),
+    ).toBeInTheDocument();
   });
 });

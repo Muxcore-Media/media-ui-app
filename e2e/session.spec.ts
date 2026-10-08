@@ -119,6 +119,7 @@ test('session correction preserves an unsaved personal settings form', async ({ 
   identity.release();
   await expect(sections.getByRole('link', { name: 'Acquisition', exact: true })).toHaveCount(0);
   await expect(pageSize).toHaveValue('127');
+  await expect(pageSize).toBeFocused();
   await expect(page).toHaveURL('/settings/display');
 });
 

@@ -173,6 +173,14 @@ the sign-out handoff. Cached identity is cosmetic: a completed session refresh
 updates visible controls, explicit authentication denial clears it, and transient
 network failures may retain it. Server authorization remains the BFF's responsibility.
 
+Display settings hydrate untouched fields when saved preferences arrive, retaining
+each edited field and its focus until Save. A later save response can refresh
+untouched fields without replacing edits made after submission. An unsaved theme
+choice does not change the applied theme. Other personal Settings forms are unchanged.
+These fixtures cover form hydration after a response, not request ordering: saving
+before the initial userdata read finishes, out-of-order write acknowledgments and
+provider/cross-device durability remain separate work.
+
 An existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e`.
 [Browser fixtures CI](.github/workflows/browser.yml) uses Playwright's pinned

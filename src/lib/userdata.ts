@@ -359,8 +359,26 @@ function readJSON<T>(key: string, fallback: T): T {
   }
 }
 
+const preferenceListeners = new Set<() => void>();
+let preferenceRevision = 0;
+
+/** Same-document cache changes; observers do not change userdata request ordering. */
+export function subscribePreferences(listener: () => void): () => void {
+  preferenceListeners.add(listener);
+  return () => { preferenceListeners.delete(listener); };
+}
+
+/** A stable primitive snapshot for React; getPreferences() returns a fresh object. */
+export function getPreferenceRevision(): number {
+  return preferenceRevision;
+}
+
 function writeJSON(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(value));
+  if (key === KEYS.prefs) {
+    preferenceRevision += 1;
+    preferenceListeners.forEach((listener) => listener());
+  }
 }
 
 function getMeta(): Meta {

@@ -1,5 +1,5 @@
 import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Archive,
@@ -32,7 +32,9 @@ import { canManageAcquisition, canManageBackups, canManageIndexers, canManageInv
 import {
   applyTheme,
   getPreferences,
+  getPreferenceRevision,
   getUserdataSyncStatus,
+  subscribePreferences,
   updatePreferences,
   type UserPreferences,
 } from '../lib/userdata';
@@ -386,17 +388,28 @@ function ProfilePane() {
 }
 
 function DisplayPane() {
-  const [prefs, save] = usePrefs();
+  useSyncExternalStore(subscribePreferences, getPreferenceRevision, getPreferenceRevision);
+  const prefs = getPreferences();
+  // A present draft field is user-edited, even if its value equals the old cache.
+  // Keep numeric input as text so hydration never replaces an in-progress edit.
+  const [draft, setDraft] = useState<Partial<{
+    theme: UserPreferences['display']['theme'];
+    libraryPageSize: string;
+    showWatchedIndicators: boolean;
+  }>>({});
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const fd = new FormData(e.target as HTMLFormElement);
-    save({
+    const next = updatePreferences({
       display: {
         theme: String(fd.get('theme')) as UserPreferences['display']['theme'],
         libraryPageSize: Number(fd.get('libraryPageSize')) || 48,
         showWatchedIndicators: fd.get('showWatchedIndicators') === 'on',
       },
     });
+    applyTheme(next.display.theme);
+    // This submission is synchronous. Later edits stay dirty when its PUT reply arrives.
+    setDraft({});
   }
   return (
     <form onSubmit={onSubmit} className={paneClass} aria-labelledby="settings-display-heading">
@@ -408,7 +421,8 @@ function DisplayPane() {
         <select
           id="settings-theme"
           name="theme"
-          defaultValue={prefs.display.theme}
+          value={draft.theme ?? prefs.display.theme}
+          onChange={(e) => setDraft((current) => ({ ...current, theme: e.target.value as UserPreferences['display']['theme'] }))}
           className={inputClass}
         >
           <option value="dark">Dark</option>
@@ -424,7 +438,8 @@ function DisplayPane() {
           type="number"
           min={12}
           max={200}
-          defaultValue={prefs.display.libraryPageSize}
+          value={draft.libraryPageSize ?? String(prefs.display.libraryPageSize)}
+          onChange={(e) => setDraft((current) => ({ ...current, libraryPageSize: e.target.value }))}
           className={inputClass}
         />
       </label>
@@ -432,7 +447,8 @@ function DisplayPane() {
         <input
           name="showWatchedIndicators"
           type="checkbox"
-          defaultChecked={prefs.display.showWatchedIndicators}
+          checked={draft.showWatchedIndicators ?? prefs.display.showWatchedIndicators}
+          onChange={(e) => setDraft((current) => ({ ...current, showWatchedIndicators: e.target.checked }))}
         />
         Show watched indicators
       </label>

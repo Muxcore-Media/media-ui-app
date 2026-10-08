@@ -404,12 +404,12 @@ export interface AudiobookDetail {
 /**
  * A single item returned by the media-graph /api/graph/related endpoint.
  * Extends SearchResult so it can be passed directly to PosterCard as `type="external"`.
- * `content_rating` enables parental filtering via applyParentalFilter.
+ * `content_rating` is display metadata; parental enforcement is server-side (ADR-0031).
  */
 export type RelatedItem = SearchResult & {
   /** Graph edge label (e.g. "related_to", "same_franchise", "adaptation", "neighbor"). */
   relation?: string;
-  /** Library content rating when the BFF can join it (optional; absent = unrestricted). */
+  /** Library content rating when the BFF can join it (optional; display only, absence does not mean allowed). */
   content_rating?: string;
 };
 

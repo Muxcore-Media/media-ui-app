@@ -35,6 +35,7 @@ import { Button } from '../components/ui/Button';
 import { IconButton } from '../components/ui/IconButton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { parentalTitleOr } from '../api/errors';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import {
   enqueue,
@@ -166,7 +167,7 @@ export default function TVShowDetail() {
     return (
       <div className="space-y-3" data-testid="tv-detail-page">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-          TV show not found
+          {parentalTitleOr(error, 'TV show not found')}
         </h1>
         <ErrorBanner message={error || 'TV show not found.'} />
         <Link to="/tv" className="text-[var(--accent-color)] hover:underline">

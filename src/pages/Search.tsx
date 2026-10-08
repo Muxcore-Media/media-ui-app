@@ -20,6 +20,8 @@ import {
   type LibraryHit,
 } from '../lib/unified-search';
 import { getParentalState, isItemRestricted } from '../lib/parental';
+import { ParentalNotice } from '../components/parental/ParentalNotice';
+import type { ParentalCode } from '../api/errors';
 import type { Movie, SearchResult, TVShow } from '../types';
 
 export default function Search() {
@@ -35,6 +37,7 @@ export default function Search() {
     [],
   );
   const [remote, setRemote] = useState<SearchResult[]>([]);
+  const [remoteParental, setRemoteParental] = useState<ParentalCode | null>(null);
   const [requested, setRequested] = useState<Record<string, string>>({});
 
   const scopeOptions = useMemo(() => searchScopesForCaps(caps), [caps]);
@@ -54,6 +57,7 @@ export default function Search() {
     if (!canSearch) {
       setLibrary([]);
       setRemote([]);
+      setRemoteParental(null);
       setError(null);
       return;
     }
@@ -65,12 +69,14 @@ export default function Search() {
         if (cancelled) return;
         setLibrary(res.library);
         setRemote(res.remote);
+        setRemoteParental(res.remoteParental ?? null);
       })
       .catch((err) => {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : 'Search failed');
         setLibrary([]);
         setRemote([]);
+        setRemoteParental(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -156,6 +162,7 @@ export default function Search() {
       )}
 
       {error ? <ErrorBanner message={error} /> : null}
+      {!loading && !error && remoteParental ? <ParentalNotice code={remoteParental} /> : null}
       {loading && <LoadingStatus label="Searching" />}
       {loading && <PosterGridSkeleton count={6} />}
 

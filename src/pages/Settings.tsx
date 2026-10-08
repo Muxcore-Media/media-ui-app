@@ -555,6 +555,11 @@ function ParentalPane() {
       <p className="text-sm text-[var(--text-secondary)]">
         Restrict this profile without opening admin-ui. The PIN uses the same hash as admin-ui.
       </p>
+      <p className="text-sm text-[var(--text-secondary)]" data-testid="parental-server-note">
+        These settings only change what this device shows and prompts for. They do not restrict
+        playback or browsing. The server applies the parental controls an administrator sets for
+        your account, and a PIN cannot override them.
+      </p>
       {error ? (
         <p className="text-sm text-[var(--danger-color)]" role="alert">
           {error}

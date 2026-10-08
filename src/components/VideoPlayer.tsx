@@ -621,7 +621,14 @@ export default function VideoPlayer({
     return <ErrorScreen message="This title isn't available to play." href={href} />;
   }
   if (source.error) {
-    return <ErrorScreen message={source.error} href={href} onRetry={source.retry} />;
+    return (
+      <ErrorScreen
+        message={source.error}
+        href={href}
+        onRetry={source.retry}
+        parentalCode={source.parentalCode}
+      />
+    );
   }
 
   const metaLineParts: string[] = [];

@@ -33,6 +33,7 @@ import { DetailHeroSkeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
+import { parentalTitleOr } from '../api/errors';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { PinGateDialog } from '../components/parental/PinGateDialog';
 import { RestrictedOverlay } from '../components/parental/RestrictedOverlay';
@@ -137,7 +138,7 @@ export default function MovieDetail() {
     return (
       <div className="space-y-3" data-testid="movie-detail-page">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-          Movie not found
+          {parentalTitleOr(error, 'Movie not found')}
         </h1>
         <ErrorBanner message={error || 'Movie not found.'} />
         <Link to="/movies" className="text-[var(--accent-color)] hover:underline">

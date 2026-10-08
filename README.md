@@ -203,6 +203,8 @@ existing accent tokens. Danger text and filled danger controls have separate tok
 so light error text can darken while filled controls keep their original red surface.
 The invite success status uses a theme-aware success foreground without changing green fills.
 The anchor reset lives in Tailwind's base layer so explicit foreground utilities win.
+Movies genre and sort controls explicitly use the primary foreground token so native
+select text follows the hydrated theme alongside its background.
 
 ## MVP wiring
 

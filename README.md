@@ -41,6 +41,40 @@ These are UI presentation and routing guards. Server authorization is unchanged
 and remains authoritative, including stricter permissions on some mutations.
 FR-ADM-010 remains partial until operator controls migrate to admin-ui.
 
+## Operator-only controls (T-M5-12)
+
+The BFF answers `403 operator.forbidden` to any session without the `admin` or `manager`
+role on 43 state-changing routes, and `403 operator.admin_required` when a manager names
+`root_folder_path` in a library PATCH (BFF-API.md "Operator route roles"). The SPA no longer
+offers those controls to other roles. Roles come from the cached session identity
+(`useOperatorAccess`, built on `src/lib/session.ts`), so a member, a viewer, an approver and
+a session whose roles are not cached yet see none of them.
+
+| Control | Needs |
+|---------|-------|
+| Remove from library, delete file(s), refresh metadata (movies, TV, music, books, comics, audiobooks; episode file delete) | `admin` or `manager` |
+| Monitor toggles, quality-profile picker | `admin` or `manager` |
+| Root-folder picker (library item pages) | `admin` only |
+| Series override save / clear | `admin` or `manager` |
+| Interactive search: Grab and Block (the scored list stays readable) | `admin` or `manager` |
+| Add to wanted; Search now on Activity, Missing, Upcoming, In Progress; wanted remove; retry import; block; manual import | `admin` or `manager` |
+| Blocklist Unblock / Clear all | `admin` or `manager` |
+| Settings > Debrid add (the cloud library stays readable) | `admin` or `manager` |
+| Rename apply (the preview stays readable) | `admin` or `manager` |
+| Subtitle download in the player ("Find online") | `admin` or `manager` |
+| Live TV timer form (timers stay readable) | `admin` or `manager` |
+| Stop on `/sessions` | `admin` or `manager`; there is no "stop my own stream" control |
+
+Delay-profile and TRaSH-sync controls were already hidden from members and are unchanged.
+Formats score/parse, GET reads, media issues, watch together, userdata, telemetry, watchlist,
+requests and playback session telemetry are open on the server and stay visible to members.
+
+This is presentation only. **The BFF is authoritative**: the cached role can be stale, so a
+refused action is handled too. A `403 operator.*` becomes a typed `OperatorError` with calm
+copy ("You don't have permission for this action."), is shown as a status rather than an
+error, is never retried, and re-reads `/api/session` once so a control that should be gone
+disappears. Nothing here grants access.
+
 ## Auth + stream (MVP host)
 
 On the MuxCore reference stack (`_mvp` in a sibling workspace checkout):
@@ -133,6 +167,11 @@ downgrades, expired sessions, userdata failures, unsaved personal form state, an
 the sign-out handoff. Cached identity is cosmetic: a completed session refresh
 updates visible controls, explicit authentication denial clears it, and transient
 network failures may retain it. Server authorization remains the BFF's responsibility.
+
+Operator-control scenarios (`e2e/operator-controls.spec.ts`) check Activity, a library item page,
+`/sessions` and the player's subtitle download at 375 and 1280 px for a `viewer` (controls
+hidden), a `manager` (shown; root folder hidden) and an `admin` (root folder shown), including a
+stale-role 403 that is explained calmly, not retried, and followed by a session re-read.
 
 An existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e`.

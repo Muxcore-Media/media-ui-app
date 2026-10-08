@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../../lib/session';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { RootFolderSelect } from './RootFolderSelect';
+import { OperatorError } from '../../api/errors';
+import { NON_ROOT_ROLE_CASES, ROOT_ROLE_CASES } from '../../test/operator-roles';
 
 const listRoots = vi.fn();
 const pickRoot = vi.fn();
@@ -19,6 +22,9 @@ vi.mock('../../api/client', async () => {
 });
 
 describe('RootFolderSelect', () => {
+  // The BFF reserves these controls for admin (T-M5-12).
+  beforeEach(() => setCurrentRoles(['admin']));
+
   it('assigns a library root to a movie', async () => {
     pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
     listRoots.mockResolvedValue({
@@ -118,5 +124,51 @@ describe('RootFolderSelect', () => {
         rootFolderPath: '/data/comics',
       });
     });
+  });
+});
+
+describe('RootFolderSelect admin-only gate (T-M5-12)', () => {
+  const catalog = {
+    available: true,
+    roots: [{ id: 'r1', path: '/data/uhd', name: 'UHD', mediaKind: 'movies', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],
+  };
+
+  // The BFF answers 403 operator.admin_required to a manager that names root_folder_path.
+  it.each(NON_ROOT_ROLE_CASES)('renders nothing and loads nothing for %s', (_label, roles) => {
+    listRoots.mockReset();
+    pickRoot.mockReset();
+    listRoots.mockResolvedValue(catalog);
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    setCurrentRoles(roles);
+    const { container } = render(<RootFolderSelect kind="movie" id="m1" />);
+    expect(screen.queryByLabelText('Root folder')).toBeNull();
+    expect(container).toBeEmptyDOMElement();
+    expect(listRoots).not.toHaveBeenCalled();
+  });
+
+  it.each(ROOT_ROLE_CASES)('offers the picker to %s', async (_label, roles) => {
+    listRoots.mockReset();
+    pickRoot.mockReset();
+    listRoots.mockResolvedValue(catalog);
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    setCurrentRoles(roles);
+    render(<RootFolderSelect kind="movie" id="m1" />);
+    expect(await screen.findByLabelText('Root folder')).toBeInTheDocument();
+  });
+
+  it('explains an admin_required 403 calmly and does not retry', async () => {
+    listRoots.mockReset();
+    pickRoot.mockReset();
+    setRootFolder.mockReset();
+    listRoots.mockResolvedValue(catalog);
+    pickRoot.mockResolvedValue({ available: false, root: null, error: '' });
+    setRootFolder.mockRejectedValue(new OperatorError('operator.admin_required', 403));
+    setCurrentRoles(['admin']);
+    render(<RootFolderSelect kind="movie" id="m1" />);
+    fireEvent.change(await screen.findByLabelText('Root folder'), { target: { value: '/data/uhd' } });
+    const note = await screen.findByTestId('root-folder-note');
+    expect(note).toHaveTextContent("You don't have permission for this action. Changing a root folder needs an administrator.");
+    expect(note).toHaveAttribute('role', 'status');
+    expect(setRootFolder).toHaveBeenCalledTimes(1);
   });
 });

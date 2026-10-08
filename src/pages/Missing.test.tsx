@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../lib/session';
 import { ALL_CAPABILITIES, CapabilitiesContext } from '../lib/capabilities';
 import Missing from './Missing';
+import { OperatorError } from '../api/errors';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const listMissing = vi.fn();
 const addWanted = vi.fn();
@@ -21,6 +24,9 @@ vi.mock('../api/client', async () => {
 });
 
 describe('Missing page', () => {
+  // The BFF reserves these controls for admin/manager (T-M5-12).
+  beforeEach(() => setCurrentRoles(['manager']));
+
   beforeEach(() => {
     listMissing.mockReset();
     addWanted.mockReset();
@@ -203,5 +209,68 @@ describe('Missing page', () => {
       }));
       expect(searchNow).toHaveBeenCalledWith({ item_type: 'book', item_id: 'b1' });
     });
+  });
+});
+
+describe('Missing page operator gate (T-M5-12)', () => {
+  const missing = {
+    available: true,
+    movies: {
+      available: true,
+      total: 1,
+      items: [{
+        kind: 'movie',
+        id: 'm1',
+        itemId: 'm1',
+        seriesId: '',
+        title: 'Dune',
+        year: 2021,
+        tmdbId: 438631,
+        seasonNumber: 0,
+        episodeNumber: 0,
+        airDate: '',
+        qualityProfileId: 'qp_hd',
+        href: '/movies/m1',
+      }],
+    },
+    tv: { available: true, total: 0, items: [] },
+  };
+
+  beforeEach(() => {
+    listMissing.mockReset();
+    addWanted.mockReset();
+    searchNow.mockReset();
+    listMissing.mockResolvedValue(missing);
+  });
+
+  function renderPage() {
+    return render(
+      <MemoryRouter>
+        <Missing />
+      </MemoryRouter>,
+    );
+  }
+
+  it.each(MEMBER_ROLE_CASES)('lists missing titles without search now for %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByTestId('missing-movies')).toHaveTextContent('Dune');
+    expect(screen.queryByRole('button', { name: 'Search now' })).toBeNull();
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers search now to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Search now' })).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 calmly and does not retry', async () => {
+    setCurrentRoles(['manager']);
+    addWanted.mockRejectedValue(new OperatorError('operator.forbidden', 403));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Search now' }));
+    expect(await screen.findByTestId('missing-flash')).toHaveTextContent("You don't have permission for this action.");
+    expect(addWanted).toHaveBeenCalledTimes(1);
+    expect(searchNow).not.toHaveBeenCalled();
   });
 });

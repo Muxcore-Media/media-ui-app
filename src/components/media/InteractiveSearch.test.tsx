@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../../lib/session';
 import { fireEvent, render, screen } from '@testing-library/react';
 import InteractiveSearch from './InteractiveSearch';
 import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../../lib/capabilities';
+import { OperatorError } from '../../api/errors';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../../test/operator-roles';
 
 const searchReleases = vi.fn();
 const grabRelease = vi.fn();
@@ -37,6 +40,9 @@ function renderSearch(caps = ALL_CAPABILITIES, autoSearch = false) {
 }
 
 describe('InteractiveSearch', () => {
+  // The BFF reserves these controls for admin/manager (T-M5-12).
+  beforeEach(() => setCurrentRoles(['manager']));
+
   beforeEach(() => {
     searchReleases.mockReset();
     grabRelease.mockReset();
@@ -119,5 +125,65 @@ describe('InteractiveSearch', () => {
     fireEvent.click(screen.getByRole('button', { name: /search releases/i }));
     expect(await screen.findByTestId('release-grab-blocked')).toHaveTextContent(/wireguard/i);
     expect(screen.getByRole('button', { name: /grab dune.2021/i })).toBeDisabled();
+  });
+});
+
+describe('InteractiveSearch operator gate (T-M5-12)', () => {
+  beforeEach(() => {
+    searchReleases.mockReset();
+    grabRelease.mockReset();
+    blockRelease.mockReset();
+    getAcquisition.mockReset();
+    getAcquisition.mockResolvedValue({ liveGrabAllowed: true, message: '' });
+    searchReleases.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          guid: 'high',
+          title: 'Dune.2021.2160p.BluRay.REMUX',
+          indexer_name: 'fixture',
+          download_protocol: 'torrent',
+          size: 40e9,
+          score: 210,
+          seeders: 12,
+          quality: { label: '2160p Remux', resolution: '2160p', source: 'Remux', hdr: true },
+        },
+      ],
+    });
+  });
+
+  // GET /api/releases/search is a read, so members still see the scored list; only Grab and Block go.
+  it.each(MEMBER_ROLE_CASES)('lists releases without grab, block or an empty actions column for %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderSearch();
+    fireEvent.click(screen.getByRole('button', { name: /search releases/i }));
+    expect(await screen.findByText('Dune.2021.2160p.BluRay.REMUX')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /grab dune/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /block dune/i })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Actions' })).toBeNull();
+    expect(screen.queryByTestId('release-grab-blocked')).toBeNull();
+    expect(getAcquisition).not.toHaveBeenCalled();
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers grab and block to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderSearch();
+    fireEvent.click(screen.getByRole('button', { name: /search releases/i }));
+    expect(await screen.findByRole('button', { name: /grab dune/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /block dune/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Actions' })).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 on grab calmly and does not retry', async () => {
+    setCurrentRoles(['manager']);
+    grabRelease.mockRejectedValue(new OperatorError('operator.forbidden', 403));
+    renderSearch();
+    fireEvent.click(screen.getByRole('button', { name: /search releases/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /grab dune/i }));
+    const notice = await screen.findByTestId('release-search-error');
+    expect(notice).toHaveTextContent("You don't have permission for this action.");
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(grabRelease).toHaveBeenCalledTimes(1);
   });
 });

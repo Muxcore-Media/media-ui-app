@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../lib/session';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import AudiobookDetailPage from './AudiobookDetail';
@@ -41,6 +42,9 @@ function renderDetail() {
 }
 
 describe('AudiobookDetail page', () => {
+  // The BFF reserves these controls for admin (T-M5-12).
+  beforeEach(() => setCurrentRoles(['admin']));
+
   beforeEach(() => {
     getAudiobook.mockReset();
     setMonitored.mockReset();

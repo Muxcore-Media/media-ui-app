@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../lib/session';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Activity from './Activity';
+import { OperatorError } from '../api/errors';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const listActivity = vi.fn();
 const listWanted = vi.fn();
@@ -40,6 +43,9 @@ function renderPage() {
 }
 
 describe('Activity page', () => {
+  // The BFF reserves these controls for admin/manager (T-M5-12).
+  beforeEach(() => setCurrentRoles(['manager']));
+
   beforeEach(() => {
     listActivity.mockReset();
     listWanted.mockReset();
@@ -231,5 +237,93 @@ describe('Activity page', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Downloads' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading downloads' })).toBeInTheDocument();
+  });
+});
+
+describe('Activity page operator gate (T-M5-12)', () => {
+  beforeEach(() => {
+    listActivity.mockReset();
+    listWanted.mockReset();
+    retryImport.mockReset();
+    searchNow.mockReset();
+    removeWanted.mockReset();
+    addWanted.mockReset();
+    blockRelease.mockReset();
+    listImportCandidates.mockReset();
+    importPath.mockReset();
+    listWanted.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [{ id: 'q-miss', item_type: 'movie', item_id: 'm-miss', title: 'Still Missing', year: 2024, monitored: true, missing: true }],
+    });
+    listActivity.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          id: 'h-fail',
+          wanted_item_id: 'q-1',
+          guid: 'g-fail',
+          title: 'Broken Import',
+          status: 'import_failed',
+          status_label: 'Import failed',
+          status_detail: 'path not watched',
+          stuck: true,
+          warning: true,
+        },
+      ],
+    });
+    listImportCandidates.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          path: '/downloads/Dune.2021.mkv',
+          name: 'Dune.2021.mkv',
+          title: 'Dune',
+          mediaType: 'movie',
+          year: 2021,
+          size: 1048576,
+          quality: { label: '1080p Remux', resolution: '1080p', source: 'Remux', codec: '', hdr: false, score: 150 },
+        },
+      ],
+    });
+    retryImport.mockResolvedValue({ attempted: 1, message: 'ok' });
+    searchNow.mockResolvedValue({ started: true, message: 'wanted search started' });
+  });
+
+  // Reads stay visible (queue, history). Search now, remove, retry, block, add and manual import go.
+  it.each(MEMBER_ROLE_CASES)('shows the queue without any action for %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByText('Still Missing')).toBeInTheDocument();
+    expect(screen.getByText('Broken Import')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByTestId('wanted-add-form')).toBeNull();
+    expect(screen.queryByTestId('activity-import')).toBeNull();
+    expect(listImportCandidates).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers every action to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByText('Still Missing')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Search all wanted' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /remove still missing from wanted/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry import/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Block' })).toBeInTheDocument();
+    expect(screen.getByTestId('wanted-add-form')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-import')).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 calmly and does not retry', async () => {
+    setCurrentRoles(['manager']);
+    retryImport.mockRejectedValue(new OperatorError('operator.forbidden', 403));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /retry import/i }));
+    // Activity reports action outcomes in its muted status line, which is already the calm tone.
+    expect(await screen.findByTestId('activity-flash')).toHaveTextContent("You don't have permission for this action.");
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(retryImport).toHaveBeenCalledTimes(1);
   });
 });

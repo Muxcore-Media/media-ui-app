@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Settings from './Settings';
@@ -7,6 +7,7 @@ import { ALL_CAPABILITIES, CapabilitiesContext, DEFAULT_CAPABILITIES } from '../
 import { getPreferences } from '../lib/userdata';
 import { setCurrentRoles, setCurrentUserId } from '../lib/session';
 import * as passkeys from '../lib/passkeys';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const getRequestPolicy = vi.fn();
 const updateRequestPolicy = vi.fn();
@@ -2593,6 +2594,67 @@ describe('Settings page', () => {
         expect(screen.getByRole('link', { name: /Display/i })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /Playback/i })).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Settings Debrid pane operator gate (T-M5-12)', () => {
+    const calls: Array<{ url: string; method: string }> = [];
+  const DEBRID_CAPS = { ...ALL_CAPABILITIES, features: { ...ALL_CAPABILITIES.features, debrid: true } };
+
+    function stubFetch(addResponse: { status: number; body: unknown }) {
+      calls.length = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input);
+          calls.push({ url, method: init?.method || 'GET' });
+          if (url.startsWith('/api/debrid/vfs')) return Response.json({ items: [{ id: 'd1', filename: 'Dune.mkv' }] });
+          if (url.startsWith('/api/debrid/add')) return Response.json(addResponse.body, { status: addResponse.status });
+          if (url.startsWith('/api/session') || url.startsWith('/api/me')) {
+            return Response.json({ user_id: 'u1', roles: ['manager'] });
+          }
+          return Response.json({});
+        }),
+      );
+    }
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    // The cloud library is a read and stays visible; only the add form is operator-only.
+    it.each(MEMBER_ROLE_CASES)('shows the library but no add form for %s', async (_label, roles) => {
+      stubFetch({ status: 200, body: {} });
+      setCurrentRoles(roles);
+      renderSettings('/settings/debrid', DEBRID_CAPS);
+      expect(await screen.findByTestId('settings-debrid-pane')).toBeInTheDocument();
+      expect(await screen.findByText('Dune.mkv')).toBeInTheDocument();
+      expect(screen.queryByTestId('settings-debrid-link')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Add to debrid' })).toBeNull();
+      expect(calls.some((c) => c.method === 'POST')).toBe(false);
+    });
+
+    it.each(OPERATOR_ROLE_CASES)('offers the add form to %s', async (_label, roles) => {
+      stubFetch({ status: 200, body: { id: 'x1', kind: 'magnet' } });
+      setCurrentRoles(roles);
+      renderSettings('/settings/debrid', DEBRID_CAPS);
+      fireEvent.change(await screen.findByTestId('settings-debrid-link'), { target: { value: 'magnet:?xt=urn:btih:abc' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Add to debrid' }));
+      expect(await screen.findByText(/Queued on debrid \(magnet · x1\)/)).toBeInTheDocument();
+    });
+
+    it('maps a 403 operator.forbidden to calm copy, refreshes the session once and does not retry', async () => {
+      stubFetch({ status: 403, body: { error: 'admin or manager role required', code: 'operator.forbidden' } });
+      setCurrentRoles(['manager']);
+      renderSettings('/settings/debrid', DEBRID_CAPS);
+      fireEvent.change(await screen.findByTestId('settings-debrid-link'), { target: { value: 'magnet:?xt=urn:btih:abc' } });
+      const sessionReads = () => calls.filter((c) => c.url.startsWith('/api/session') || c.url.startsWith('/api/me')).length;
+      await waitFor(() => expect(calls.some((c) => c.url.startsWith('/api/debrid/vfs'))).toBe(true));
+      const before = sessionReads();
+      fireEvent.click(screen.getByRole('button', { name: 'Add to debrid' }));
+      await waitFor(() => expect(sessionReads()).toBe(before + 1));
+      const notice = await screen.findByTestId('settings-debrid-error');
+      expect(notice).toHaveAttribute('data-operator-code', 'operator.forbidden');
+      expect(notice).toHaveTextContent("You don't have permission for this action.");
+      expect(calls.filter((c) => c.url.startsWith('/api/debrid/add'))).toHaveLength(1);
     });
   });
 });

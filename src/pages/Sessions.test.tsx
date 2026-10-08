@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../lib/session';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Sessions from './Sessions';
+import { OperatorError } from '../api/errors';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const listSessions = vi.fn();
 const stopSession = vi.fn();
@@ -20,6 +23,9 @@ vi.mock('../api/client', async () => {
 });
 
 describe('Sessions page', () => {
+  // The BFF reserves these controls for admin/manager (T-M5-12).
+  beforeEach(() => setCurrentRoles(['manager']));
+
   beforeEach(() => {
     listSessions.mockReset();
     stopSession.mockReset();
@@ -134,5 +140,70 @@ describe('Sessions page', () => {
       'noopener,noreferrer',
     );
     open.mockRestore();
+  });
+});
+
+describe('Sessions page operator gate (T-M5-12)', () => {
+  const row = {
+    id: 's1',
+    title: 'Dune',
+    user: 'sam',
+    href: '/movies/m1',
+    player: 'MuxCore',
+    transcode: false,
+    paused: false,
+    positionSeconds: 120,
+    durationSeconds: 600,
+  };
+
+  beforeEach(() => {
+    listSessions.mockReset();
+    stopSession.mockReset();
+    listSessions.mockResolvedValue({ available: true, total: 1, items: [row] });
+  });
+
+  function renderPage() {
+    return render(
+      <MemoryRouter>
+        <Sessions />
+      </MemoryRouter>,
+    );
+  }
+
+  // Stop can end any household member's stream and the BFF cannot prove ownership, so members get no
+  // Stop at all, and there is deliberately no "stop my own stream" control for them.
+  it.each(MEMBER_ROLE_CASES)('lists the stream without any stop control for %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByText('Dune')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute('href', '/movies/m1');
+    expect(screen.queryByRole('button', { name: /stop|end|kick|disconnect/i })).toBeNull();
+    expect(screen.queryByText(/stop a device/i)).toBeNull();
+  });
+
+  it('shows no empty action group for a member when a row has nothing to act on', async () => {
+    setCurrentRoles(['viewer']);
+    listSessions.mockResolvedValue({ available: true, total: 1, items: [{ ...row, href: '' }] });
+    renderPage();
+    const item = (await screen.findByText('Dune')).closest('li') as HTMLElement;
+    expect(item.querySelectorAll('button, a')).toHaveLength(0);
+    expect(item.querySelectorAll('div > div')).toHaveLength(0);
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers stop to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Stop Dune' })).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 on stop calmly and does not retry', async () => {
+    setCurrentRoles(['manager']);
+    stopSession.mockRejectedValue(new OperatorError('operator.forbidden', 403));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Stop Dune' }));
+    const notice = await screen.findByTestId('operator-notice');
+    expect(notice).toHaveAttribute('data-operator-code', 'operator.forbidden');
+    expect(notice).toHaveTextContent("You don't have permission for this action.");
+    expect(stopSession).toHaveBeenCalledTimes(1);
   });
 });

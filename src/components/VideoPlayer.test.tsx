@@ -1,9 +1,10 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 import { updatePreferences, upsertProgress } from '../lib/userdata';
 import { setCurrentRoles } from '../lib/session';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const RESOLVED_STREAM_URL = '/stream/movies/m1';
 
@@ -697,11 +698,16 @@ describe('VideoPlayer skip outro + next episode', () => {
 });
 
 describe('VideoPlayer subtitle search', () => {
+  // The BFF reserves these controls for admin/manager (T-M5-12).
+  beforeEach(() => setCurrentRoles(['manager']));
+
   function stubFetchWithSubtitleSearch(overrides: {
     searchBody?: unknown;
     searchOk?: boolean;
     downloadBody?: unknown;
     downloadOk?: boolean;
+    /** The BFF refuses the download for the session's role (T-M5-12). */
+    downloadForbidden?: boolean;
   } = {}) {
     vi.stubGlobal(
       'fetch',
@@ -728,6 +734,14 @@ describe('VideoPlayer subtitle search', () => {
                   ],
                 },
               ),
+          });
+        }
+        if (url.includes('/api/subtitles/download') && overrides.downloadForbidden) {
+          return Promise.resolve({
+            ok: false,
+            status: 403,
+            statusText: 'Forbidden',
+            json: () => Promise.resolve({ error: 'admin or manager role required', code: 'operator.forbidden' }),
           });
         }
         if (url.includes('/api/subtitles/download')) {
@@ -885,6 +899,75 @@ describe('VideoPlayer subtitle search', () => {
     await waitFor(() => {
       expect(within(menu).getByTestId('subtitle-find-empty')).toBeInTheDocument();
     });
+  });
+
+  // Downloading is admin/manager on the BFF (T-M5-12), so members are not offered "Find online".
+  it.each(MEMBER_ROLE_CASES)('does not offer "Find online" to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    stubFetchWithSubtitleSearch();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+
+    expect(within(menu).getByRole('button', { name: 'Appearance…' })).toBeInTheDocument();
+    expect(within(menu).queryByTestId('subtitle-find-online-btn')).toBeNull();
+    const fetchMock = vi.mocked(globalThis.fetch);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/api/subtitles/'))).toBe(false);
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers "Find online" to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    stubFetchWithSubtitleSearch();
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+
+    expect(within(menu).getByTestId('subtitle-find-online-btn')).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 on download calmly, stops offering it and does not retry', async () => {
+    stubFetchWithSubtitleSearch({ downloadForbidden: true });
+
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    await waitForResolvedVideo();
+
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByTestId('subtitle-find-online-btn'));
+    await waitFor(() => {
+      expect(within(menu).getByTestId('subtitle-find-results')).toBeInTheDocument();
+    });
+    fireEvent.click(within(menu).getByLabelText(/Download Test 2024/i));
+
+    await waitFor(() => {
+      expect(within(menu).getByText("You don't have permission for this action.")).toBeInTheDocument();
+    });
+    const downloads = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter(([input]) => String(input).includes('/api/subtitles/download'));
+    expect(downloads).toHaveLength(1);
+    expect(within(menu).queryByRole('alert')).toBeNull();
   });
 });
 

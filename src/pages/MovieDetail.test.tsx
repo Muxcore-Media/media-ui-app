@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../lib/session';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import MovieDetail from './MovieDetail';
@@ -53,6 +54,9 @@ vi.mock('../api/client', async () => {
 });
 
 describe('MovieDetail page', () => {
+  // The BFF reserves these controls for admin (T-M5-12).
+  beforeEach(() => setCurrentRoles(['admin']));
+
   beforeEach(() => {
     getMovie.mockReset();
     jellyfinPlayURL.mockReset();

@@ -42,7 +42,8 @@ describe('ComicSeries page', () => {
     listRoots.mockReset();
     pickRoot.mockReset();
     setRootFolder.mockReset();
-    setCurrentRoles([]);
+    // The BFF reserves these controls for admin (T-M5-12).
+    setCurrentRoles(['admin']);
     listRoots.mockResolvedValue({
       available: true,
       roots: [{ id: 'r1', path: '/data/comics', name: 'Comics', mediaKind: 'comics', accessible: true, freeBytes: 0, totalBytes: 0, isDefault: true }],

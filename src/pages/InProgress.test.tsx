@@ -8,6 +8,8 @@ import {
   DEFAULT_CAPABILITIES,
 } from '../lib/capabilities';
 import { setCurrentRoles } from '../lib/session';
+import { OperatorError } from '../api/errors';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const listRequests = vi.fn();
 const listMovies = vi.fn();
@@ -60,7 +62,8 @@ describe('InProgress page', () => {
     searchNow.mockReset();
     approveRequest.mockReset();
     denyRequest.mockReset();
-    setCurrentRoles([]);
+    // The BFF reserves these controls for admin/manager (T-M5-12).
+    setCurrentRoles(['manager']);
     listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
     listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
     listUpgrades.mockResolvedValue({ items: [], total: 0, available: true });
@@ -329,5 +332,58 @@ describe('InProgress accessibility', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'In progress' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading in-progress titles' })).toBeInTheDocument();
+  });
+});
+
+describe('InProgress page operator gate (T-M5-12)', () => {
+  beforeEach(() => {
+    listRequests.mockReset();
+    listMovies.mockReset();
+    listTVShows.mockReset();
+    listUpgrades.mockReset();
+    searchNow.mockReset();
+    listRequests.mockResolvedValue([]);
+    listMovies.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listTVShows.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 200 });
+    listUpgrades.mockResolvedValue({
+      available: true,
+      total: 1,
+      items: [
+        {
+          queue_id: 'q-far',
+          item_type: 'tv',
+          item_id: 's-far',
+          title: 'Needs Upgrade',
+          year: 2021,
+          current_score: 10,
+          cutoff_score: 200,
+        },
+      ],
+    });
+  });
+
+  it.each(MEMBER_ROLE_CASES)('lists upgrades without search now for %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage(ALL_CAPABILITIES);
+    expect(await screen.findByTestId('in-progress-upgrades')).toHaveTextContent('Needs Upgrade');
+    expect(screen.queryByRole('button', { name: /search now/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /search all upgrades/i })).toBeNull();
+    expect(screen.queryByText(/search now to let/i)).toBeNull();
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers search now to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage(ALL_CAPABILITIES);
+    expect(await screen.findByRole('button', { name: /search now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /search all upgrades/i })).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 calmly and does not retry', async () => {
+    setCurrentRoles(['manager']);
+    searchNow.mockRejectedValue(new OperatorError('operator.forbidden', 403));
+    renderPage(ALL_CAPABILITIES);
+    fireEvent.click(await screen.findByRole('button', { name: /search now/i }));
+    expect(await screen.findByTestId('upgrade-search-now')).toHaveTextContent("You don't have permission for this action.");
+    expect(searchNow).toHaveBeenCalledTimes(1);
   });
 });

@@ -62,7 +62,8 @@ describe('MusicArtist page', () => {
     setRootFolder.mockReset();
     importLibraryFile.mockReset();
     addMusicAlbum.mockReset();
-    setCurrentRoles([]);
+    // The BFF reserves these controls for admin (T-M5-12).
+    setCurrentRoles(['admin']);
     setMonitored.mockResolvedValue({ monitored: false });
     removeLibraryItem.mockResolvedValue({ removed: true, delete_files: false });
     refreshLibraryItem.mockResolvedValue({ refreshed: true });

@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../lib/session';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Upcoming from './Upcoming';
 import { updatePreferences } from '../lib/userdata';
+import { OperatorError } from '../api/errors';
+import { MEMBER_ROLE_CASES, OPERATOR_ROLE_CASES } from '../test/operator-roles';
 
 const listCalendar = vi.fn();
 const listTVShows = vi.fn();
@@ -59,6 +62,8 @@ describe('Upcoming page', () => {
         },
       ],
     });
+    // The BFF reserves these controls for admin/manager (T-M5-12).
+    setCurrentRoles(['manager']);
   });
 
   it('lists episodes airing soon', async () => {
@@ -233,5 +238,62 @@ describe('Upcoming accessibility', () => {
 
     expect(await screen.findByText('No upcoming episodes')).toBeInTheDocument();
     expect(screen.getByTestId('upcoming-empty')).toBeInTheDocument();
+  });
+});
+
+describe('Upcoming page operator gate (T-M5-12)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listCalendar.mockReset();
+    listTVShows.mockReset();
+    listMovies.mockReset();
+    searchNow.mockReset();
+    listTVShows.mockResolvedValue({ items: [], total: 0 });
+    listMovies.mockResolvedValue({ items: [], total: 0 });
+    listCalendar.mockResolvedValue({
+      available: true,
+      items: [
+        {
+          kind: 'tv',
+          id: 'ep-1',
+          parent_id: 's1',
+          title: 'Orbital',
+          subtitle: 'S01E01 · Pilot',
+          date: tomorrowIso(),
+          href: '/tv/s1',
+        },
+      ],
+    });
+  });
+
+  function renderPage() {
+    return render(
+      <MemoryRouter>
+        <Upcoming />
+      </MemoryRouter>,
+    );
+  }
+
+  it.each(MEMBER_ROLE_CASES)('lists the calendar without search now for %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByText('Orbital')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Search now' })).toBeNull();
+    expect(screen.queryByText(/search now grabs/i)).toBeNull();
+  });
+
+  it.each(OPERATOR_ROLE_CASES)('offers search now to %s', async (_label, roles) => {
+    setCurrentRoles(roles);
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Search now' })).toBeInTheDocument();
+  });
+
+  it('explains a stale-role 403 calmly and does not retry', async () => {
+    setCurrentRoles(['manager']);
+    searchNow.mockRejectedValue(new OperatorError('operator.forbidden', 403));
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Search now' }));
+    expect(await screen.findByRole('status')).toHaveTextContent("You don't have permission for this action.");
+    expect(searchNow).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
   canApproveRequests,
+  canChangeRootFolder,
+  canOperateLibrary,
   canManageAcquisition,
   canManageIndexers,
   canManageRequestPolicy,
@@ -133,5 +135,30 @@ describe('current user id cache', () => {
     expect(canManageSubtitles(['admin'])).toBe(true);
     setCurrentRoles([]);
     expect(getCurrentRoles()).toEqual([]);
+  });
+});
+
+describe('operator control predicates (T-M5-12)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  // Same predicate as the BFF sessionHasPrivilegedRole / sessionHasAdminRole.
+  it.each([
+    { roles: ['admin'], operate: true, root: true },
+    { roles: ['manager'], operate: true, root: false },
+    { roles: ['viewer', ' Manager '], operate: true, root: false },
+    { roles: ['manager', ' AdMiN '], operate: true, root: true },
+    { roles: ['approver'], operate: false, root: false },
+    { roles: ['user'], operate: false, root: false },
+    { roles: ['viewer'], operate: false, root: false },
+    { roles: ['administrator', 'managers', 'root'], operate: false, root: false },
+    { roles: [], operate: false, root: false },
+  ])('$roles: operate=$operate root=$root', ({ roles, operate, root }) => {
+    expect(canOperateLibrary(roles)).toBe(operate);
+    expect(canChangeRootFolder(roles)).toBe(root);
+    setCurrentRoles(roles);
+    expect(canOperateLibrary()).toBe(operate);
+    expect(canChangeRootFolder()).toBe(root);
   });
 });

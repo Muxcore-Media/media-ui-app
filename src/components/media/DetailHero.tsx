@@ -59,7 +59,7 @@ export function DetailHero({
               {meta}
             </div>
           )}
-          {tagline && <p className="italic text-[var(--accent-color)]">{tagline}</p>}
+          {tagline && <p className="italic text-[var(--accent-text)]">{tagline}</p>}
           {overview && (
             <p className="max-w-3xl leading-relaxed text-[var(--text-secondary)]">{overview}</p>
           )}

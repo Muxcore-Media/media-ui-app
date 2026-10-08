@@ -218,7 +218,7 @@ export default function Queue() {
           action={
             <Link
               to="/search"
-              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               Search
             </Link>
@@ -285,7 +285,7 @@ export default function Queue() {
                     <Link
                       to={item.href}
                       aria-label={`Play ${item.title}`}
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-color)]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-text)] transition hover:bg-[var(--bg-elevated-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-color)]"
                     >
                       <Play className="h-4 w-4 fill-current" aria-hidden="true" />
                     </Link>

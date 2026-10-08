@@ -66,7 +66,7 @@ export default function AudiobookDetailPage() {
           Audiobook not found
         </h1>
         <ErrorBanner message={error || 'Audiobook not found.'} />
-        <Link to="/audiobooks" className="text-[var(--accent-color)] hover:underline">
+        <Link to="/audiobooks" className="text-[var(--accent-text)] hover:underline">
           Back to audiobooks
         </Link>
       </div>
@@ -88,7 +88,7 @@ export default function AudiobookDetailPage() {
       <div>
         <Link
           to="/audiobooks"
-          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Audiobooks
@@ -189,7 +189,7 @@ export default function AudiobookDetailPage() {
                   {track ? (
                     <button
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-text)] transition hover:bg-[var(--bg-elevated-2)]"
                       aria-label={isPlaying ? `Pause ${f.title}` : `Play ${f.title}`}
                       aria-pressed={isPlaying}
                       onClick={() => nowPlaying.toggle(track, queue)}

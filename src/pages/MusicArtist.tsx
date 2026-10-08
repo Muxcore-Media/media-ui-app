@@ -87,7 +87,7 @@ export default function MusicArtist() {
           Artist not found
         </h1>
         <ErrorBanner message={error || 'Artist not found.'} />
-        <Link to="/music" className="text-[var(--accent-color)] hover:underline">
+        <Link to="/music" className="text-[var(--accent-text)] hover:underline">
           Back to music
         </Link>
       </div>
@@ -124,7 +124,7 @@ export default function MusicArtist() {
       <div>
         <Link
           to="/music"
-          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Music
@@ -259,7 +259,7 @@ export default function MusicArtist() {
                       {t.stream_url || t.path ? (
                         <button
                           type="button"
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-text)] transition hover:bg-[var(--bg-elevated-2)]"
                           aria-label={playing === t.id ? `Pause ${t.title}` : `Play ${t.title}`}
                           aria-pressed={playing === t.id}
                           onClick={() => {

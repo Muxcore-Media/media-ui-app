@@ -113,7 +113,7 @@ export default function Movies() {
       {!loading && inProgressCount > 0 && (
         <p className="text-sm text-[var(--text-secondary)]">
           {inProgressCount} {inProgressCount === 1 ? 'movie is' : 'movies are'} still downloading.{' '}
-          <Link to="/requests" className="font-medium text-[var(--accent-color)] hover:underline">
+          <Link to="/requests" className="font-medium text-[var(--accent-text)] hover:underline">
             View in progress
           </Link>
         </p>
@@ -191,7 +191,7 @@ export default function Movies() {
               !genre ? (
                 <Link
                   to="/search"
-                  className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                  className="text-sm font-medium text-[var(--accent-text)] hover:underline"
                 >
                   Search titles
                 </Link>

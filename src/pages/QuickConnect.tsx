@@ -34,7 +34,7 @@ export default function QuickConnect() {
   return (
     <div className="mx-auto max-w-md space-y-6" data-testid="quickconnect-page">
       <header className="flex flex-col items-center gap-2 text-center">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-elevated-2)] text-[var(--accent-color)]">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bg-elevated-2)] text-[var(--accent-text)]">
           <KeyRound className="h-5 w-5" aria-hidden="true" />
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">

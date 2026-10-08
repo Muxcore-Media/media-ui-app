@@ -64,7 +64,7 @@ function BucketList({
           return (
             <li key={row.key || row.label} className="flex items-center justify-between gap-3 px-4 py-2.5">
               {href ? (
-                <Link to={href} className="min-w-0 truncate text-sm font-medium text-[var(--accent-color)] hover:underline">
+                <Link to={href} className="min-w-0 truncate text-sm font-medium text-[var(--accent-text)] hover:underline">
                   {row.label}
                 </Link>
               ) : (
@@ -154,7 +154,7 @@ export default function WatchStats() {
         <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
           Household plays from the playback monitor — the same totals Tautulli shows for the last 30 days.
         </p>
-        <Link to="/sessions" className="inline-block text-sm font-semibold text-[var(--accent-color)] hover:underline">
+        <Link to="/sessions" className="inline-block text-sm font-semibold text-[var(--accent-text)] hover:underline">
           Now watching
         </Link>
       </header>

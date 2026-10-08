@@ -57,7 +57,7 @@ export default function MusicVideos() {
           action={
             <Link
               to="/movies"
-              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               Browse movies
             </Link>

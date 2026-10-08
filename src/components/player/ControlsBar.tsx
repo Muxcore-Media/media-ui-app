@@ -216,7 +216,7 @@ export default function ControlsBar(props: Props) {
               type="button"
               aria-label="Theater mode"
               aria-pressed={props.theaterMode}
-              className={`hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${props.theaterMode ? 'text-[var(--accent-color)]' : ''}`}
+              className={`hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${props.theaterMode ? 'text-[var(--accent-text)]' : ''}`}
               onClick={props.onToggleTheater}
             >
               <MonitorPlay className="h-4 w-4" aria-hidden="true" />
@@ -227,7 +227,7 @@ export default function ControlsBar(props: Props) {
                 type="button"
                 aria-label="Settings"
                 aria-expanded={settingsOpen}
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${settingsOpen ? 'text-[var(--accent-color)]' : ''}`}
+                className={`flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${settingsOpen ? 'text-[var(--accent-text)]' : ''}`}
                 onClick={toggleSettings}
               >
                 <Settings className="h-4 w-4" aria-hidden="true" />
@@ -271,7 +271,7 @@ export default function ControlsBar(props: Props) {
                 type="button"
                 aria-label="Picture in picture"
                 aria-pressed={props.pipActive}
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${props.pipActive ? 'text-[var(--accent-color)]' : ''}`}
+                className={`flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${props.pipActive ? 'text-[var(--accent-text)]' : ''}`}
                 onClick={props.onTogglePiP}
               >
                 <PictureInPicture2 className="h-4 w-4" aria-hidden="true" />
@@ -283,7 +283,7 @@ export default function ControlsBar(props: Props) {
                 aria-label={props.castConnected ? 'Stop casting' : 'Cast to device'}
                 aria-pressed={props.castConnected}
                 title={props.castConnected ? 'Stop casting' : 'Cast to a device'}
-                className={`hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${props.castConnected ? 'text-[var(--accent-color)]' : ''}`}
+                className={`hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${props.castConnected ? 'text-[var(--accent-text)]' : ''}`}
                 onClick={props.onToggleCast}
               >
                 <Cast className="h-4 w-4" aria-hidden="true" />

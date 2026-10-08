@@ -55,7 +55,7 @@ export default function Sessions() {
         <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
           Live household streams from the native player, Jellyfin, and Plex — stop a device the same way the Jellyfin dashboard does.
         </p>
-        <Link to="/watch-stats" className="inline-block text-sm font-semibold text-[var(--accent-color)] hover:underline">
+        <Link to="/watch-stats" className="inline-block text-sm font-semibold text-[var(--accent-text)] hover:underline">
           Watch stats
         </Link>
       </header>
@@ -96,7 +96,7 @@ export default function Sessions() {
                 {row.serverType === 'plex' && row.mediaId ? (
                   <button
                     type="button"
-                    className="text-sm font-semibold text-[var(--accent-color)] hover:underline disabled:opacity-50"
+                    className="text-sm font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
                     disabled={opening === row.id}
                     aria-label={`Open ${row.title} in Plex`}
                     onClick={() => {
@@ -119,7 +119,7 @@ export default function Sessions() {
                 {row.id ? (
                   <button
                     type="button"
-                    className="text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-color)] disabled:opacity-50"
+                    className="text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-text)] disabled:opacity-50"
                     disabled={stopping === row.id}
                     aria-label={`Stop ${row.title}`}
                     onClick={() => {
@@ -139,7 +139,7 @@ export default function Sessions() {
                 {row.href ? (
                   <Link
                     to={row.href}
-                    className="text-sm font-semibold text-[var(--accent-color)] hover:underline"
+                    className="text-sm font-semibold text-[var(--accent-text)] hover:underline"
                   >
                     Open
                   </Link>

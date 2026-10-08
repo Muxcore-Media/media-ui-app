@@ -58,7 +58,7 @@ function HistoryRow({
           {canRetry ? (
             <button
               type="button"
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
+              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
               disabled={busy}
               onClick={onRetry}
             >
@@ -69,7 +69,7 @@ function HistoryRow({
           {canSearch ? (
             <button
               type="button"
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
+              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
               disabled={busy}
               onClick={onSearch}
             >
@@ -110,7 +110,7 @@ function WantedRow({
     <li className="flex min-w-0 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
       <div className="min-w-0 flex-1 space-y-1">
         {href ? (
-          <Link to={href} className="truncate font-medium text-[var(--text-primary)] hover:text-[var(--accent-color)]">
+          <Link to={href} className="truncate font-medium text-[var(--text-primary)] hover:text-[var(--accent-text)]">
             {item.title}
           </Link>
         ) : (
@@ -127,7 +127,7 @@ function WantedRow({
       <div className="flex shrink-0 flex-wrap gap-1">
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
+          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
           disabled={busy}
           onClick={onSearch}
         >
@@ -333,7 +333,7 @@ export default function Activity() {
           title="Nothing downloading"
           message="Requested titles appear here while they search, grab, or fail to import."
           action={
-            <Link to="/requests" className="text-sm font-medium text-[var(--accent-color)] hover:underline">
+            <Link to="/requests" className="text-sm font-medium text-[var(--accent-text)] hover:underline">
               Open in progress
             </Link>
           }
@@ -382,7 +382,7 @@ export default function Activity() {
       {!loading && candidates.length > 0 && (
         <section className="space-y-3" data-testid="activity-import">
           <div className="flex items-center gap-2">
-            <FolderInput className="h-5 w-5 text-[var(--accent-color)]" aria-hidden="true" />
+            <FolderInput className="h-5 w-5 text-[var(--accent-text)]" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               Manual import <span className="text-[var(--text-tertiary)]">({candidates.length})</span>
             </h2>
@@ -415,7 +415,7 @@ export default function Activity() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
                     disabled={busyKey !== null}
                     onClick={() =>
                       void run(
@@ -492,7 +492,7 @@ export default function Activity() {
       {!loading && grouped.active.length > 0 && (
         <section className="space-y-3" data-testid="activity-active">
           <div className="flex items-center gap-2">
-            <Download className="h-5 w-5 text-[var(--accent-color)]" aria-hidden="true" />
+            <Download className="h-5 w-5 text-[var(--accent-text)]" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               Downloading <span className="text-[var(--text-tertiary)]">({grouped.active.length})</span>
             </h2>

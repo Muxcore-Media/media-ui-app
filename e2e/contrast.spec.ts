@@ -66,6 +66,12 @@ for (const theme of ['dark', 'light'] as const) {
   for (const [name, path, ready] of routes) {
     test(`${name} has no definite text contrast failures in ${theme}`, async ({ page }, info) => {
       await themeFixture(page, theme);
+      // Remove from library is operator-only (T-M5-12), so measure it as a manager would see it.
+      if (name === 'Movie detail') {
+        await page.route(/\/api\/(session|me)$/, (route) => route.fulfill({
+          json: { user_id: 'fixture-member', roles: ['manager'] },
+        }));
+      }
       await page.goto(path);
       await expect(page.locator(ready)).toBeVisible();
       const results = await audit(page, theme, info);

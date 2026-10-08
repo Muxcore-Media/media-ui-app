@@ -78,6 +78,37 @@ The `Dockerfile` + `nginx.conf` in this repo are a dev-only static preview (stan
 
 CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`npm ci` + typecheck + test + build).
 
+## Parental controls (server-enforced)
+
+The consumer BFF is the **only** enforcement point for parental restrictions
+(umbrella ADR-0031, FR-PLAY-007; contract in the BFF's `BFF-API.md`, "Parental enforcement").
+This SPA reports the server's decision; it never makes one. Every response is
+`Cache-Control: no-store` with a JSON `{ error, code }` body, and a failure to evaluate the
+policy is a denial, never "allowed".
+
+| Response | State shown |
+|----------|-------------|
+| `403 parental.blocked` (resolve also carries `code: playback.parental_blocked`) | "Not available for this profile"; the player never mounts |
+| `403 parental.restricted_route` | Calm "not available for restricted accounts" status; the matching nav/search entry point is hidden for the rest of the page session |
+| `403 parental.policy_unconfigured` | "Ask an administrator to set parental controls" |
+| `403 parental.policy_unverifiable` | "Sign in with your password instead of Quick Connect" |
+| `401 parental.session_invalid` | "Sign in again" with a link; cached identity is cleared |
+| `503 parental.policy_unavailable` / `parental.classification_unavailable` | Retryable alert; nothing plays or retries on its own |
+
+`src/api/errors.ts` maps these codes to `ParentalError` (an `ApiError`); `getJSON` in
+`src/api/client.ts` throws it, so a page that prints `err.message` shows the right copy.
+`ErrorBanner` recognises that copy and renders the calm or retryable state, the player uses
+`ErrorScreen`, and both announce through `role="status"` (decisions) or `role="alert"`
+(could not check). List routes omit denied items on the server.
+
+What is still client-side, and why it is not enforcement: `src/lib/parental.ts` and the
+Settings > Parental pane read and write `prefs.parental` in the user's own userdata blob.
+That blob is user-writable, so it is only a display hint (kids-mode look, early hiding in
+rails built from userdata such as continue watching, the PIN prompt on the player). It can
+hide more than the server allows; it cannot reveal anything, and no PIN can lift a server
+denial. Profiles and PIN grants are FR-AUTH-010 and are unchanged here. Offline-saved
+downloads play from the device without asking the BFF (existing behaviour, not changed).
+
 ## Browser fixtures
 
 ```bash
@@ -112,8 +143,10 @@ This is partial T-M4-06 / NFR-A11Y-002 evidence. It verifies consumer rendering
 and interactions, including the invite form's sign-in handoff. Full J-02 still
 requires real invite creation, redemption, login, and session establishment;
 J-03 requires fixture acquisition/import, notification, playback, and resume;
-J-08 requires server-enforced parental restrictions. Those integrated journeys
-must run against the household backend stack. These fixtures do not prove them.
+J-08 requires server-enforced parental restrictions. `e2e/parental.spec.ts` only checks
+how the SPA renders each documented BFF response (blocked, unconfigured, unverifiable,
+503, restricted route) at 375 and 1280 px; it does not prove enforcement. Those integrated
+journeys must run against the household backend stack. These fixtures do not prove them.
 The keyboard checks are partial NFR-A11Y-001 evidence: they do not establish full
 WCAG conformance, contrast compliance, or actual screen-reader announcements.
 

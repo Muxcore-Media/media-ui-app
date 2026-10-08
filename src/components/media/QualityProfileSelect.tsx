@@ -1,6 +1,7 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import { api, friendlyFetchError } from '../../api/client';
+import { ActionNote } from '../operator/ActionNote';
 import type { QualityProfile } from '../../lib/formats';
 
 export function QualityProfileSelect({
@@ -17,6 +18,7 @@ export function QualityProfileSelect({
   const { canOperate } = useOperatorAccess();
   const [profiles, setProfiles] = useState<QualityProfile[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!canOperate) return;
@@ -34,11 +36,12 @@ export function QualityProfileSelect({
     };
   }, [canOperate]);
 
-  if (!canOperate) return null;
+  if (!canOperate) return <ActionNote message={error} testId="quality-note" />;
 
   if (profiles.length === 0) return null;
 
   return (
+    <div className="space-y-1">
     <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
       <span className="sr-only">Quality profile</span>
       <select
@@ -50,9 +53,11 @@ export function QualityProfileSelect({
           const next = e.target.value;
           if (!next) return;
           setBusy(true);
+          setError(null);
           void api
             .setQualityProfile({ kind, id, qualityProfileId: next })
             .then(() => onChange?.(next))
+            .catch((err) => setError(friendlyFetchError(err, 'Could not change quality profile')))
             .finally(() => setBusy(false));
         }}
       >
@@ -64,5 +69,7 @@ export function QualityProfileSelect({
         ))}
       </select>
     </label>
+    <ActionNote message={error} testId="quality-note" />
+    </div>
   );
 }

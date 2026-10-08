@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../OperatorControls';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ban, Download, Search } from 'lucide-react';
 import { api } from '../../api/client';
@@ -164,6 +165,7 @@ export default function InteractiveSearch({
         </Button>
       </div>
 
+      <OperatorNotice />
       {error ? <ErrorBanner message={error} testId="release-search-error" /> : null}
       {!grabAllowed ? (
         <p className="text-sm text-[var(--text-secondary)]" data-testid="release-grab-blocked">
@@ -238,28 +240,30 @@ export default function InteractiveSearch({
                   </td>
                   <td className="px-3 py-2 text-[var(--text-secondary)]">{formatSize(rel.size)}</td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-wrap items-center gap-1">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-                        aria-label={`Grab ${rel.title}`}
-                        disabled={!grabAllowed || grabbing === rel.guid || blocked.has(rel.guid)}
-                        onClick={() => void grab(rel)}
-                      >
-                        <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                        {grabbing === rel.guid ? 'Grabbing…' : 'Grab'}
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
-                        aria-label={`Block ${rel.title}`}
-                        disabled={blocking === rel.guid || blocked.has(rel.guid)}
-                        onClick={() => void block(rel)}
-                      >
-                        <Ban className="h-3.5 w-3.5" aria-hidden="true" />
-                        {blocked.has(rel.guid) ? 'Blocked' : blocking === rel.guid ? 'Blocking…' : 'Block'}
-                      </button>
-                    </div>
+                    <OperatorControls>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+                          aria-label={`Grab ${rel.title}`}
+                          disabled={!grabAllowed || grabbing === rel.guid || blocked.has(rel.guid)}
+                          onClick={() => void grab(rel)}
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                          {grabbing === rel.guid ? 'Grabbing…' : 'Grab'}
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
+                          aria-label={`Block ${rel.title}`}
+                          disabled={blocking === rel.guid || blocked.has(rel.guid)}
+                          onClick={() => void block(rel)}
+                        >
+                          <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                          {blocked.has(rel.guid) ? 'Blocked' : blocking === rel.guid ? 'Blocking…' : 'Block'}
+                        </button>
+                      </div>
+                    </OperatorControls>
                   </td>
                 </tr>
               ))}

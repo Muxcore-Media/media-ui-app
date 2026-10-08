@@ -126,6 +126,7 @@ describe('MusicArtist page', () => {
   });
 
   it('unmonitors an album', async () => {
+    setCurrentRoles(['admin']);
     render(
       <NowPlayingProvider>
         <MemoryRouter initialEntries={['/music/a1']}>
@@ -143,6 +144,7 @@ describe('MusicArtist page', () => {
   });
 
   it('removes the artist from the library', async () => {
+    setCurrentRoles(['admin']);
     render(
       <NowPlayingProvider>
         <MemoryRouter initialEntries={['/music/a1']}>
@@ -166,6 +168,7 @@ describe('MusicArtist page', () => {
   });
 
   it('refreshes artist metadata', async () => {
+    setCurrentRoles(['admin']);
     render(
       <NowPlayingProvider>
         <MemoryRouter initialEntries={['/music/a1']}>
@@ -202,6 +205,7 @@ describe('MusicArtist page', () => {
   });
 
   it('assigns a quality profile to the artist', async () => {
+    setCurrentRoles(['admin']);
     render(
       <NowPlayingProvider>
         <MemoryRouter initialEntries={['/music/a1']}>
@@ -222,6 +226,7 @@ describe('MusicArtist page', () => {
   });
 
   it('assigns a root folder to the artist', async () => {
+    setCurrentRoles(['admin']);
     render(
       <NowPlayingProvider>
         <MemoryRouter initialEntries={['/music/a1']}>

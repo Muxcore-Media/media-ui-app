@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
 import { type FormEvent, useEffect, useId, useState } from 'react';
 import { CalendarClock, Clapperboard, Radio } from 'lucide-react';
 import { api } from '../api/client';
@@ -275,44 +276,47 @@ export default function LiveTV() {
 
           {tab === 'timers' && (
             <div className="space-y-4">
-              <form
-                onSubmit={onSchedule}
-                className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
-                aria-labelledby={`${tabsId}-timers`}
-              >
-                <label className="space-y-1 text-sm">
-                  <span className="text-[var(--text-secondary)]">Channel</span>
-                  <select
-                    name="channel_id"
-                    required
-                    className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5 text-sm"
-                  >
-                    {channels.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.number} · {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-[var(--text-secondary)]">Title</span>
-                  <input
-                    name="title"
-                    required
-                    className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5 text-sm"
-                  />
-                </label>
-                <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                  <input type="checkbox" name="series" value="1" />
-                  Series timer
-                </label>
-                <button
-                  type="submit"
-                  className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+              <OperatorNotice />
+              <OperatorControls>
+                <form
+                  onSubmit={onSchedule}
+                  className="flex flex-wrap items-end gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
+                  aria-labelledby={`${tabsId}-timers`}
                 >
-                  Schedule
-                </button>
-              </form>
+                  <label className="space-y-1 text-sm">
+                    <span className="text-[var(--text-secondary)]">Channel</span>
+                    <select
+                      name="channel_id"
+                      required
+                      className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5 text-sm"
+                    >
+                      {channels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.number} · {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-sm">
+                    <span className="text-[var(--text-secondary)]">Title</span>
+                    <input
+                      name="title"
+                      required
+                      className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                    <input type="checkbox" name="series" value="1" />
+                    Series timer
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-[var(--accent-hover)]"
+                  >
+                    Schedule
+                  </button>
+                </form>
+              </OperatorControls>
               {timerMsg && (
                 <p
                   role={timerOk ? 'status' : 'alert'}
@@ -325,7 +329,7 @@ export default function LiveTV() {
                 <EmptyState
                   icon={CalendarClock}
                   title="No timers scheduled"
-                  message="Use the form above to schedule a one-off or series recording."
+                  message="Scheduled one-off and series recordings appear here."
                   testId="livetv-timers-empty"
                 />
               ) : (

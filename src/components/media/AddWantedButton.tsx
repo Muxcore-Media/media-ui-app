@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Clock3 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
@@ -20,6 +21,7 @@ export function AddWantedButton({
   qualityProfileId?: string;
   seriesId?: string;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -44,6 +46,8 @@ export function AddWantedButton({
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   return (
     <div className="space-y-1">

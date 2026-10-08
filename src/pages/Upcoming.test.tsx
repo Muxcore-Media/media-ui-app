@@ -1,8 +1,11 @@
+import { setCurrentRoles } from '../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Upcoming from './Upcoming';
 import { updatePreferences } from '../lib/userdata';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const listCalendar = vi.fn();
 const listTVShows = vi.fn();
@@ -148,6 +151,7 @@ describe('Upcoming page', () => {
   });
 
   it('searches a missing series from the calendar', async () => {
+    setCurrentRoles(['manager']);
     render(
       <MemoryRouter>
         <Upcoming />

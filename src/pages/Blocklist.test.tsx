@@ -1,7 +1,10 @@
+import { setCurrentRoles } from '../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Blocklist from './Blocklist';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const listBlocklist = vi.fn();
 const clearBlocklist = vi.fn();

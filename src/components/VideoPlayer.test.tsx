@@ -822,6 +822,7 @@ describe('VideoPlayer subtitle search', () => {
   });
 
   it('auto-selects the track after a successful subtitle download', async () => {
+    setCurrentRoles(['manager']);
     stubFetchWithSubtitleSearch();
 
     render(
@@ -843,8 +844,26 @@ describe('VideoPlayer subtitle search', () => {
     fireEvent.click(within(menu).getByLabelText(/Download Test 2024/i));
 
     await waitFor(() => {
-      expect(within(menu).queryByTestId('subtitle-find-results')).not.toBeNull();
+      expect(fetch).toHaveBeenCalledWith('/api/subtitles/download', expect.objectContaining({ method: 'POST' }));
+      expect(document.querySelector('track[src="/api/subtitles/files/sub42.vtt"]')).not.toBeNull();
     });
+  });
+
+  it('keeps member subtitle search available but disables provider downloads', async () => {
+    setCurrentRoles(['viewer']);
+    stubFetchWithSubtitleSearch();
+    render(<MemoryRouter><VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" /></MemoryRouter>);
+    await waitForResolvedVideo();
+    fireEvent.click(screen.getByLabelText('Settings'));
+    const menu = screen.getByTestId('player-settings-menu');
+    fireEvent.click(within(menu).getByText('Subtitles'));
+    fireEvent.click(within(menu).getByTestId('subtitle-find-online-btn'));
+    const download = await within(menu).findByLabelText(/Download Test 2024/i);
+    expect(download).toBeDisabled();
+    fireEvent.click(download);
+    expect(within(menu).getByText(/Downloading subtitles requires an administrator or manager/)).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalledWith('/api/subtitles/download', expect.anything());
+    expect(screen.getByTestId('video-player')).toBeInTheDocument();
   });
 
   it('shows unavailable message when subtitle module is absent (503)', async () => {

@@ -1,6 +1,9 @@
+import { setCurrentRoles } from '../../lib/session';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AddWantedButton } from './AddWantedButton';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const addWanted = vi.fn();
 

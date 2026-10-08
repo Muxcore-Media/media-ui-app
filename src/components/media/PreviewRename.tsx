@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
+import { ErrorBanner } from '../ui/ErrorBanner';
 import { renameChangedCount, type RenamePreviewItem } from '../../lib/rename';
 
 export function PreviewRename({
@@ -9,6 +11,7 @@ export function PreviewRename({
   kind: 'movie' | 'tv';
   id: string;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [items, setItems] = useState<RenamePreviewItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -64,11 +67,7 @@ export function PreviewRename({
           ? `${changed} file${changed === 1 ? '' : 's'} do not match the household naming template.`
           : 'Files already match the household naming template.'}
       </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorBanner message={error} testId="preview-rename-error" /> : null}
       <ul className="space-y-2">
         {items.map((row) => (
           <li
@@ -84,7 +83,8 @@ export function PreviewRename({
           </li>
         ))}
       </ul>
-      {changed ? (
+      {/* Applying a rename moves files on disk: admin/manager on the BFF. The preview stays readable. */}
+      {changed && canOperate ? (
         <button
           type="button"
           disabled={busy}

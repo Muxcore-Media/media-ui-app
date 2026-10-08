@@ -1,8 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
+import { ErrorBanner } from '../ui/ErrorBanner';
 import { parseGroupList } from '../../lib/series-override';
 
 export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
+  const { canOperate } = useOperatorAccess();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [found, setFound] = useState(false);
   const [delay, setDelay] = useState('15');
@@ -12,6 +15,8 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    // Saving or clearing an override is admin/manager on the BFF; members get no card at all.
+    if (!canOperate) return;
     let cancelled = false;
     void api
       .getSeriesOverride(seriesId)
@@ -29,7 +34,7 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [seriesId]);
+  }, [seriesId, canOperate]);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -75,6 +80,8 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
     }
   }
 
+  // After a 403 correction the form is gone but the polite explanation stays.
+  if (!canOperate) return error ? <ErrorBanner message={error} testId="series-override-error" /> : null;
   if (available === false) return null;
 
   return (
@@ -87,11 +94,7 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
       <p className="text-sm text-[var(--text-secondary)]">
         Wait longer than the household delay, and prefer or skip release groups for this show only.
       </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorBanner message={error} testId="series-override-error" /> : null}
       <label className="block text-sm text-[var(--text-primary)]">
         <span className="mb-1 block text-xs text-[var(--text-tertiary)]">Wait (minutes)</span>
         <input

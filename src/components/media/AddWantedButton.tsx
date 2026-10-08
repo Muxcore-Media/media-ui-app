@@ -1,6 +1,7 @@
 import { Clock3 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Button } from '../ui/Button';
 
 export function AddWantedButton({
@@ -20,6 +21,7 @@ export function AddWantedButton({
   qualityProfileId?: string;
   seriesId?: string;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -45,6 +47,16 @@ export function AddWantedButton({
     }
   }
 
+  const note = flash ? (
+    <p className="text-xs text-[var(--text-tertiary)]" data-testid="add-wanted-flash">
+      {flash}
+    </p>
+  ) : null;
+
+  // Adding to wanted skips request approval, so the BFF reserves it for admin/manager.
+  // After a 403 correction the control is gone but the polite explanation stays.
+  if (!canOperate) return note;
+
   return (
     <div className="space-y-1">
       <Button
@@ -55,11 +67,7 @@ export function AddWantedButton({
       >
         {busy ? 'Adding…' : 'Add to wanted'}
       </Button>
-      {flash ? (
-        <p className="text-xs text-[var(--text-tertiary)]" data-testid="add-wanted-flash">
-          {flash}
-        </p>
-      ) : null}
+      {note}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useId, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowBigUp, Clock3, Download, Search, ShieldAlert, TriangleAlert } from 'lucide-react';
 import { api } from '../api/client';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
 import {
   detailHrefForRequest,
   groupInProgressByPhase,
@@ -237,6 +238,8 @@ function UpgradeCard({
   searching: boolean;
   onSearchNow: () => void;
 }) {
+  // Search now is admin/manager on the BFF (T-M5-12); members still see the upgrade list.
+  const { canOperate } = useOperatorAccess();
   const href = upgradeDetailHref(item);
   const gap = cutoffScoreGap(item);
   const titleBlock = (
@@ -265,14 +268,16 @@ function UpgradeCard({
       ) : (
         titleBlock
       )}
-      <button
-        type="button"
-        className="shrink-0 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-        disabled={searching}
-        onClick={onSearchNow}
-      >
-        {searching ? 'Searching…' : 'Search now'}
-      </button>
+      {canOperate ? (
+        <button
+          type="button"
+          className="shrink-0 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+          disabled={searching}
+          onClick={onSearchNow}
+        >
+          {searching ? 'Searching…' : 'Search now'}
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -281,6 +286,7 @@ function UpgradeCard({
 export default function InProgress() {
   const { caps } = useCapabilities();
   const showUpgrades = featureEnabled(caps, 'releases');
+  const { canOperate } = useOperatorAccess();
   const [entries, setEntries] = useState<InProgressEntry[]>([]);
   const [upgrades, setUpgrades] = useState<CutoffItem[]>([]);
   const [upgradesAvailable, setUpgradesAvailable] = useState(true);
@@ -445,20 +451,24 @@ export default function InProgress() {
                 Quality upgrades <span className="text-[var(--text-tertiary)]">({upgrades.length})</span>
               </h2>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Search className="h-4 w-4" aria-hidden="true" />}
-              disabled={searchingKey !== null}
-              onClick={() => void runSearchNow()}
-            >
-              {searchingKey === 'all' ? 'Searching…' : 'Search all upgrades'}
-            </Button>
+            {canOperate ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Search className="h-4 w-4" aria-hidden="true" />}
+                disabled={searchingKey !== null}
+                onClick={() => void runSearchNow()}
+              >
+                {searchingKey === 'all' ? 'Searching…' : 'Search all upgrades'}
+              </Button>
+            ) : null}
           </div>
           <p className="text-sm text-[var(--text-secondary)]">
             Titles already in the library that sit below the profile cutoff — Sonarr/Radarr
-            &quot;Cutoff Unmet&quot;. Open a title to pick a scored release, or search now to let
-            automation grab the next match.
+            &quot;Cutoff Unmet&quot;.
+            {canOperate
+              ? ' Open a title to pick a scored release, or search now to let automation grab the next match.'
+              : ''}
           </p>
           {searchNowMsg ? (
             <p className="text-sm text-[var(--text-secondary)]" data-testid="upgrade-search-now">

@@ -27,6 +27,8 @@ import {
   Users,
 } from 'lucide-react';
 import { api, signOut } from '../api/client';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
+import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { canManageAcquisition, canManageBackups, canManageIndexers, canManageInvites, canManageKeys, canManageLibrary, canManageLists, canManageMigrate, canManageNaming, canManageNotifications, canManageQuality, canManageRequestPolicy, canManageSubtitles, canManageTags, canManageUsers, getCurrentUserId } from '../lib/session';
 import {
   applyTheme,
@@ -1413,6 +1415,8 @@ function ControlsPane() {
 }
 
 function DebridPane() {
+  // Adding a link is admin/manager on the BFF (T-M5-12); the cloud library below stays readable.
+  const { canOperate } = useOperatorAccess();
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -1443,22 +1447,12 @@ function DebridPane() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = link.trim();
-    if (!trimmed) return;
+    if (!trimmed || !canOperate) return;
     setBusy(true);
     setMessage(null);
     setError(null);
     try {
-      const res = await fetch('/api/debrid/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ link: trimmed }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        id?: string;
-        kind?: string;
-      };
-      if (!res.ok) throw new Error(data.error || `Failed (${res.status})`);
+      const data = await api.addDebrid(trimmed);
       setMessage(`Queued on debrid (${data.kind || 'link'}${data.id ? ` · ${data.id}` : ''})`);
       setLink('');
     } catch (err) {
@@ -1472,7 +1466,9 @@ function DebridPane() {
     <form onSubmit={onSubmit} className={paneClass} data-testid="settings-debrid-pane">
       <h2 className="font-semibold text-[var(--text-primary)]">Debrid</h2>
       <p className="text-sm text-[var(--text-secondary)]">
-        Paste a magnet link or hoster URL to queue on your configured debrid provider.
+        {canOperate
+          ? 'Paste a magnet link or hoster URL to queue on your configured debrid provider.'
+          : 'Cloud downloads queued by a household manager appear here.'}
       </p>
       {message && (
         <p
@@ -1482,29 +1478,26 @@ function DebridPane() {
           {message}
         </p>
       )}
-      {error && (
-        <p
-          role="alert"
-          className="rounded-[var(--radius-sm)] border border-[var(--danger-color)]/40 px-3 py-2 text-sm text-[var(--danger-color)]"
-        >
-          {error}
-        </p>
-      )}
-      <label htmlFor="settings-debrid-link" className="block space-y-1 text-sm">
-        <span className="text-[var(--text-secondary)]">Magnet or link</span>
-        <input
-          id="settings-debrid-link"
-          name="link"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          className={inputClass}
-          placeholder="magnet:?xt=… or https://…"
-          data-testid="settings-debrid-link"
-        />
-      </label>
-      <button type="submit" disabled={busy || !link.trim()} className={saveBtnClass}>
-        {busy ? 'Adding…' : 'Add to debrid'}
-      </button>
+      {error && <ErrorBanner message={error} testId="settings-debrid-error" />}
+      {canOperate ? (
+        <>
+          <label htmlFor="settings-debrid-link" className="block space-y-1 text-sm">
+            <span className="text-[var(--text-secondary)]">Magnet or link</span>
+            <input
+              id="settings-debrid-link"
+              name="link"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              className={inputClass}
+              placeholder="magnet:?xt=… or https://…"
+              data-testid="settings-debrid-link"
+            />
+          </label>
+          <button type="submit" disabled={busy || !link.trim()} className={saveBtnClass}>
+            {busy ? 'Adding…' : 'Add to debrid'}
+          </button>
+        </>
+      ) : null}
       <div
         className="space-y-2 border-t border-[var(--border-subtle)] pt-4"
         data-testid="settings-debrid-library"

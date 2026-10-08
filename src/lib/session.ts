@@ -165,7 +165,7 @@ export function canApproveRequests(roles: string[] = getCurrentRoles()): boolean
   });
 }
 
-function hasAdminOrManager(roles: string[]): boolean {
+function hasAdminOrManager(roles: readonly string[]): boolean {
   return roles.some((role) => {
     switch (role.trim().toLowerCase()) {
       case 'admin':
@@ -175,6 +175,25 @@ function hasAdminOrManager(roles: string[]): boolean {
         return false;
     }
   });
+}
+
+/**
+ * True when the session may use the state-changing operator controls the BFF role-gates (T-M5-12,
+ * BFF-API.md "Operator route roles"): remove/delete/refresh, monitor and quality changes, grab/block,
+ * wanted, search-now, retry, import, rename, subtitle download, Live TV timers, session stop.
+ * Same predicate as the BFF `sessionHasPrivilegedRole` (admin or manager). Cosmetic only: the cached
+ * role can be stale and the BFF is the authority.
+ */
+export function canOperateLibrary(roles: readonly string[] = getCurrentRoles()): boolean {
+  return hasAdminOrManager(roles);
+}
+
+/**
+ * True when the session may change a library item's `root_folder_path`. The BFF requires `admin`
+ * for it (`operator.admin_required` for a manager); monitored and quality stay manager-capable.
+ */
+export function canChangeRootFolder(roles: readonly string[] = getCurrentRoles()): boolean {
+  return roles.some((role) => role.trim().toLowerCase() === 'admin');
 }
 
 /** True when the household session may access shared acquisition settings. */

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  OperatorError,
   downloadSubtitle,
   searchSubtitles,
   type PlaybackSubtitleTrack,
@@ -17,6 +18,11 @@ export type SubtitleSearchState = {
   downloadingId: string | null;
   /** ID of the most-recently successfully downloaded subtitle. */
   downloadedId: string | null;
+  /**
+   * True after the BFF refused the download for this session's role (403 `operator.*`). The
+   * message in `error` is calm copy, and the player stops offering the download.
+   */
+  denied: boolean;
 };
 
 const INITIAL_STATE: SubtitleSearchState = {
@@ -25,6 +31,7 @@ const INITIAL_STATE: SubtitleSearchState = {
   error: null,
   downloadingId: null,
   downloadedId: null,
+  denied: false,
 };
 
 /** True when an HTTP error message suggests the media-subtitles module is absent/unhealthy. */
@@ -44,7 +51,7 @@ export function useSubtitleSearch() {
   const [state, setState] = useState<SubtitleSearchState>(INITIAL_STATE);
 
   const search = useCallback(async (params: SubtitleSearchParams) => {
-    setState({ status: 'searching', results: [], error: null, downloadingId: null, downloadedId: null });
+    setState({ ...INITIAL_STATE, status: 'searching' });
     try {
       const data = await searchSubtitles(params);
       if (!data.available) {
@@ -78,7 +85,12 @@ export function useSubtitleSearch() {
           srclang: data.language,
           src: data.track_url,
         };
-      } catch {
+      } catch (err) {
+        if (err instanceof OperatorError) {
+          // A role decision, not a fault: say so once and do not offer the download again.
+          setState((s) => ({ ...s, downloadingId: null, status: 'error', error: err.message, denied: true }));
+          return null;
+        }
         setState((s) => ({
           ...s,
           downloadingId: null,

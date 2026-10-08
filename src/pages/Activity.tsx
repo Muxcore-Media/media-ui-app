@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Ban, Clock3, Download, FolderInput, RotateCcw, Search, Trash2, TriangleAlert } from 'lucide-react';
 import { api } from '../api/client';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
 import {
   activityCanRetryImport,
   activityCanSearchAgain,
@@ -23,12 +24,15 @@ import type { ActivityRecord, WantedItem } from '../types';
 function HistoryRow({
   rec,
   busy,
+  canAct,
   onRetry,
   onBlock,
   onSearch,
 }: {
   rec: ActivityRecord;
   busy: boolean;
+  /** admin/manager: retry, search and block are role-gated on the BFF (T-M5-12). */
+  canAct: boolean;
   onRetry: () => void;
   onBlock: () => void;
   onSearch?: () => void;
@@ -36,6 +40,9 @@ function HistoryRow({
   const stuck = rec.stuck || rec.warning;
   const canRetry = activityCanRetryImport(rec.status);
   const canSearch = activityCanSearchAgain(rec.status) && !!rec.wanted_item_id && !!onSearch;
+  const canBlock = Boolean(rec.guid && rec.wanted_item_id);
+  // No empty action group: members see the status, not controls that would be refused.
+  const showActions = canAct && stuck && (canRetry || canSearch || canBlock);
   return (
     <li
       className={`flex min-w-0 flex-wrap items-center gap-3 rounded-[var(--radius-md)] border bg-[var(--bg-elevated)] p-3 ${
@@ -53,7 +60,7 @@ function HistoryRow({
           <p className="text-xs leading-snug text-[var(--text-secondary)]">{rec.status_detail}</p>
         ) : null}
       </div>
-      {stuck ? (
+      {showActions ? (
         <div className="flex shrink-0 flex-wrap gap-1">
           {canRetry ? (
             <button
@@ -77,7 +84,7 @@ function HistoryRow({
               Search now
             </button>
           ) : null}
-          {rec.guid && rec.wanted_item_id ? (
+          {canBlock ? (
             <button
               type="button"
               className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
@@ -97,11 +104,14 @@ function HistoryRow({
 function WantedRow({
   item,
   busy,
+  canAct,
   onSearch,
   onRemove,
 }: {
   item: WantedItem;
   busy: boolean;
+  /** admin/manager: search-now and wanted/remove are role-gated on the BFF (T-M5-12). */
+  canAct: boolean;
   onSearch: () => void;
   onRemove: () => void;
 }) {
@@ -124,33 +134,36 @@ function WantedRow({
         </p>
         <Badge tone="warning">Missing</Badge>
       </div>
-      <div className="flex shrink-0 flex-wrap gap-1">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-          disabled={busy}
-          onClick={onSearch}
-        >
-          <Search className="h-3.5 w-3.5" aria-hidden="true" />
-          Search now
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
-          disabled={busy}
-          aria-label={`Remove ${item.title} from wanted`}
-          onClick={onRemove}
-        >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-          Remove
-        </button>
-      </div>
+      {canAct ? (
+        <div className="flex shrink-0 flex-wrap gap-1">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+            disabled={busy}
+            onClick={onSearch}
+          >
+            <Search className="h-3.5 w-3.5" aria-hidden="true" />
+            Search now
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
+            disabled={busy}
+            aria-label={`Remove ${item.title} from wanted`}
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Remove
+          </button>
+        </div>
+      ) : null}
     </li>
   );
 }
 
 /** Arr-style download activity: stuck grabs, missing wanted, recent history. */
 export default function Activity() {
+  const { canOperate } = useOperatorAccess();
   const [history, setHistory] = useState<ActivityRecord[]>([]);
   const [wanted, setWanted] = useState<WantedItem[]>([]);
   const [candidates, setCandidates] = useState<ImportCandidate[]>([]);
@@ -192,7 +205,7 @@ export default function Activity() {
 
   const grouped = useMemo(() => splitActivity(history), [history]);
   const empty =
-    !loading && !error && history.length === 0 && wanted.length === 0 && candidates.length === 0;
+    !loading && !error && history.length === 0 && wanted.length === 0 && (!canOperate || candidates.length === 0);
 
   const run = async (key: string, fn: () => Promise<void>, ok: string) => {
     setBusyKey(key);
@@ -218,19 +231,21 @@ export default function Activity() {
             download folder — the same daily queue as Sonarr/Radarr.
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<Search className="h-4 w-4" aria-hidden="true" />}
-          disabled={busyKey !== null}
-          onClick={() =>
-            void run('all', async () => {
-              await api.searchNow();
-            }, 'Wanted search started.')
-          }
-        >
-          Search all wanted
-        </Button>
+        {canOperate ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Search className="h-4 w-4" aria-hidden="true" />}
+            disabled={busyKey !== null}
+            onClick={() =>
+              void run('all', async () => {
+                await api.searchNow();
+              }, 'Wanted search started.')
+            }
+          >
+            Search all wanted
+          </Button>
+        ) : null}
       </header>
 
       {loading && (
@@ -251,7 +266,7 @@ export default function Activity() {
         </p>
       ) : null}
 
-      {!loading ? (
+      {!loading && canOperate ? (
         <form
           className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 sm:grid-cols-[8rem_1fr_10rem_auto]"
           data-testid="wanted-add-form"
@@ -319,7 +334,7 @@ export default function Activity() {
             <button
               type="submit"
               disabled={busyKey !== null}
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-accent)] disabled:opacity-50"
             >
               Add to wanted
             </button>
@@ -355,6 +370,7 @@ export default function Activity() {
                 key={item.id}
                 item={item}
                 busy={busyKey !== null}
+                canAct={canOperate}
                 onSearch={() =>
                   void run(
                     item.id,
@@ -379,7 +395,7 @@ export default function Activity() {
         </section>
       )}
 
-      {!loading && candidates.length > 0 && (
+      {!loading && canOperate && candidates.length > 0 && (
         <section className="space-y-3" data-testid="activity-import">
           <div className="flex items-center gap-2">
             <FolderInput className="h-5 w-5 text-[var(--accent-text)]" aria-hidden="true" />
@@ -451,6 +467,7 @@ export default function Activity() {
                 key={rec.id}
                 rec={rec}
                 busy={busyKey !== null}
+                canAct={canOperate}
                 onRetry={() =>
                   void run(
                     rec.id,
@@ -499,7 +516,7 @@ export default function Activity() {
           </div>
           <ul className="grid gap-3">
             {grouped.active.map((rec) => (
-              <HistoryRow key={rec.id} rec={rec} busy={false} onRetry={() => undefined} onBlock={() => undefined} />
+              <HistoryRow key={rec.id} rec={rec} busy={false} canAct={canOperate} onRetry={() => undefined} onBlock={() => undefined} />
             ))}
           </ul>
         </section>
@@ -512,7 +529,7 @@ export default function Activity() {
           </h2>
           <ul className="grid gap-3">
             {grouped.recent.map((rec) => (
-              <HistoryRow key={rec.id} rec={rec} busy={false} onRetry={() => undefined} onBlock={() => undefined} />
+              <HistoryRow key={rec.id} rec={rec} busy={false} canAct={canOperate} onRetry={() => undefined} onBlock={() => undefined} />
             ))}
           </ul>
         </section>

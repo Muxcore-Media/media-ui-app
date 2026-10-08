@@ -1,6 +1,8 @@
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { api } from '../../api/client';
+import { api, friendlyFetchError } from '../../api/client';
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
+import { ActionNote } from '../operator/ActionNote';
 import { Button } from '../ui/Button';
 
 export function RemoveLibraryButton({
@@ -16,6 +18,7 @@ export function RemoveLibraryButton({
   hasFile?: boolean;
   onRemoved?: () => void;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [open, setOpen] = useState(false);
   const [deleteFiles, setDeleteFiles] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,11 +32,14 @@ export function RemoveLibraryButton({
       await api.removeLibraryItem({ kind, id, deleteFiles });
       onRemoved?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not remove from library');
+      setError(friendlyFetchError(err, 'Could not remove from library'));
     } finally {
       setBusy(false);
     }
   }
+
+  // Removal and file deletion are operator actions (admin/manager) on the BFF.
+  if (!canOperate) return <ActionNote message={error} testId="remove-library-note" />;
 
   if (!open) {
     return (
@@ -65,11 +71,7 @@ export function RemoveLibraryButton({
           Also delete files on disk
         </label>
       ) : null}
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <ActionNote message={error} testId="remove-library-note" />
       <div className="flex flex-wrap gap-2">
         <Button variant="danger" disabled={busy} onClick={() => void confirm()}>
           {busy ? 'Removing…' : deleteFiles ? 'Remove and delete files' : 'Remove from library'}

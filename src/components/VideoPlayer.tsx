@@ -59,6 +59,7 @@ import {
 } from '../api/client';
 import type { PlayerTrackInfo } from '../lib/player/types';
 import { canManageLibrary } from '../lib/session';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
 import { persistedSkipSegments, upsertSegmentKind } from '../lib/playback-segments';
 
 /** Show the "Next Episode" button this many seconds before the end of an episode. */
@@ -145,6 +146,7 @@ export default function VideoPlayer({
   const source = usePlaybackSource(src);
 
   const subtitleSearch = useSubtitleSearch();
+  const { canOperate } = useOperatorAccess();
 
   const upNext = useUpNext({
     showId,
@@ -817,15 +819,22 @@ export default function VideoPlayer({
           onAspectMode={handleAspectMode}
           onPrevMarker={markerNavEnabled ? goToPrevMarker : undefined}
           onNextMarker={markerNavEnabled ? goToNextMarker : undefined}
-          subtitleSearch={{
-            status: subtitleSearch.status,
-            results: subtitleSearch.results,
-            error: subtitleSearch.error,
-            downloadingId: subtitleSearch.downloadingId,
-            downloadedId: subtitleSearch.downloadedId,
-            onSearch: handleFindSubtitles,
-            onDownload: (id, provider) => void handleDownloadSubtitle(id, provider),
-          }}
+          subtitleSearch={
+            // Downloading a subtitle is admin/manager on the BFF (T-M5-12), so members are not offered
+            // "Find online". After a 403 the explanation stays until the next title.
+            canOperate || subtitleSearch.denied
+              ? {
+                  status: subtitleSearch.status,
+                  results: subtitleSearch.results,
+                  error: subtitleSearch.error,
+                  downloadingId: subtitleSearch.downloadingId,
+                  downloadedId: subtitleSearch.downloadedId,
+                  denied: subtitleSearch.denied,
+                  onSearch: handleFindSubtitles,
+                  onDownload: (id, provider) => void handleDownloadSubtitle(id, provider),
+                }
+              : undefined
+          }
           skipPoints={
             mediaId && canManageLibrary()
               ? {

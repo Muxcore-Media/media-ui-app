@@ -41,6 +41,8 @@ export type SubtitleSearchMenuProps = {
   error: string | null;
   downloadingId: string | null;
   downloadedId: string | null;
+  /** The BFF refused downloads for this role: keep the explanation, drop the entry point. */
+  denied?: boolean;
   onSearch: () => void;
   onDownload: (id: string, provider: string) => void;
 };
@@ -354,7 +356,7 @@ export default function SettingsMenu(props: Props) {
             >
               Appearance…
             </button>
-            {subtitleSearch ? (
+            {subtitleSearch && !subtitleSearch.denied ? (
               <button
                 type="button"
                 data-testid="subtitle-find-online-btn"

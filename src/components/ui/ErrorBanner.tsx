@@ -1,4 +1,5 @@
-import { parentalCodeFromMessage } from '../../api/errors';
+import { operatorCodeFromMessage, parentalCodeFromMessage } from '../../api/errors';
+import { OperatorNotice } from '../operator/OperatorNotice';
 import { ParentalNotice } from '../parental/ParentalNotice';
 
 type Props = {
@@ -11,11 +12,14 @@ type Props = {
  *
  * Pages store `err.message`; a server-side parental outcome (`ParentalError`, ADR-0031) has
  * fixed SPA copy, so it is recognised here and shown as a calm "not available" state (or a
- * retryable alert for "could not check") instead of a red failure.
+ * retryable alert for "could not check") instead of a red failure. An operator role denial
+ * (`OperatorError`, T-M5-12) is likewise a calm status, never a red failure.
  */
 export function ErrorBanner({ message, testId = 'page-error' }: Props) {
   const parentalCode = parentalCodeFromMessage(message);
   if (parentalCode) return <ParentalNotice code={parentalCode} testId={testId === 'page-error' ? undefined : testId} />;
+  const operatorCode = operatorCodeFromMessage(message);
+  if (operatorCode) return <OperatorNotice code={operatorCode} testId={testId === 'page-error' ? undefined : testId} />;
   return (
     <p
       role="alert"

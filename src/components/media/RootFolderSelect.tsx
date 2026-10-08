@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import { api, friendlyFetchError } from '../../api/client';
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
+import { ActionNote } from '../operator/ActionNote';
 import { rootLabel, type LibraryRoot } from '../../lib/roots';
 
 export function RootFolderSelect({
@@ -13,9 +15,11 @@ export function RootFolderSelect({
   value?: string;
   onChange?: (next: string) => void;
 }) {
+  const { canChangeRoot } = useOperatorAccess();
   const [roots, setRoots] = useState<LibraryRoot[]>([]);
   const [picked, setPicked] = useState<LibraryRoot | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const catalogKind =
     kind === 'movie'
       ? 'movies'
@@ -30,6 +34,9 @@ export function RootFolderSelect({
               : 'music';
 
   useEffect(() => {
+    // The BFF requires the admin role to change root_folder_path (managers get
+    // operator.admin_required), so other roles are not offered the picker at all.
+    if (!canChangeRoot) return;
     let cancelled = false;
     void api
       .listRoots(catalogKind)
@@ -49,16 +56,19 @@ export function RootFolderSelect({
     return () => {
       cancelled = true;
     };
-  }, [catalogKind]);
+  }, [catalogKind, canChangeRoot]);
 
+  if (!canChangeRoot) return <ActionNote message={error} testId="root-folder-note" />;
   if (roots.length === 0) return null;
 
   function assign(next: string) {
     if (!next || !id) return;
     setBusy(true);
+    setError(null);
     void api
       .setRootFolder({ kind, id, rootFolderPath: next })
       .then(() => onChange?.(next))
+      .catch((err) => setError(friendlyFetchError(err, 'Could not change the root folder')))
       .finally(() => setBusy(false));
   }
 
@@ -95,6 +105,7 @@ export function RootFolderSelect({
           {picked ? ` (${picked.name || picked.path})` : ''}
         </button>
       ) : null}
+      <ActionNote message={error} testId="root-folder-note" />
     </div>
   );
 }

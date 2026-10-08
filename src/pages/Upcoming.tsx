@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { api } from '../api/client';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
 import { ShelfSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -31,6 +32,7 @@ function monthBounds(offset: number): { start: string; end: string; label: strin
 }
 
 export default function Upcoming() {
+  const { canOperate } = useOperatorAccess();
   const [items, setItems] = useState<CalendarItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +115,7 @@ export default function Upcoming() {
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Upcoming</h1>
           <p className="text-sm text-[var(--text-secondary)]">
             Episode air dates and movie releases on one calendar — same daily view as Sonarr +
-            Radarr. Search now grabs a missing title the day it airs.
+            Radarr.{canOperate ? ' Search now grabs a missing title the day it airs.' : ''}
           </p>
           <Link to="/missing" className="mt-1 inline-block text-sm font-semibold text-[var(--accent-text)] hover:underline">
             Library missing
@@ -220,7 +222,7 @@ export default function Upcoming() {
                           {r.has_file ? ' · In library' : ' · Missing'}
                         </p>
                       </div>
-                      {!r.has_file ? (
+                      {!r.has_file && canOperate ? (
                         <button
                           type="button"
                           className="shrink-0 text-sm font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"

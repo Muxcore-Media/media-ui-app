@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Search } from 'lucide-react';
 import { api } from '../api/client';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
@@ -18,6 +19,8 @@ function MissingRow({
   busy: boolean;
   onSearch: () => void;
 }) {
+  // Search now adds to wanted and starts a search: admin/manager on the BFF (T-M5-12).
+  const { canOperate } = useOperatorAccess();
   return (
     <li className="flex min-w-0 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2.5">
       <div className="min-w-0 flex-1">
@@ -28,15 +31,17 @@ function MissingRow({
           {item.kind === 'movie' ? item.year || 'Movie' : missingEpisodeLabel(item)}
         </p>
       </div>
-      <button
-        type="button"
-        className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)] disabled:opacity-50"
-        disabled={busy}
-        onClick={onSearch}
-      >
-        <Search className="h-3.5 w-3.5" aria-hidden="true" />
-        Search now
-      </button>
+      {canOperate ? (
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)] disabled:opacity-50"
+          disabled={busy}
+          onClick={onSearch}
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden="true" />
+          Search now
+        </button>
+      ) : null}
     </li>
   );
 }

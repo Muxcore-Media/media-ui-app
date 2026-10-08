@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Ban } from 'lucide-react';
 import { api } from '../api/client';
+import { useOperatorAccess } from '../hooks/useOperatorAccess';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -8,6 +9,8 @@ import { LoadingStatus } from '../components/ui/LoadingStatus';
 import type { BlocklistEntry } from '../lib/blocklist';
 
 export default function Blocklist() {
+  // Clearing entries is admin/manager on the BFF (T-M5-12); members can still read the list.
+  const { canOperate } = useOperatorAccess();
   const [items, setItems] = useState<BlocklistEntry[]>([]);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -76,11 +79,11 @@ export default function Blocklist() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Blocklist</h1>
           <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
-            Releases automation will skip — the same list as Sonarr/Radarr Blocklist. Clear an entry
-            to let Search now try it again.
+            Releases automation will skip — the same list as Sonarr/Radarr Blocklist.
+            {canOperate ? ' Clear an entry to let Search now try it again.' : ''}
           </p>
         </div>
-        {items.length > 0 ? (
+        {canOperate && items.length > 0 ? (
           <Button variant="danger" disabled={busy === 'all'} onClick={() => void clearAll()}>
             Clear all
           </Button>
@@ -116,14 +119,16 @@ export default function Blocklist() {
                   {row.guid ? ` · ${row.guid}` : ''}
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busy === row.guid}
-                onClick={() => void clearOne(row)}
-              >
-                Unblock
-              </Button>
+              {canOperate ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy === row.guid}
+                  onClick={() => void clearOne(row)}
+                >
+                  Unblock
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>

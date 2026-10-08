@@ -2,6 +2,7 @@ import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { renameChangedCount, type RenamePreviewItem } from '../../lib/rename';
+import { ErrorBanner } from '../ui/ErrorBanner';
 
 export function PreviewRename({
   kind,
@@ -69,11 +70,7 @@ export function PreviewRename({
           ? `${changed} file${changed === 1 ? '' : 's'} do not match the household naming template.`
           : 'Files already match the household naming template.'}
       </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorBanner message={error} testId="rename-error" /> : null}
       <ul className="space-y-2">
         {items.map((row) => (
           <li

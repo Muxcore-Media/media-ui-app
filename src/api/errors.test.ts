@@ -3,18 +3,23 @@ import {
   api,
   ApiError,
   friendlyPlaybackError,
+  OperatorError,
   ParentalError,
   resolvePlayback,
   fetchPlaybackChapters,
 } from './client';
 import {
+  OPERATOR_CODES,
+  OPERATOR_COPY,
   PARENTAL_CODES,
   PARENTAL_COPY,
+  operatorCodeFromBody,
+  operatorCodeFromMessage,
   parentalCodeFromBody,
   parentalCodeFromMessage,
   type ParentalCode,
 } from './errors';
-import { getSessionSnapshot, setCurrentRoles, setCurrentUserId } from '../lib/session';
+import { getCurrentRoles, getSessionSnapshot, setCurrentRoles, setCurrentUserId } from '../lib/session';
 import { getRestrictedEntryPoints, resetRestrictedRoutes } from '../lib/restricted-routes';
 
 function jsonResponse(status: number, body: unknown) {
@@ -149,5 +154,100 @@ describe('parental error mapping (ADR-0031)', () => {
       fetchMock.mockResolvedValueOnce(jsonResponse(status, { error: 'x', code }));
       await expect(resolvePlayback('/stream/movies/m1')).rejects.toBeInstanceOf(ParentalError);
     }
+  });
+});
+
+describe('operator role denial mapping (T-M5-12, C-30)', () => {
+  const fetchMock = vi.fn();
+  const isIdentity = (url: RequestInfo | URL) => /^\/api\/(session|me)(\?|$)/.test(String(url));
+  const sessionReads = () => fetchMock.mock.calls.filter(([url]) => isIdentity(url)).length;
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+    localStorage.clear();
+    setCurrentUserId('u-viewer');
+    setCurrentRoles(['manager']);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function respond(operator: Response, session: Response = jsonResponse(200, { user_id: 'u-viewer', roles: ['viewer'] })) {
+    fetchMock.mockImplementation(async (url: RequestInfo | URL) =>
+      isIdentity(url) ? session.clone() : operator.clone(),
+    );
+  }
+
+  it('documents exactly the two server codes', () => {
+    expect([...OPERATOR_CODES].sort()).toEqual(['operator.admin_required', 'operator.forbidden']);
+  });
+
+  it.each(OPERATOR_CODES)('maps 403 %s to an OperatorError with SPA copy', async (code) => {
+    respond(jsonResponse(403, { error: 'server words', code }));
+    const err = await api.stopSession('s1').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(OperatorError);
+    expect(err).toBeInstanceOf(ApiError);
+    const operator = err as OperatorError;
+    expect(operator.operatorCode).toBe(code);
+    expect(operator.status).toBe(403);
+    expect(operator.code).toBe(code);
+    expect(operator.serverMessage).toBe('server words');
+    expect(operator.message).toBe(OPERATOR_COPY[code].message);
+    expect(operator.message).toMatch(/don't have permission/);
+    expect(operatorCodeFromMessage(operator.message)).toBe(code);
+  });
+
+  it('does not retry the refused request', async () => {
+    respond(jsonResponse(403, { error: 'no', code: 'operator.forbidden' }));
+    await api.stopSession('s1').catch(() => undefined);
+    await vi.waitFor(() => expect(sessionReads()).toBe(1));
+    const stops = fetchMock.mock.calls.filter(([url]) => String(url).includes('/stop'));
+    expect(stops).toHaveLength(1);
+  });
+
+  it('re-reads the session so a stale cached role is corrected', async () => {
+    respond(jsonResponse(403, { error: 'no', code: 'operator.forbidden' }));
+    await api.stopSession('s1').catch(() => undefined);
+    await vi.waitFor(() => expect(getCurrentRoles()).toEqual(['viewer']));
+    expect(getSessionSnapshot().roles).toEqual(['viewer']);
+  });
+
+  it('is cosmetic: a refresh that fails or returns no roles never crashes or loops', async () => {
+    respond(jsonResponse(403, { error: 'no', code: 'operator.forbidden' }), jsonResponse(503, { error: 'down' }));
+    const err = await api.stopSession('s1').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(OperatorError);
+    await vi.waitFor(() => expect(sessionReads()).toBeGreaterThanOrEqual(1));
+    expect(sessionReads()).toBeLessThanOrEqual(2);
+    expect(getCurrentRoles()).toEqual(['manager']);
+  });
+
+  it('does not treat other denials as role denials', async () => {
+    for (const [status, code] of [
+      [403, 'csrf.rejected'],
+      [403, 'parental.restricted_route'],
+      [403, 'operator.made_up'],
+      [403, undefined],
+      [413, 'operator.body_too_large'],
+      [400, 'operator.forbidden'],
+      [401, 'operator.forbidden'],
+    ] as const) {
+      respond(jsonResponse(status, { error: 'x', code }));
+      const err = await api.stopSession('s1').catch((e: unknown) => e);
+      expect(err, `${status} ${code}`).not.toBeInstanceOf(OperatorError);
+      expect(err).toBeInstanceOf(ApiError);
+    }
+    expect(operatorCodeFromBody({ code: 'operator.forbidden' }, 500)).toBeNull();
+    expect(operatorCodeFromBody(null, 403)).toBeNull();
+    expect(operatorCodeFromMessage('something else')).toBeNull();
+    expect(operatorCodeFromMessage(null)).toBeNull();
+  });
+
+  it('keeps the library PATCH root-folder denial distinct from the generic one', async () => {
+    respond(jsonResponse(403, { error: 'admin role required to change root_folder_path', code: 'operator.admin_required' }));
+    const err = await api.setRootFolder({ kind: 'movie', id: 'm1', rootFolderPath: '/data/x' }).catch((e: unknown) => e);
+    expect((err as OperatorError).operatorCode).toBe('operator.admin_required');
+    expect((err as OperatorError).message).toContain('needs an administrator');
   });
 });

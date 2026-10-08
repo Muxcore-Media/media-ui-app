@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
@@ -9,10 +10,11 @@ export function DeleteEpisodeFileButton({
   id: string;
   onRemoved?: () => void;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [busy, setBusy] = useState(false);
 
   async function remove() {
-    if (!id || busy) return;
+    if (!canOperate || !id || busy) return;
     if (!window.confirm('Delete this episode file from disk?')) return;
     setBusy(true);
     try {
@@ -22,6 +24,8 @@ export function DeleteEpisodeFileButton({
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   return (
     <button

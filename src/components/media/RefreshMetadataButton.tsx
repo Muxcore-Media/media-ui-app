@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
@@ -12,11 +13,12 @@ export function RefreshMetadataButton({
   id: string;
   onRefreshed?: () => void;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
   async function refresh() {
-    if (!id || busy) return;
+    if (!canOperate || !id || busy) return;
     setBusy(true);
     try {
       await api.refreshLibraryItem({ kind, id });
@@ -26,6 +28,8 @@ export function RefreshMetadataButton({
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   return (
     <Button

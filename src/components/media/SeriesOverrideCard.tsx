@@ -1,8 +1,10 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { type FormEvent, useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { parseGroupList } from '../../lib/series-override';
 
 export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
+  const { canOperate } = useOperatorAccess();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [found, setFound] = useState(false);
   const [delay, setDelay] = useState('15');
@@ -12,6 +14,7 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!canOperate) return;
     let cancelled = false;
     void api
       .getSeriesOverride(seriesId)
@@ -29,7 +32,7 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [seriesId]);
+  }, [seriesId, canOperate]);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -74,6 +77,8 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   if (available === false) return null;
 

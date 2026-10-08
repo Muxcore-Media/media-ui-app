@@ -1,7 +1,10 @@
+import { setCurrentRoles } from '../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveTV from './LiveTV';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const listLiveTV = vi.fn();
 

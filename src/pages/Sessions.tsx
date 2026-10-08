@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MonitorPlay } from 'lucide-react';
@@ -53,12 +54,13 @@ export default function Sessions() {
       <header className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Now watching</h1>
         <p className="max-w-2xl text-sm text-[var(--text-secondary)]">
-          Live household streams from the native player, Jellyfin, and Plex — stop a device the same way the Jellyfin dashboard does.
+          Live household streams from the native player, Jellyfin, and Plex.
         </p>
         <Link to="/watch-stats" className="inline-block text-sm font-semibold text-[var(--accent-text)] hover:underline">
           Watch stats
         </Link>
       </header>
+      <OperatorNotice />
       {loading ? (
         <div aria-busy="true">
           <LoadingStatus label="Loading sessions" />
@@ -117,24 +119,26 @@ export default function Sessions() {
                   </button>
                 ) : null}
                 {row.id ? (
-                  <button
-                    type="button"
-                    className="text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-text)] disabled:opacity-50"
-                    disabled={stopping === row.id}
-                    aria-label={`Stop ${row.title}`}
-                    onClick={() => {
-                      setStopping(row.id);
-                      void api
-                        .stopSession(row.id)
-                        .then(() => refresh())
-                        .catch((err) => {
-                          setError(err instanceof Error ? err.message : 'Could not stop session');
-                        })
-                        .finally(() => setStopping(null));
-                    }}
-                  >
-                    Stop
-                  </button>
+                  <OperatorControls>
+                    <button
+                      type="button"
+                      className="text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-text)] disabled:opacity-50"
+                      disabled={stopping === row.id}
+                      aria-label={`Stop ${row.title}`}
+                      onClick={() => {
+                        setStopping(row.id);
+                        void api
+                          .stopSession(row.id)
+                          .then(() => refresh())
+                          .catch((err) => {
+                            setError(err instanceof Error ? err.message : 'Could not stop session');
+                          })
+                          .finally(() => setStopping(null));
+                      }}
+                    >
+                      Stop
+                    </button>
+                  </OperatorControls>
                 ) : null}
                 {row.href ? (
                   <Link

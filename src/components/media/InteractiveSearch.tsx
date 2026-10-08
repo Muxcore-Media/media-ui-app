@@ -218,7 +218,7 @@ export default function InteractiveSearch({
             <tbody className="divide-y divide-[var(--border-subtle)]">
               {items.map((rel) => (
                 <tr key={rel.guid || rel.title}>
-                  <td className="px-3 py-2 font-semibold text-[var(--accent-color)]">
+                  <td className="px-3 py-2 font-semibold text-[var(--accent-text)]">
                     {rel.score ?? 0}
                   </td>
                   <td className="px-3 py-2 text-[var(--text-secondary)]" data-testid="release-quality">
@@ -241,7 +241,7 @@ export default function InteractiveSearch({
                     <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
+                        className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
                         aria-label={`Grab ${rel.title}`}
                         disabled={!grabAllowed || grabbing === rel.guid || blocked.has(rel.guid)}
                         onClick={() => void grab(rel)}

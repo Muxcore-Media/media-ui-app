@@ -186,7 +186,7 @@ export default function Music() {
                       <div>
                         <Link
                           to={`/music/${a.id}`}
-                          className="font-medium text-[var(--accent-color)] hover:underline"
+                          className="font-medium text-[var(--accent-text)] hover:underline"
                         >
                           {a.name || a.title || a.id}
                         </Link>
@@ -238,7 +238,7 @@ export default function Music() {
                         {t.stream_url ? (
                           <button
                             type="button"
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-text)] transition hover:bg-[var(--bg-elevated-2)]"
                             aria-label={playing === t.id ? `Pause ${t.title}` : `Play ${t.title}`}
                             aria-pressed={playing === t.id}
                             onClick={() => {

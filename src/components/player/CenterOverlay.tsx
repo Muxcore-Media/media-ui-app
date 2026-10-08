@@ -27,7 +27,7 @@ export default function CenterOverlay({
           aria-label="Loading playback"
           className="flex h-full items-center justify-center gap-2 text-sm text-[var(--player-fg-muted)]"
         >
-          <Spinner className="h-8 w-8 text-[var(--accent-color)]" aria-hidden="true" />
+          <Spinner className="h-8 w-8 text-[var(--accent-text)]" aria-hidden="true" />
           <span aria-hidden="true">Loading…</span>
         </div>
       ) : null}

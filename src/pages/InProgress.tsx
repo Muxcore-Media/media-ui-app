@@ -127,7 +127,7 @@ function InProgressCard({
         {href ? (
           <Link
             to={href}
-            className="block truncate font-medium text-[var(--text-primary)] hover:text-[var(--accent-color)]"
+            className="block truncate font-medium text-[var(--text-primary)] hover:text-[var(--accent-text)]"
           >
             {entryTitle(entry)}
           </Link>
@@ -258,7 +258,7 @@ function UpgradeCard({
       {href ? (
         <Link
           to={href}
-          className="min-w-0 flex-1 rounded-[var(--radius-sm)] hover:text-[var(--accent-color)]"
+          className="min-w-0 flex-1 rounded-[var(--radius-sm)] hover:text-[var(--accent-text)]"
         >
           {titleBlock}
         </Link>
@@ -267,7 +267,7 @@ function UpgradeCard({
       )}
       <button
         type="button"
-        className="shrink-0 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-color)] hover:bg-[var(--bg-elevated-2)]"
+        className="shrink-0 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
         disabled={searching}
         onClick={onSearchNow}
       >
@@ -427,7 +427,7 @@ export default function InProgress() {
           action={
             <Link
               to="/search"
-              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               Search to add titles
             </Link>
@@ -440,7 +440,7 @@ export default function InProgress() {
         <section className="space-y-3" data-testid="in-progress-upgrades" id="upgrades">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <ArrowBigUp className="h-5 w-5 text-[var(--accent-color)]" aria-hidden="true" />
+              <ArrowBigUp className="h-5 w-5 text-[var(--accent-text)]" aria-hidden="true" />
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 Quality upgrades <span className="text-[var(--text-tertiary)]">({upgrades.length})</span>
               </h2>
@@ -512,7 +512,7 @@ export default function InProgress() {
           />
           <PhaseSection
             title="Downloading"
-            icon={<Download className="h-5 w-5 text-[var(--accent-color)]" aria-hidden="true" />}
+            icon={<Download className="h-5 w-5 text-[var(--accent-text)]" aria-hidden="true" />}
             entries={grouped.downloading}
             testId="in-progress-downloading"
             canApprove={canApprove}

@@ -63,7 +63,7 @@ export default function TopBar({
             aria-label={watchTogetherCopied ? 'Watch Together link copied' : 'Watch Together'}
             aria-pressed={watchTogetherActive}
             data-testid="player-watch-together"
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${watchTogetherActive ? 'text-[var(--accent-color)]' : 'text-[var(--player-fg)]'}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] ${watchTogetherActive ? 'text-[var(--accent-text)]' : 'text-[var(--player-fg)]'}`}
             onClick={onWatchTogether}
           >
             <Users className="h-4.5 w-4.5" aria-hidden="true" />
@@ -81,7 +81,7 @@ export default function TopBar({
           type="button"
           aria-label="Playback stats"
           aria-pressed={statsVisible}
-          className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${statsVisible ? 'text-[var(--accent-color)]' : 'text-[var(--player-fg)]'}`}
+          className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:bg-[var(--player-chip-hover)] sm:flex ${statsVisible ? 'text-[var(--accent-text)]' : 'text-[var(--player-fg)]'}`}
           onClick={onToggleStats}
         >
           <Info className="h-4.5 w-4.5" aria-hidden="true" />

@@ -66,7 +66,7 @@ export default function ComicSeries() {
     return (
       <div className="space-y-3">
         <p className="text-[var(--text-secondary)]">{error || 'Series not found'}</p>
-        <Link to="/comics" className="text-[var(--accent-color)]">
+        <Link to="/comics" className="text-[var(--accent-text)]">
           Back to comics
         </Link>
       </div>
@@ -81,7 +81,7 @@ export default function ComicSeries() {
       <div>
         <Link
           to="/comics"
-          className="mb-3 inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-color)]"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-text)]"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Comics
@@ -126,7 +126,7 @@ export default function ComicSeries() {
             </p>
             <button
               type="button"
-              className="text-xs font-semibold text-[var(--accent-color)] hover:underline"
+              className="text-xs font-semibold text-[var(--accent-text)] hover:underline"
               onClick={() => setOpenIssueId(null)}
             >
               Close reader
@@ -181,7 +181,7 @@ export default function ComicSeries() {
                     <button
                       type="button"
                       onClick={() => setOpenIssueId(iss.id)}
-                      className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-color)] transition hover:border-[var(--accent-color)]"
+                      className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-text)] transition hover:border-[var(--accent-color)]"
                     >
                       Read {iss.number ? `#${iss.number}` : iss.title}
                     </button>

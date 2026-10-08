@@ -39,7 +39,7 @@ export function ParentalNotice({ code, onRetry, testId = 'parental-notice' }: Pa
         <p className="font-semibold text-[var(--text-primary)]">{copy.title}</p>
         <p className="text-[var(--text-secondary)]">{copy.message}</p>
         {code === 'parental.session_invalid' ? (
-          <a href="/login" className="inline-block text-[var(--accent-color)] hover:underline">
+          <a href="/login" className="inline-block text-[var(--accent-text)] hover:underline">
             Sign in
           </a>
         ) : null}
@@ -47,7 +47,7 @@ export function ParentalNotice({ code, onRetry, testId = 'parental-notice' }: Pa
           <button
             type="button"
             onClick={onRetry}
-            className="flex items-center gap-1.5 text-[var(--accent-color)] hover:underline"
+            className="flex items-center gap-1.5 text-[var(--accent-text)] hover:underline"
           >
             <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
             Try again

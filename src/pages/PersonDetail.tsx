@@ -102,7 +102,7 @@ export default function PersonDetail() {
       <div className="space-y-3" data-testid="person-detail-page">
         <Link
           to="/"
-          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Home
@@ -140,7 +140,7 @@ export default function PersonDetail() {
       {/* Back navigation */}
       <Link
         to="/"
-        className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+        className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
         aria-label="Back to home"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />

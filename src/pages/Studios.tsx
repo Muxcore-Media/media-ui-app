@@ -84,7 +84,7 @@ export default function Studios() {
           action={
             <Link
               to="/movies"
-              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               Browse movies
             </Link>
@@ -125,7 +125,7 @@ export default function Studios() {
             <button
               type="button"
               onClick={() => setParams({})}
-              className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               All studios
@@ -148,7 +148,7 @@ export default function Studios() {
           )}
           <p className="text-xs text-[var(--text-tertiary)]">
             Also see{' '}
-            <Link className="text-[var(--accent-color)]" to="/collections">
+            <Link className="text-[var(--accent-text)]" to="/collections">
               Collections
             </Link>
             .

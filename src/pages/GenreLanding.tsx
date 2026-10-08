@@ -103,7 +103,7 @@ export default function GenreLanding() {
     <div className="space-y-6" data-testid="genre-landing-page">
       {/* Breadcrumb */}
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-sm">
-        <Link to="/" className="text-[var(--text-tertiary)] hover:text-[var(--accent-color)]">
+        <Link to="/" className="text-[var(--text-tertiary)] hover:text-[var(--accent-text)]">
           Home
         </Link>
         <span className="text-[var(--text-tertiary)]" aria-hidden="true">/</span>
@@ -160,13 +160,13 @@ export default function GenreLanding() {
                 <div className="flex flex-wrap justify-center gap-3">
                   <Link
                     to="/movies"
-                    className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                    className="text-sm font-medium text-[var(--accent-text)] hover:underline"
                   >
                     Browse movies
                   </Link>
                   <Link
                     to="/tv"
-                    className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                    className="text-sm font-medium text-[var(--accent-text)] hover:underline"
                   >
                     Browse TV shows
                   </Link>

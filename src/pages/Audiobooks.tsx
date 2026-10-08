@@ -119,7 +119,7 @@ export default function Audiobooks() {
                   <div className="min-w-0">
                     <Link
                       to={href}
-                      className="truncate font-medium text-[var(--accent-color)] hover:underline"
+                      className="truncate font-medium text-[var(--accent-text)] hover:underline"
                     >
                       {ab.title}
                     </Link>
@@ -138,7 +138,7 @@ export default function Audiobooks() {
                     {first ? (
                       <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-color)] transition hover:bg-[var(--bg-elevated-2)]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--accent-text)] transition hover:bg-[var(--bg-elevated-2)]"
                         aria-label={isPlaying ? `Pause ${ab.title}` : `Play ${ab.title}`}
                         aria-pressed={isPlaying}
                         onClick={() => nowPlaying.toggle(first, queue)}

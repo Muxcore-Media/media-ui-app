@@ -49,7 +49,7 @@ export default function Mixed() {
         <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Mixed</h1>
         <p className="text-sm text-[var(--text-secondary)]">
           Movies and TV shows in one place.{' '}
-          <Link to="/search" className="text-[var(--accent-color)]">
+          <Link to="/search" className="text-[var(--accent-text)]">
             Search everything
           </Link>
         </p>
@@ -86,7 +86,7 @@ export default function Mixed() {
           action={
             <Link
               to="/search"
-              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               Search
             </Link>

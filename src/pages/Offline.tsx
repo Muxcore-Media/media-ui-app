@@ -90,7 +90,7 @@ export default function Offline() {
                   {item.status === 'ready' ? (
                     <Link
                       to={playTo}
-                      className="text-sm font-semibold text-[var(--accent-color)] hover:underline"
+                      className="text-sm font-semibold text-[var(--accent-text)] hover:underline"
                     >
                       Play
                     </Link>
@@ -150,7 +150,7 @@ export default function Offline() {
                         {item.ratingKey ? (
                           <button
                             type="button"
-                            className="text-xs font-semibold text-[var(--accent-color)] hover:underline disabled:opacity-50"
+                            className="text-xs font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
                             disabled={openingKey === item.ratingKey}
                             aria-label={`Open ${item.title} in Plex`}
                             onClick={() => {

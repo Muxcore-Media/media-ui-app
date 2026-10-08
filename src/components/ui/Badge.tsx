@@ -8,7 +8,7 @@ const toneClass: Record<Tone, string> = {
   neutral: 'bg-[var(--bg-overlay)] text-[var(--text-primary)] border border-white/15 backdrop-blur',
   success: 'bg-[var(--success)] text-black',
   warning: 'bg-[var(--warning)] text-black',
-  danger: 'bg-[var(--danger-color)] text-white',
+  danger: 'bg-[var(--danger-surface)] text-[var(--text-on-danger)]',
 };
 
 /** Small consistent badge for "Ready", content ratings, and score chips (AGENTS.md §5). */

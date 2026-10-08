@@ -741,7 +741,7 @@ function PlaybackPane() {
               <li key={row.id} className="px-3 py-2">
                 <Link
                   to={`/search?q=${encodeURIComponent(row.id)}`}
-                  className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                  className="text-sm font-medium text-[var(--accent-text)] hover:underline"
                 >
                   {row.id}
                 </Link>
@@ -1523,7 +1523,7 @@ function DebridPane() {
                 </span>
                 <NavLink
                   to={`/player?src=${encodeURIComponent(`debrid:${item.id}`)}`}
-                  className="shrink-0 text-[var(--accent-color)] hover:underline"
+                  className="shrink-0 text-[var(--accent-text)] hover:underline"
                 >
                   Play
                 </NavLink>
@@ -1670,7 +1670,7 @@ function AcquisitionPane() {
                     <>
                       <button
                         type="button"
-                        className="text-xs text-[var(--accent-color)]"
+                        className="text-xs text-[var(--accent-text)]"
                         onClick={() => {
                           setBusy(true);
                           setError(null);
@@ -2164,7 +2164,7 @@ function LibrariesPane() {
                     <button
                       type="button"
                       disabled={busy}
-                      className="text-[var(--accent-color)]"
+                      className="text-[var(--accent-text)]"
                       onClick={() => void onSave(root.id)}
                     >
                       Save
@@ -2197,7 +2197,7 @@ function LibrariesPane() {
             {parent ? (
               <button
                 type="button"
-                className="text-[var(--accent-color)]"
+                className="text-[var(--accent-text)]"
                 onClick={() => void openPath(parent).catch((err) => setError(err instanceof Error ? err.message : 'Browse failed'))}
               >
                 Up
@@ -3771,7 +3771,7 @@ function InvitesPane() {
             {!invite.revoked ? (
               <button
                 type="button"
-                className="shrink-0 text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-color)]"
+                className="shrink-0 text-sm font-semibold text-[var(--text-primary)] hover:text-[var(--accent-text)]"
                 aria-label={`Revoke invite ${invite.prefix || invite.id}`}
                 onClick={() => {
                   void api
@@ -6774,7 +6774,7 @@ function GuardPane() {
             <li key={row.id || row.name} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2">
               <p className="min-w-0 truncate text-sm text-[var(--text-primary)]">{guardRuleLabel(row)}</p>
               <div className="flex shrink-0 gap-2">
-                <button type="button" className="text-xs font-semibold text-[var(--accent-color)]" onClick={() => editRule(row)}>
+                <button type="button" className="text-xs font-semibold text-[var(--accent-text)]" onClick={() => editRule(row)}>
                   Edit
                 </button>
                 <button type="button" className="text-xs font-semibold text-[var(--danger-color)]" onClick={() => void onDeleteRule(row.id)}>
@@ -6792,7 +6792,7 @@ function GuardPane() {
             {catalog.violations.map((row) => (
               <li key={row.id} className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-2">
                 <p className="min-w-0 truncate text-sm text-[var(--text-primary)]">{row.summary || row.id}</p>
-                <button type="button" className="shrink-0 text-xs font-semibold text-[var(--accent-color)]" onClick={() => void onAck(row.id)}>
+                <button type="button" className="shrink-0 text-xs font-semibold text-[var(--accent-text)]" onClick={() => void onAck(row.id)}>
                   Acknowledge
                 </button>
               </li>
@@ -6809,7 +6809,7 @@ function GuardPane() {
                 <p className="min-w-0 truncate text-sm text-[var(--text-primary)]">
                   {row.userName || row.userId} · {Math.round(row.score)}
                 </p>
-                <button type="button" className="shrink-0 text-xs font-semibold text-[var(--accent-color)]" onClick={() => void onResetTrust(row)}>
+                <button type="button" className="shrink-0 text-xs font-semibold text-[var(--accent-text)]" onClick={() => void onResetTrust(row)}>
                   Reset
                 </button>
               </li>

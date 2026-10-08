@@ -150,6 +150,22 @@ journeys must run against the household backend stack. These fixtures do not pro
 The keyboard checks are partial NFR-A11Y-001 evidence: they do not establish full
 WCAG conformance, contrast compliance, or actual screen-reader announcements.
 
+`e2e/contrast.spec.ts` adds rendered text-contrast checks for Home, movie browse/detail,
+Display/Playback settings, invite forms and parental detail/player outcomes in both
+themes at all four widths (T-M4-08). Each fixture verifies the computed theme before
+running axe's color-contrast rule; a deliberately failing control verifies the gate.
+The invite success/sign-in handoff and filled control hover colors are also checked.
+The JSON attachments retain indeterminate image/gradient comparisons for manual review.
+Passing means no definite axe text-contrast failures in those fixtures, not complete
+contrast coverage or WCAG conformance.
+
+Foreground accent utilities use `--accent-text`, preserving the dark accent while
+using a darker foreground in light mode. Filled controls and borders retain their
+existing accent tokens. Danger text and filled danger controls have separate tokens,
+so light error text can darken while filled controls keep their original red surface.
+The invite success status uses a theme-aware success foreground without changing green fills.
+The anchor reset lives in Tailwind's base layer so explicit foreground utilities win.
+
 ## MVP wiring
 
 | Piece | Location |

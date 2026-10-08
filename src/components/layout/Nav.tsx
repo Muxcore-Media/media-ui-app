@@ -163,7 +163,7 @@ export default function Nav() {
             className="shrink-0 text-lg font-bold tracking-tight"
             aria-label="MuxCore Media home"
           >
-            MuxCore <span className="text-[var(--accent-color)]">Media</span>
+            MuxCore <span className="text-[var(--accent-text)]">Media</span>
           </NavLink>
 
           <nav
@@ -374,7 +374,7 @@ function MobileTabBar({
           className={({ isActive }) =>
             cn(
               'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition',
-              isActive ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]',
+              isActive ? 'text-[var(--accent-text)]' : 'text-[var(--text-secondary)]',
             )
           }
         >
@@ -392,7 +392,7 @@ function MobileTabBar({
           aria-label={open ? 'Close menu' : 'More'}
           className={cn(
             'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition',
-            open ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]',
+            open ? 'text-[var(--accent-text)]' : 'text-[var(--text-secondary)]',
           )}
         >
           {open ? (

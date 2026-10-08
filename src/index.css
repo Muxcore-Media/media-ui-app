@@ -21,12 +21,16 @@
   --border-subtle: #23252b;
   --text-primary: #f5f5f7;
   --text-secondary: #a1a1aa;
-  --text-tertiary: #6b6b73;
+  --text-tertiary: #888892;
   --accent-color: #3db8a8;
+  --accent-text: var(--accent-color);
   --accent-hover: #56d0c0;
   --success: #3ddc84;
+  --success-text: var(--success);
   --warning: #f5a623;
   --danger-color: #ef4444;
+  --danger-surface: #ef4444;
+  --text-on-danger: #0b0c0f;
   --focus-ring: color-mix(in srgb, var(--accent-color) 60%, transparent);
   --text-on-accent: #0b0c0f;
   --surface-contrast: #ffffff;
@@ -59,7 +63,10 @@
   --border-subtle: #dcdfe6;
   --text-primary: #14151a;
   --text-secondary: #5c5f6a;
-  --text-tertiary: #8a8d99;
+  --text-tertiary: #656773;
+  --accent-text: #0f766e;
+  --danger-color: #b91c1c;
+  --success-text: #166534;
   --text-on-accent: #0b0c0f;
 }
 
@@ -90,9 +97,12 @@ body {
   color: var(--text);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* Resets belong below utility classes in the cascade: filled links declare their own ink. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 button,

@@ -102,7 +102,7 @@ export function PinGateDialog({ pinHash, onSuccess, onCancel, actionLabel }: Pin
         {/* Icon + heading */}
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--bg-base)]">
-            <Lock className="h-7 w-7 text-[var(--accent-color)]" aria-hidden="true" />
+            <Lock className="h-7 w-7 text-[var(--accent-text)]" aria-hidden="true" />
           </div>
           <h2
             id="pin-gate-title"

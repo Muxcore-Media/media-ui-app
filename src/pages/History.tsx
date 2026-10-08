@@ -130,7 +130,7 @@ export default function History() {
             Search
           </button>
           {filtered ? (
-            <Link to="/history" className="text-sm font-semibold text-[var(--accent-color)] hover:underline">
+            <Link to="/history" className="text-sm font-semibold text-[var(--accent-text)] hover:underline">
               Clear filter
             </Link>
           ) : null}
@@ -159,13 +159,13 @@ export default function History() {
             <div className="flex flex-wrap justify-center gap-3">
               <Link
                 to="/movies"
-                className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                className="text-sm font-medium text-[var(--accent-text)] hover:underline"
               >
                 Browse movies
               </Link>
               <Link
                 to="/tv"
-                className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                className="text-sm font-medium text-[var(--accent-text)] hover:underline"
               >
                 Browse TV
               </Link>

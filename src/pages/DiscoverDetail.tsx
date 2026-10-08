@@ -105,7 +105,7 @@ export default function DiscoverDetail() {
           Title not found
         </h1>
         <ErrorBanner message={error || 'Title not found'} />
-        <Link to={backHref} className="text-sm text-[var(--accent-color)] hover:underline">
+        <Link to={backHref} className="text-sm text-[var(--accent-text)] hover:underline">
           Back to search
         </Link>
       </div>
@@ -121,7 +121,7 @@ export default function DiscoverDetail() {
       <nav aria-label="Breadcrumb">
         <Link
           to={backHref}
-          className="inline-flex text-sm text-[var(--text-secondary)] hover:text-[var(--accent-color)]"
+          className="inline-flex text-sm text-[var(--text-secondary)] hover:text-[var(--accent-text)]"
         >
           ← Back to search
         </Link>

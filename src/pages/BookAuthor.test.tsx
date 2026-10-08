@@ -83,6 +83,7 @@ describe('BookAuthor page', () => {
   });
 
   it('can unmonitor the author', async () => {
+    setCurrentRoles(['admin']);
     render(
       <MemoryRouter initialEntries={['/books/auth1']}>
         <Routes>
@@ -121,6 +122,7 @@ describe('BookAuthor page', () => {
   });
 
   it('removes the author from the library', async () => {
+    setCurrentRoles(['admin']);
     render(
       <MemoryRouter initialEntries={['/books/auth1']}>
         <Routes>
@@ -164,6 +166,7 @@ describe('BookAuthor page', () => {
   });
 
   it('assigns a root folder to the author', async () => {
+    setCurrentRoles(['admin']);
     render(
       <MemoryRouter initialEntries={['/books/auth1']}>
         <Routes>

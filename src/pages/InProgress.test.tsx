@@ -187,6 +187,7 @@ describe('InProgress page', () => {
   });
 
   it('lists cutoff-unmet titles and starts a wanted search', async () => {
+    setCurrentRoles(['manager']);
     listRequests.mockResolvedValueOnce([]);
     listUpgrades.mockResolvedValueOnce({
       available: true,
@@ -219,6 +220,17 @@ describe('InProgress page', () => {
     expect(searchNow).toHaveBeenCalledWith(
       expect.objectContaining({ item_id: 's-far', item_type: 'tv' }),
     );
+  });
+
+  it('keeps approver request decisions separate from operator acquisition', async () => {
+    setCurrentRoles(['approver']);
+    listRequests.mockResolvedValue([{ id: 'r1', itemType: 'movie', title: 'Pending film', status: 'pending' }]);
+    listUpgrades.mockResolvedValue({ available: true, items: [{ queue_id: 'q1', item_id: 'm1', item_type: 'movie', title: 'Upgrade film', cutoff_score: 10 }] });
+    renderPage(ALL_CAPABILITIES);
+    expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    expect(await screen.findByText('Upgrade film')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Search all upgrades|Search now/ })).not.toBeInTheDocument();
+    expect(searchNow).not.toHaveBeenCalled();
   });
 
   it.each(['admin', 'manager', 'approver'])('lets %s approve a pending request', async (role) => {

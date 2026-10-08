@@ -1,3 +1,4 @@
+import { OperatorControls } from '../components/OperatorControls';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
@@ -221,14 +222,16 @@ export default function Upcoming() {
                         </p>
                       </div>
                       {!r.has_file ? (
-                        <button
-                          type="button"
-                          className="shrink-0 text-sm font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
-                          disabled={searchingId === rowKey}
-                          onClick={() => void searchMissing(r)}
-                        >
-                          {searchingId === rowKey ? 'Searching…' : 'Search now'}
-                        </button>
+                        <OperatorControls>
+                          <button
+                            type="button"
+                            className="shrink-0 text-sm font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
+                            disabled={searchingId === rowKey}
+                            onClick={() => void searchMissing(r)}
+                          >
+                            {searchingId === rowKey ? 'Searching…' : 'Search now'}
+                          </button>
+                        </OperatorControls>
                       ) : null}
                       <Link
                         to={r.href}

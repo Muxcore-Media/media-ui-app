@@ -1,7 +1,10 @@
+import { setCurrentRoles } from '../../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import InteractiveSearch from './InteractiveSearch';
 import { CapabilitiesContext, ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '../../lib/capabilities';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const searchReleases = vi.fn();
 const grabRelease = vi.fn();

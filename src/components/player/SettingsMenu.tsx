@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useState } from 'react';
 import {
   Check,
@@ -622,6 +623,7 @@ function OptionRow({
 }
 
 function SubtitleFindPanel({ search }: { search: SubtitleSearchMenuProps | undefined }) {
+  const { canOperate } = useOperatorAccess();
   if (!search) return null;
 
   const busy = search.downloadingId !== null;
@@ -673,42 +675,45 @@ function SubtitleFindPanel({ search }: { search: SubtitleSearchMenuProps | undef
 
   if (search.status === 'done' && search.results.length > 0) {
     return (
-      <ul className="space-y-0.5 py-1 text-sm" data-testid="subtitle-find-results">
-        {search.results.map((r) => {
-          const isDownloading = search.downloadingId === r.id;
-          const isDownloaded = search.downloadedId === r.id;
-          return (
-            <li key={`${r.provider}:${r.id}`}>
-              <button
-                type="button"
-                disabled={busy}
-                aria-label={`Download ${r.title} (${r.language.toUpperCase()})`}
-                className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[var(--player-chip-hover)] disabled:cursor-wait disabled:opacity-70"
-                onClick={() => search.onDownload(r.id, r.provider)}
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[var(--player-fg)]">{r.title}</span>
-                  <span className="block text-[10px] text-[var(--player-fg-subtle)]">
-                    {r.language.toUpperCase()}
-                    {' · '}
-                    {r.format.toUpperCase()}
-                    {r.release ? ` · ${r.release}` : ''}
+      <div>
+        {!canOperate && <p className="px-3 py-2 text-xs text-[var(--player-fg-muted)]">Downloading subtitles requires an administrator or manager. Existing subtitle tracks remain available.</p>}
+        <ul className="space-y-0.5 py-1 text-sm" data-testid="subtitle-find-results">
+          {search.results.map((r) => {
+            const isDownloading = search.downloadingId === r.id;
+            const isDownloaded = search.downloadedId === r.id;
+            return (
+              <li key={`${r.provider}:${r.id}`}>
+                <button
+                  type="button"
+                  disabled={busy || !canOperate}
+                  aria-label={`Download ${r.title} (${r.language.toUpperCase()})`}
+                  className="flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[var(--player-chip-hover)] disabled:cursor-not-allowed disabled:opacity-70"
+                  onClick={() => search.onDownload(r.id, r.provider)}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[var(--player-fg)]">{r.title}</span>
+                    <span className="block text-[10px] text-[var(--player-fg-subtle)]">
+                      {r.language.toUpperCase()}
+                      {' · '}
+                      {r.format.toUpperCase()}
+                      {r.release ? ` · ${r.release}` : ''}
+                    </span>
                   </span>
-                </span>
-                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
-                  {isDownloading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--player-fg-muted)]" aria-hidden="true" />
-                  ) : isDownloaded ? (
-                    <Check className="h-4 w-4 text-[var(--accent-text)]" aria-hidden="true" />
-                  ) : (
-                    <Download className="h-3.5 w-3.5 text-[var(--player-fg-muted)]" aria-hidden="true" />
-                  )}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
+                    {isDownloading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--player-fg-muted)]" aria-hidden="true" />
+                    ) : isDownloaded ? (
+                      <Check className="h-4 w-4 text-[var(--accent-text)]" aria-hidden="true" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5 text-[var(--player-fg-muted)]" aria-hidden="true" />
+                    )}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     );
   }
 

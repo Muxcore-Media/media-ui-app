@@ -1,3 +1,4 @@
+import { setCurrentRoles } from '../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -90,6 +91,7 @@ describe('AudiobookDetail page', () => {
   });
 
   it('can unmonitor the audiobook', async () => {
+    setCurrentRoles(['admin']);
     renderDetail();
     fireEvent.click(await screen.findByRole('button', { name: 'Monitored' }));
     await waitFor(() => {
@@ -98,6 +100,7 @@ describe('AudiobookDetail page', () => {
   });
 
   it('removes the audiobook from the library', async () => {
+    setCurrentRoles(['admin']);
     render(
       <NowPlayingProvider>
         <MemoryRouter initialEntries={['/audiobooks/ab1']}>
@@ -121,6 +124,7 @@ describe('AudiobookDetail page', () => {
   });
 
   it('assigns a root folder to the audiobook author', async () => {
+    setCurrentRoles(['admin']);
     renderDetail();
     fireEvent.change(await screen.findByLabelText('Root folder'), { target: { value: '/data/audiobooks' } });
     await waitFor(() => {

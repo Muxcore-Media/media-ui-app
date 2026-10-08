@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
@@ -18,11 +19,12 @@ export function MonitorButton({
   onChange?: (next: boolean) => void;
   compact?: boolean;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [busy, setBusy] = useState(false);
   const on = Boolean(monitored);
 
   async function toggle() {
-    if (!id || busy) return;
+    if (!canOperate || !id || busy) return;
     setBusy(true);
     try {
       const next = !on;
@@ -32,6 +34,8 @@ export function MonitorButton({
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   if (compact) {
     return (

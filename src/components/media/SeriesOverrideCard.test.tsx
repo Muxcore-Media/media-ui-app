@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../../lib/session';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SeriesOverrideCard } from './SeriesOverrideCard';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const getSeriesOverride = vi.fn();
 const upsertSeriesOverride = vi.fn();

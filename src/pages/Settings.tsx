@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
@@ -1490,21 +1491,24 @@ function DebridPane() {
           {error}
         </p>
       )}
-      <label htmlFor="settings-debrid-link" className="block space-y-1 text-sm">
-        <span className="text-[var(--text-secondary)]">Magnet or link</span>
-        <input
-          id="settings-debrid-link"
-          name="link"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          className={inputClass}
-          placeholder="magnet:?xt=… or https://…"
-          data-testid="settings-debrid-link"
-        />
-      </label>
-      <button type="submit" disabled={busy || !link.trim()} className={saveBtnClass}>
-        {busy ? 'Adding…' : 'Add to debrid'}
-      </button>
+      <OperatorNotice />
+      <OperatorControls>
+        <label htmlFor="settings-debrid-link" className="block space-y-1 text-sm">
+          <span className="text-[var(--text-secondary)]">Magnet or link</span>
+          <input
+            id="settings-debrid-link"
+            name="link"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            className={inputClass}
+            placeholder="magnet:?xt=… or https://…"
+            data-testid="settings-debrid-link"
+          />
+        </label>
+        <button type="submit" disabled={busy || !link.trim()} className={saveBtnClass}>
+          {busy ? 'Adding…' : 'Add to debrid'}
+        </button>
+      </OperatorControls>
       <div
         className="space-y-2 border-t border-[var(--border-subtle)] pt-4"
         data-testid="settings-debrid-library"

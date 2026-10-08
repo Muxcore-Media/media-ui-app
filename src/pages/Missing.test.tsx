@@ -1,8 +1,11 @@
+import { setCurrentRoles } from '../lib/session';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ALL_CAPABILITIES, CapabilitiesContext } from '../lib/capabilities';
 import Missing from './Missing';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const listMissing = vi.fn();
 const addWanted = vi.fn();

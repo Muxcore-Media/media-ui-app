@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { QualityProfile } from '../../lib/formats';
@@ -13,10 +14,12 @@ export function QualityProfileSelect({
   value?: string;
   onChange?: (next: string) => void;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [profiles, setProfiles] = useState<QualityProfile[]>([]);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!canOperate) return;
     let cancelled = false;
     void api
       .getFormats()
@@ -29,7 +32,9 @@ export function QualityProfileSelect({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [canOperate]);
+
+  if (!canOperate) return null;
 
   if (profiles.length === 0) return null;
 

@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
 import { useEffect, useState } from 'react';
 import { Ban } from 'lucide-react';
 import { api } from '../api/client';
@@ -81,11 +82,14 @@ export default function Blocklist() {
           </p>
         </div>
         {items.length > 0 ? (
-          <Button variant="danger" disabled={busy === 'all'} onClick={() => void clearAll()}>
-            Clear all
-          </Button>
+          <OperatorControls>
+            <Button variant="danger" disabled={busy === 'all'} onClick={() => void clearAll()}>
+              Clear all
+            </Button>
+          </OperatorControls>
         ) : null}
       </header>
+      <OperatorNotice />
       {loading ? <LoadingStatus label="Loading blocklist" /> : null}
       {error ? <ErrorBanner message={error} /> : null}
       {!loading && !available ? (
@@ -116,14 +120,16 @@ export default function Blocklist() {
                   {row.guid ? ` · ${row.guid}` : ''}
                 </p>
               </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busy === row.guid}
-                onClick={() => void clearOne(row)}
-              >
-                Unblock
-              </Button>
+              <OperatorControls>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={busy === row.guid}
+                  onClick={() => void clearOne(row)}
+                >
+                  Unblock
+                </Button>
+              </OperatorControls>
             </li>
           ))}
         </ul>

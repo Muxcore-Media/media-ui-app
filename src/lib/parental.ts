@@ -1,10 +1,23 @@
 /**
- * Parental-controls enforcement for media-ui-app.
+ * Cosmetic parental helpers for media-ui-app. THIS IS NOT ENFORCEMENT.
  *
- * Reads parental prefs written by admin-ui via the BFF userdata blob
- * (ParentalPrefs fields on UserPreferences.parental).  All enforcement
- * is fail-open: when prefs are unavailable the content is shown; when
- * prefs explicitly restrict a title it is hidden/blocked.
+ * Authority: the consumer BFF evaluates the account's parental policy on every gated
+ * list, detail, search and playback route and answers 403 `parental.*` / 503 when it
+ * cannot decide (ADR-0031, FR-PLAY-007; see `src/api/errors.ts` and the README). A denial
+ * the server issued can never be lifted by anything in this file: not by a client PIN
+ * (profiles and PIN are FR-AUTH-010, out of scope), not by a missing rating, not by
+ * editing the userdata blob.
+ *
+ * What remains here, and why it is safe:
+ *  - The helpers read `prefs.parental` from the user's own userdata blob. That blob is
+ *    writable by the user, so it is a *display hint only*. It can hide more than the server
+ *    allows (harmless); it can never reveal anything, because the server filters first.
+ *  - They still tidy rows the server does not classify (userdata rails: continue watching,
+ *    favorites, next up) and drive the "kids mode" look and the PIN prompt on the player.
+ *  - Behaviour for an unknown or NR rating stays permissive (`ratingLevel` returns -1),
+ *    because here "permissive" only means "do not hide a row cosmetically". It is not a
+ *    decision to allow playback: the server still decides, and it denies an unclassified
+ *    item to a restricted account.
  */
 
 import type { Movie, TVShow } from '../types';
@@ -17,8 +30,8 @@ import { getParentalPrefs, showIdFromHref, type ParentalPrefs } from './userdata
 
 /**
  * Numeric severity level for a content rating string.
- * Lower = less restrictive.  Unknown/unrated titles return -1 (treated as
- * unrestricted so legitimate unrated content isn't silently blocked).
+ * Lower = less restrictive.  Unknown/unrated titles return -1 (cosmetic filter only:
+ * not hidden client-side; the BFF is what denies unclassified items).
  */
 const RATING_LEVELS: Record<string, number> = {
   // Kids / all-ages
@@ -68,7 +81,8 @@ export function ratingLevel(rating: string | undefined | null): number {
 
 /**
  * Returns true when `titleRating` exceeds `maxRating`.
- * Unknown title ratings are never blocked (fail-open per spec).
+ * Cosmetic only. Unknown title ratings are not hidden client-side; this says nothing
+ * about whether the server will allow the title.
  * Empty `maxRating` means no ceiling is configured → not blocked.
  */
 export function ratingExceedsMax(
@@ -112,7 +126,7 @@ export function validateParentalPIN(pin: string): string | null {
   return null;
 }
 
-/** Returns true when the item should be hidden given current parental prefs. */
+/** Cosmetic: true when the item should be hidden from a row given the local prefs hint. */
 export function isItemRestricted(
   item: RatableItem,
   prefs: Pick<ParentalPrefs, 'kidsMode' | 'maxRating' | 'blockedTags'>,
@@ -124,7 +138,7 @@ export function isItemRestricted(
   return ratingExceedsMax(item.content_rating, ceiling);
 }
 
-/** Filter an array of items, removing any restricted by current parental prefs. */
+/** Cosmetic: drop rows the local prefs hint would hide. Not an access control. */
 export function filterByParentalControls<T extends RatableItem>(
   items: T[],
   prefs: Pick<ParentalPrefs, 'kidsMode' | 'maxRating' | 'blockedTags'>,
@@ -135,8 +149,8 @@ export function filterByParentalControls<T extends RatableItem>(
 }
 
 /**
- * Convenience wrapper: reads current prefs from localStorage and filters.
- * Soft-fails open when prefs cannot be read.
+ * Convenience wrapper: reads the local prefs hint and filters. Cosmetic only; the BFF has
+ * already removed items the account may not see.
  */
 export function applyParentalFilter<T extends RatableItem>(items: T[]): T[] {
   try {
@@ -199,7 +213,7 @@ export function indexLibraryRatings(
 
 /**
  * Prefer a rating already stashed on the userdata row; otherwise join
- * through the library index. Missing/unknown stays undefined (fail-open).
+ * through the library index. Missing/unknown stays undefined (not hidden cosmetically).
  */
 export function resolveUserdataContentRating(
   entry: UserdataRatingKey,
@@ -223,9 +237,9 @@ export function annotateUserdataWithRatings<T extends UserdataRatingKey>(
 }
 
 /**
- * Filter userdata rails by parental prefs after joining library ratings.
- * Unknown/missing ratings remain (soft-fail open). Soft-fails open if prefs
- * cannot be read.
+ * Cosmetic: filter userdata rails by the local prefs hint after joining library ratings.
+ * Unknown/missing ratings remain. Continue-watching titles are client-written and are not
+ * server-classified (ADR-0031 §6); opening one still goes through the enforced routes.
  */
 export function filterUserdataByParental<T extends UserdataRatingKey>(
   entries: T[],
@@ -274,9 +288,9 @@ export function missingLibraryFetches(
 type LibraryRatingRow = { id: string; content_rating?: string };
 
 /**
- * When parental restrictions are on, fetch library rows that userdata rails
+ * When the local prefs hint is on, fetch library rows that userdata rails
  * still need so `applyUserdataParentalFilter` can see a `content_rating`.
- * No-ops when kids mode / max rating are off (soft-fail open).
+ * No-ops when kids mode / max rating are off. Cosmetic only.
  */
 export async function expandLibraryRatingsForUserdata(
   entries: UserdataRatingKey[],
@@ -340,11 +354,14 @@ export interface ParentalState {
   maxRating: string;
   pinEnabled: boolean;
   pinHash: string;
-  /** True when any restriction is active (kidsMode or maxRating set). */
+  /** True when the local hint has a restriction set (kidsMode, maxRating or blocked tags). Not authoritative. */
   anyRestriction: boolean;
 }
 
-/** Read current parental state from localStorage prefs. Soft-fails open. */
+/**
+ * Read the local parental prefs hint (kids-mode look, PIN prompt). Cosmetic: it is not the
+ * server policy, and `anyRestriction` must not be used to decide access.
+ */
 export function getParentalState(): ParentalState {
   try {
     const p = getParentalPrefs();

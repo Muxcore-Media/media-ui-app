@@ -22,6 +22,8 @@ import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import ErrorScreen from '../components/player/ErrorScreen';
+import { ParentalNotice } from '../components/parental/ParentalNotice';
+import { PARENTAL_CODES, PARENTAL_COPY } from '../api/errors';
 import PosterCard from '../components/media/PosterCard';
 import { Shelf, ShelfItem } from '../components/media/Shelf';
 import RequestableCard from '../components/search/RequestableCard';
@@ -237,6 +239,28 @@ describe('axe: shared primitives', () => {
     expect(screen.getByText('Playback unavailable')).toBeTruthy();
     expect(await axe(container)).toHaveNoViolations();
   });
+});
+
+describe('axe: server-side parental states (ADR-0031)', () => {
+  for (const code of PARENTAL_CODES) {
+    it(`ParentalNotice ${code}`, async () => {
+      const { container } = render(<ParentalNotice code={code} onRetry={() => {}} />);
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it(`player ErrorScreen ${code}`, async () => {
+      const { container } = withCaps(
+        <ErrorScreen
+          message={PARENTAL_COPY[code].message}
+          href="/movies"
+          onRetry={() => {}}
+          parentalCode={code}
+        />,
+      );
+      expect(screen.getByRole('heading', { level: 1, name: PARENTAL_COPY[code].title })).toBeTruthy();
+      expect(await axe(container)).toHaveNoViolations();
+    });
+  }
 });
 
 describe('axe: cards and shelves', () => {

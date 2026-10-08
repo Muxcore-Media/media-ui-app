@@ -1,5 +1,6 @@
 import type { FeatureKey, LibraryKey } from './capabilities';
 import { featureEnabled, libraryEnabled, type Capabilities } from './capabilities';
+import { isRestrictedEntryPoint } from './restricted-routes';
 
 export type NavItem = {
   to: string;
@@ -46,35 +47,39 @@ export const OVERFLOW_CATALOG: NavItem[] = [
   { to: '/quickconnect', label: 'Quick Connect', feature: 'quickconnect' },
 ];
 
-function navItemVisible(caps: Capabilities, item: NavItem): boolean {
+const NONE_HIDDEN: ReadonlySet<string> = new Set<string>();
+
+function navItemVisible(caps: Capabilities, item: NavItem, hidden: ReadonlySet<string>): boolean {
+  // Cosmetic: the BFF already refused this destination for the account (parental.restricted_route).
+  if (isRestrictedEntryPoint(hidden, item.to)) return false;
   if (item.library) return libraryEnabled(caps, item.library);
   if (item.feature) return featureEnabled(caps, item.feature);
   return true;
 }
 
-export function visiblePrimaryNav(caps: Capabilities): NavItem[] {
-  return PRIMARY_CATALOG.filter((item) => navItemVisible(caps, item));
+export function visiblePrimaryNav(caps: Capabilities, hidden: ReadonlySet<string> = NONE_HIDDEN): NavItem[] {
+  return PRIMARY_CATALOG.filter((item) => navItemVisible(caps, item, hidden));
 }
 
-export function visibleOverflowNav(caps: Capabilities): NavItem[] {
-  return OVERFLOW_CATALOG.filter((item) => navItemVisible(caps, item));
+export function visibleOverflowNav(caps: Capabilities, hidden: ReadonlySet<string> = NONE_HIDDEN): NavItem[] {
+  return OVERFLOW_CATALOG.filter((item) => navItemVisible(caps, item, hidden));
 }
 
 /** Bottom-tab paths — destinations already one tap away on mobile. */
 export const MOBILE_TAB_PATHS = new Set(['/', '/search', '/movies']);
 
 /** Items for the mobile "More" sheet (primary libs not in the tab bar + overflow). */
-export function mobileMoreMenuItems(caps: Capabilities): NavItem[] {
-  const fromPrimary = visiblePrimaryNav(caps).filter((item) => !MOBILE_TAB_PATHS.has(item.to));
-  return [...fromPrimary, ...visibleOverflowNav(caps)];
+export function mobileMoreMenuItems(caps: Capabilities, hidden: ReadonlySet<string> = NONE_HIDDEN): NavItem[] {
+  const fromPrimary = visiblePrimaryNav(caps, hidden).filter((item) => !MOBILE_TAB_PATHS.has(item.to));
+  return [...fromPrimary, ...visibleOverflowNav(caps, hidden)];
 }
 
-export function showDesktopMoreMenu(caps: Capabilities): boolean {
-  return visibleOverflowNav(caps).length > 0;
+export function showDesktopMoreMenu(caps: Capabilities, hidden: ReadonlySet<string> = NONE_HIDDEN): boolean {
+  return visibleOverflowNav(caps, hidden).length > 0;
 }
 
-export function showMobileMoreMenu(caps: Capabilities): boolean {
-  return mobileMoreMenuItems(caps).length > 0;
+export function showMobileMoreMenu(caps: Capabilities, hidden: ReadonlySet<string> = NONE_HIDDEN): boolean {
+  return mobileMoreMenuItems(caps, hidden).length > 0;
 }
 
 /** Route path → capability requirement for guarded SPA routes. */

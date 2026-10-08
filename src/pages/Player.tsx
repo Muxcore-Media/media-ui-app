@@ -21,6 +21,9 @@ export default function Player() {
   const togetherId = params.get('together') || undefined;
   const contentRating = params.get('content_rating') || undefined;
 
+  // Cosmetic pre-check only (ADR-0031): the `content_rating` URL param and the local prefs hint
+  // are client-controlled. "Unlock" merely mounts the player, which asks the BFF; a server
+  // denial (403 parental.*) then shows its own state and no PIN can lift it.
   const [pinOpen, setPinOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 

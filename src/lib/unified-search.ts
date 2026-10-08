@@ -1,4 +1,5 @@
 import { api } from '../api/client';
+import { parentalCodeOf, type ParentalCode } from '../api/errors';
 import { isWatchable } from './acquisition';
 import type { Capabilities, LibraryKey } from './capabilities';
 import { featureEnabled, libraryEnabled } from './capabilities';
@@ -94,7 +95,7 @@ export async function runUnifiedSearch(
   caps: Capabilities,
   query: string,
   scope: SearchScope,
-): Promise<{ library: LibraryHit[]; remote: SearchResult[] }> {
+): Promise<{ library: LibraryHit[]; remote: SearchResult[]; remoteParental?: ParentalCode }> {
   const needle = query.trim().toLowerCase();
   if (needle.length < 2) {
     return { library: [], remote: [] };
@@ -127,17 +128,24 @@ export async function runUnifiedSearch(
     tasks.push(api.listAudiobooks().catch(() => emptyLib));
   } else tasks.push(Promise.resolve(emptyLib));
 
+  // A server-side parental outcome on the external catalogue (ADR-0031) is reported, not
+  // swallowed: local results still show, and the page explains why the rest is missing.
+  let remoteParental: ParentalCode | undefined;
+  const remoteFailed = (err: unknown): SearchResult[] => {
+    remoteParental ??= parentalCodeOf(err) ?? undefined;
+    return [];
+  };
   const remoteTasks: Promise<SearchResult[]>[] = [];
   if (scopeIncludesMovieTVRemote(scope)) {
-    remoteTasks.push(api.search(query.trim()).catch(() => [] as SearchResult[]));
+    remoteTasks.push(api.search(query.trim()).catch(remoteFailed));
   }
   if (scopeIncludesMusicRemote(scope, caps)) {
-    remoteTasks.push(api.search(query.trim(), { type: 'music' }).catch(() => [] as SearchResult[]));
+    remoteTasks.push(api.search(query.trim(), { type: 'music' }).catch(remoteFailed));
     remoteTasks.push(
-      api.search(query.trim(), { type: 'music_album' }).catch(() => [] as SearchResult[]),
+      api.search(query.trim(), { type: 'music_album' }).catch(remoteFailed),
     );
     remoteTasks.push(
-      api.search(query.trim(), { type: 'music_track' }).catch(() => [] as SearchResult[]),
+      api.search(query.trim(), { type: 'music_track' }).catch(remoteFailed),
     );
   }
   tasks.push(
@@ -238,7 +246,11 @@ export async function runUnifiedSearch(
     /* keep remote only — library cleared below when scope is add-only display */
   }
 
-  return { library: scope === 'add' ? [] : lib, remote: filteredRemote };
+  return {
+    library: scope === 'add' ? [] : lib,
+    remote: filteredRemote,
+    ...(remoteParental ? { remoteParental } : {}),
+  };
 }
 
 export function remoteNotInLibrary(library: LibraryHit[], remote: SearchResult[]): SearchResult[] {

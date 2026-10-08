@@ -1222,6 +1222,14 @@ describe('Settings page', () => {
     expect(parental.pinHash).toHaveLength(64);
   });
 
+  it('says the local parental settings are not enforcement and a PIN cannot override the server', async () => {
+    const { findByTestId } = renderSettings('/settings/parental');
+    const note = await findByTestId('parental-server-note');
+    expect(note).toHaveTextContent(/only change what this device shows/i);
+    expect(note).toHaveTextContent(/server applies the parental controls an administrator sets/i);
+    expect(note).toHaveTextContent(/PIN cannot override/i);
+  });
+
   it('rejects a short parental PIN', async () => {
     const { findByTestId } = renderSettings('/settings/parental');
     expect(await findByTestId('settings-parental')).toBeInTheDocument();

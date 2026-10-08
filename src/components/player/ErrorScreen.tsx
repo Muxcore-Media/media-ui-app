@@ -45,11 +45,11 @@ export default function ErrorScreen({ message, href, onRetry, parentalCode }: Pr
         </h1>
         <p role={calm ? 'status' : 'alert'}>{message}</p>
         <div className="flex items-center justify-center gap-4">
-          <Link to={href} className="text-[var(--accent-color)] hover:underline">
+          <Link to={href} className="text-[var(--accent-text)] hover:underline">
             Go back
           </Link>
           {parentalCode === 'parental.session_invalid' ? (
-            <a href="/login" className="text-[var(--accent-color)] hover:underline">
+            <a href="/login" className="text-[var(--accent-text)] hover:underline">
               Sign in
             </a>
           ) : null}
@@ -57,7 +57,7 @@ export default function ErrorScreen({ message, href, onRetry, parentalCode }: Pr
             <button
               type="button"
               onClick={onRetry}
-              className="flex items-center gap-1.5 text-[var(--accent-color)] hover:underline"
+              className="flex items-center gap-1.5 text-[var(--accent-text)] hover:underline"
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
               Retry

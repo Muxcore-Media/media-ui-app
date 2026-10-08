@@ -72,7 +72,7 @@ export default function BookAuthor() {
     return (
       <div className="space-y-3">
         <p className="text-[var(--text-secondary)]">{error || 'Author not found'}</p>
-        <Link to="/books" className="text-[var(--accent-color)]">
+        <Link to="/books" className="text-[var(--accent-text)]">
           Back to books
         </Link>
       </div>
@@ -89,7 +89,7 @@ export default function BookAuthor() {
       <div>
         <Link
           to="/books"
-          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-color)] hover:underline"
+          className="flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Books
@@ -143,7 +143,7 @@ export default function BookAuthor() {
             </p>
             <button
               type="button"
-              className="text-xs font-semibold text-[var(--accent-color)] hover:underline"
+              className="text-xs font-semibold text-[var(--accent-text)] hover:underline"
               onClick={() => setOpenFileId(null)}
             >
               Close reader
@@ -166,7 +166,7 @@ export default function BookAuthor() {
                 Your browser cannot render EPUB inline.{' '}
                 <a
                   href={openFile.stream_url}
-                  className="font-medium text-[var(--accent-color)] hover:underline"
+                  className="font-medium text-[var(--accent-text)] hover:underline"
                 >
                   Open the file
                 </a>
@@ -245,7 +245,7 @@ export default function BookAuthor() {
                         key={f.id}
                         type="button"
                         onClick={() => setOpenFileId(f.id)}
-                        className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-color)] transition hover:border-[var(--accent-color)]"
+                        className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--accent-text)] transition hover:border-[var(--accent-color)]"
                       >
                         Read {f.title || 'file'}
                       </button>

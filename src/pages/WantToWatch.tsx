@@ -170,7 +170,7 @@ export default function WantToWatch() {
             action={
               <Link
                 to="/discover"
-                className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                className="text-sm font-medium text-[var(--accent-text)] hover:underline"
               >
                 Browse Discover
               </Link>

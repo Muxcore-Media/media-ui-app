@@ -115,7 +115,7 @@ export default function Upcoming() {
             Episode air dates and movie releases on one calendar — same daily view as Sonarr +
             Radarr. Search now grabs a missing title the day it airs.
           </p>
-          <Link to="/missing" className="mt-1 inline-block text-sm font-semibold text-[var(--accent-color)] hover:underline">
+          <Link to="/missing" className="mt-1 inline-block text-sm font-semibold text-[var(--accent-text)] hover:underline">
             Library missing
           </Link>
         </div>
@@ -180,7 +180,7 @@ export default function Upcoming() {
           action={
             <Link
               to="/tv"
-              className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+              className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               Browse TV
             </Link>
@@ -223,7 +223,7 @@ export default function Upcoming() {
                       {!r.has_file ? (
                         <button
                           type="button"
-                          className="shrink-0 text-sm font-semibold text-[var(--accent-color)] hover:underline disabled:opacity-50"
+                          className="shrink-0 text-sm font-semibold text-[var(--accent-text)] hover:underline disabled:opacity-50"
                           disabled={searchingId === rowKey}
                           onClick={() => void searchMissing(r)}
                         >
@@ -233,7 +233,7 @@ export default function Upcoming() {
                       <Link
                         to={r.href}
                         aria-label={`Open ${r.title}, ${detail}`}
-                        className="shrink-0 text-sm font-medium text-[var(--accent-color)] hover:underline"
+                        className="shrink-0 text-sm font-medium text-[var(--accent-text)] hover:underline"
                       >
                         Open
                       </Link>

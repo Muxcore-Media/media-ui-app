@@ -87,7 +87,7 @@ export default function RequestableCard({
             <span className="text-xs text-[var(--text-tertiary)]">{item.year}</span>
           ) : null}
         </div>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] group-hover:text-[var(--accent-color)]">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] group-hover:text-[var(--accent-text)]">
           {item.title}
         </h3>
         {item.albumTitle && item.mediaType === 'music_track' ? (

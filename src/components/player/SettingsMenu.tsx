@@ -349,7 +349,7 @@ export default function SettingsMenu(props: Props) {
             ) : null}
             <button
               type="button"
-              className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--accent-color)] hover:bg-[var(--player-chip-hover)]"
+              className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--accent-text)] hover:bg-[var(--player-chip-hover)]"
               onClick={() => setPanel('subtitle-appearance')}
             >
               Appearance…
@@ -358,7 +358,7 @@ export default function SettingsMenu(props: Props) {
               <button
                 type="button"
                 data-testid="subtitle-find-online-btn"
-                className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--accent-color)] hover:bg-[var(--player-chip-hover)]"
+                className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--accent-text)] hover:bg-[var(--player-chip-hover)]"
                 onClick={() => {
                   subtitleSearch.onSearch();
                   setPanel('subtitle-find');
@@ -409,7 +409,7 @@ export default function SettingsMenu(props: Props) {
                     type="button"
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-xs capitalize ${
                       subtitlePrefs.textSize === sz
-                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-color)]'
+                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-text)]'
                         : 'border-[var(--player-chip-border)] hover:bg-[var(--player-chip-hover)]'
                     }`}
                     onClick={() => onSubtitlePrefs({ textSize: sz })}
@@ -445,7 +445,7 @@ export default function SettingsMenu(props: Props) {
                     type="button"
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-xs capitalize ${
                       subtitlePrefs.edgeStyle === edge
-                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-color)]'
+                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-text)]'
                         : 'border-[var(--player-chip-border)] hover:bg-[var(--player-chip-hover)]'
                     }`}
                     onClick={() => onSubtitlePrefs({ edgeStyle: edge })}
@@ -466,7 +466,7 @@ export default function SettingsMenu(props: Props) {
                     type="button"
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-xs capitalize ${
                       subtitlePrefs.verticalPosition === pos
-                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-color)]'
+                        ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/20 text-[var(--accent-text)]'
                         : 'border-[var(--player-chip-border)] hover:bg-[var(--player-chip-hover)]'
                     }`}
                     onClick={() => onSubtitlePrefs({ verticalPosition: pos })}
@@ -610,10 +610,10 @@ function OptionRow({
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center">
           {active ? (
-            <Check className="h-4 w-4 text-[var(--accent-color)]" aria-hidden="true" />
+            <Check className="h-4 w-4 text-[var(--accent-text)]" aria-hidden="true" />
           ) : null}
         </span>
-        <span className={active ? 'text-[var(--accent-color)]' : 'text-[var(--player-fg)]'}>
+        <span className={active ? 'text-[var(--accent-text)]' : 'text-[var(--player-fg)]'}>
           {label}
         </span>
       </button>
@@ -699,7 +699,7 @@ function SubtitleFindPanel({ search }: { search: SubtitleSearchMenuProps | undef
                   {isDownloading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--player-fg-muted)]" aria-hidden="true" />
                   ) : isDownloaded ? (
-                    <Check className="h-4 w-4 text-[var(--accent-color)]" aria-hidden="true" />
+                    <Check className="h-4 w-4 text-[var(--accent-text)]" aria-hidden="true" />
                   ) : (
                     <Download className="h-3.5 w-3.5 text-[var(--player-fg-muted)]" aria-hidden="true" />
                   )}
@@ -752,7 +752,7 @@ function SkipPointsPanel({ editor }: { editor: SkipPointsEditor }) {
           type="button"
           disabled={!canClear}
           data-testid="player-clear-skip-points"
-          className="w-full rounded-lg px-3 py-2 text-left text-[var(--accent-color)] hover:bg-[var(--player-chip-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full rounded-lg px-3 py-2 text-left text-[var(--accent-text)] hover:bg-[var(--player-chip-hover)] disabled:cursor-not-allowed disabled:opacity-40"
           onClick={editor.onClear}
         >
           Clear skip points

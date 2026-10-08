@@ -41,7 +41,7 @@ export function ImportFileField({
       <button
         type="submit"
         disabled={busy || !path.trim()}
-        className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-color)] hover:border-[var(--accent-color)] disabled:opacity-50"
+        className="rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--accent-text)] hover:border-[var(--accent-color)] disabled:opacity-50"
       >
         {busy ? 'Importing…' : 'Import file'}
       </button>

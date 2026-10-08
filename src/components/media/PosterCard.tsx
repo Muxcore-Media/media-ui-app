@@ -113,7 +113,7 @@ export default function PosterCard({
         </div>
       </div>
       <div className="space-y-0.5 pt-2">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-color)] group-focus-visible:text-[var(--accent-color)]">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-text)] group-focus-visible:text-[var(--accent-text)]">
           {title}
         </h3>
         <p className="text-xs text-[var(--text-tertiary)]">

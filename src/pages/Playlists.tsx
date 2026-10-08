@@ -222,7 +222,7 @@ export default function Playlists() {
                             {f && allowed ? (
                               <Link
                                 to={f.href}
-                                className="text-[var(--accent-color)] hover:underline"
+                                className="text-[var(--accent-text)] hover:underline"
                               >
                                 {f.title}
                               </Link>

@@ -123,7 +123,7 @@ export default function LibrarySection({
                     {href ? (
                       <Link
                         to={href}
-                        className="truncate font-medium text-[var(--accent-color)] hover:underline"
+                        className="truncate font-medium text-[var(--accent-text)] hover:underline"
                       >
                         {primaryLabel(row)}
                       </Link>

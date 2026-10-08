@@ -58,7 +58,7 @@ export function AcquisitionSetupBanner() {
         {canManageAcquisition() && featureEnabled(caps, 'acquisition') && (
           <>
             {' '}
-            <Link to="/settings/acquisition" className="text-[var(--accent-color)] hover:underline">
+            <Link to="/settings/acquisition" className="text-[var(--accent-text)] hover:underline">
               Check acquisition
             </Link>
           </>

@@ -126,7 +126,7 @@ export default function InviteJoin() {
           className="space-y-3 rounded-[var(--radius-md)] border border-[var(--success)]/40 bg-[var(--bg-elevated)] p-4 text-sm"
           data-testid="invite-join-success"
         >
-          <p id="invite-join-success-message" role="status" className="font-medium text-[var(--success)]">
+          <p id="invite-join-success-message" role="status" className="font-medium text-[var(--success-text)]">
             Account created — you can sign in now.
           </p>
           <a
@@ -205,11 +205,11 @@ export default function InviteJoin() {
 
       <p className="text-center text-xs text-[var(--text-tertiary)]">
         Already have an account?{' '}
-        <a href="/login" className="font-medium text-[var(--accent-color)] hover:underline">
+        <a href="/login" className="font-medium text-[var(--accent-text)] hover:underline">
           Sign in
         </a>
         {' · '}
-        <Link to="/" className="font-medium text-[var(--accent-color)] hover:underline">
+        <Link to="/" className="font-medium text-[var(--accent-text)] hover:underline">
           Browse library
         </Link>
       </p>

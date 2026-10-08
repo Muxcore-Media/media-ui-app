@@ -47,7 +47,7 @@ export function Shelf({
         {seeAllHref && (
           <Link
             to={seeAllHref}
-            className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+            className="text-sm font-medium text-[var(--accent-text)] hover:underline"
             aria-label={`See all ${title}`}
           >
             See all

@@ -113,7 +113,7 @@ export default function TVShows() {
       {!loading && inProgressCount > 0 && (
         <p className="text-sm text-[var(--text-secondary)]">
           {inProgressCount} {inProgressCount === 1 ? 'show is' : 'shows are'} still downloading.{' '}
-          <Link to="/requests" className="font-medium text-[var(--accent-color)] hover:underline">
+          <Link to="/requests" className="font-medium text-[var(--accent-text)] hover:underline">
             View in progress
           </Link>
         </p>
@@ -188,7 +188,7 @@ export default function TVShows() {
               !genre ? (
                 <Link
                   to="/search"
-                  className="text-sm font-medium text-[var(--accent-color)] hover:underline"
+                  className="text-sm font-medium text-[var(--accent-text)] hover:underline"
                 >
                   Search titles
                 </Link>

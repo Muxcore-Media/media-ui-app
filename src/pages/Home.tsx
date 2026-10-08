@@ -316,7 +316,7 @@ function UpcomingCard({ kind, show, episode, air }: UpcomingEpisodeRow) {
         )}
       </div>
       <div className="space-y-0.5 pt-2">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-color)] group-focus-visible:text-[var(--accent-color)]">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)] transition group-hover:text-[var(--accent-text)] group-focus-visible:text-[var(--accent-text)]">
           {show.title}
         </h3>
         <p className="text-xs text-[var(--text-tertiary)]">{epLabel}</p>
@@ -755,7 +755,7 @@ export default function Home() {
           <p className="text-sm text-[var(--text-secondary)]">
             {inProgressCount} {inProgressCount === 1 ? 'title is' : 'titles are'} being requested or
             downloaded.{' '}
-            <Link to="/requests" className="font-medium text-[var(--accent-color)] hover:underline">
+            <Link to="/requests" className="font-medium text-[var(--accent-text)] hover:underline">
               View in progress
             </Link>
           </p>

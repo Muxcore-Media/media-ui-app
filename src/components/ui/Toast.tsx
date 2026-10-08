@@ -83,7 +83,7 @@ function ToastCard({
         aria-hidden
         className={cn(
           'mt-0.5 h-5 w-5 shrink-0',
-          isSuccess ? 'text-[var(--success)]' : 'text-[var(--accent-color)]',
+          isSuccess ? 'text-[var(--success)]' : 'text-[var(--accent-text)]',
         )}
       />
       <div className="min-w-0 flex-1">
@@ -95,7 +95,7 @@ function ToastCard({
           <button
             type="button"
             onClick={handleAction}
-            className="mt-1.5 text-xs font-medium text-[var(--accent-color)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
+            className="mt-1.5 text-xs font-medium text-[var(--accent-text)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]"
           >
             {toast.actionLabel ?? 'View'}
           </button>

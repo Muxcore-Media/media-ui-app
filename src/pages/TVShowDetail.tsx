@@ -170,7 +170,7 @@ export default function TVShowDetail() {
           {parentalTitleOr(error, 'TV show not found')}
         </h1>
         <ErrorBanner message={error || 'TV show not found.'} />
-        <Link to="/tv" className="text-[var(--accent-color)] hover:underline">
+        <Link to="/tv" className="text-[var(--accent-text)] hover:underline">
           Back to TV
         </Link>
       </div>
@@ -349,7 +349,7 @@ export default function TVShowDetail() {
                 href={jellyfinURL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--accent-color)] transition hover:border-[var(--accent-color)]"
+                className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--accent-text)] transition hover:border-[var(--accent-color)]"
               >
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />
                 Open in linked app

@@ -276,7 +276,7 @@ export default function Search() {
               in{' '}
               <button
                 type="button"
-                className="text-[var(--accent-color)] hover:underline"
+                className="text-[var(--accent-text)] hover:underline"
                 onClick={() => setScope('all')}
               >
                 {scopeOptions.find((o) => o.id === scope)?.label ?? scope}
@@ -286,7 +286,7 @@ export default function Search() {
           .{' '}
           <button
             type="button"
-            className="text-[var(--accent-color)] hover:underline"
+            className="text-[var(--accent-text)] hover:underline"
             onClick={() => navigate('/')}
           >
             Back home

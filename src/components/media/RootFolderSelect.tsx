@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { rootLabel, type LibraryRoot } from '../../lib/roots';
@@ -13,6 +14,7 @@ export function RootFolderSelect({
   value?: string;
   onChange?: (next: string) => void;
 }) {
+  const { canChangeRoot: canOperate } = useOperatorAccess();
   const [roots, setRoots] = useState<LibraryRoot[]>([]);
   const [picked, setPicked] = useState<LibraryRoot | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,6 +32,7 @@ export function RootFolderSelect({
               : 'music';
 
   useEffect(() => {
+    if (!canOperate) return;
     let cancelled = false;
     void api
       .listRoots(catalogKind)
@@ -49,7 +52,9 @@ export function RootFolderSelect({
     return () => {
       cancelled = true;
     };
-  }, [catalogKind]);
+  }, [catalogKind, canOperate]);
+
+  if (!canOperate) return null;
 
   if (roots.length === 0) return null;
 

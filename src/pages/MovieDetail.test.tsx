@@ -1,3 +1,4 @@
+import { setCurrentRoles } from '../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -83,6 +84,7 @@ describe('MovieDetail page', () => {
   });
 
   it('renders movie metadata', async () => {
+    setCurrentRoles(['admin']);
     render(
       <MemoryRouter initialEntries={['/movies/m-550']}>
         <Routes>

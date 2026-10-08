@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../../lib/session';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DeleteEpisodeFileButton } from './DeleteEpisodeFileButton';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const removeEpisodeFile = vi.fn();
 

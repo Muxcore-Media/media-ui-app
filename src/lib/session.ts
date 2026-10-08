@@ -202,6 +202,11 @@ export function canManageLibrary(roles: string[] = getCurrentRoles()): boolean {
   return hasAdminOrManager(roles);
 }
 
+/** Root-folder assignments in library PATCHes are admin-only (T-M5-12). */
+export function canManageRootFolder(roles: string[] = getCurrentRoles()): boolean {
+  return roles.some((role) => role.trim().toLowerCase() === 'admin');
+}
+
 /** True when the household session may list, role-change, or remove household users. */
 export function canManageUsers(roles: string[] = getCurrentRoles()): boolean {
   return hasAdminOrManager(roles);

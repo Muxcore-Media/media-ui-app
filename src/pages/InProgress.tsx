@@ -1,3 +1,4 @@
+import { OperatorControls } from '../components/OperatorControls';
 import { useEffect, useMemo, useState, useId, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowBigUp, Clock3, Download, Search, ShieldAlert, TriangleAlert } from 'lucide-react';
@@ -265,14 +266,16 @@ function UpgradeCard({
       ) : (
         titleBlock
       )}
-      <button
-        type="button"
-        className="shrink-0 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-        disabled={searching}
-        onClick={onSearchNow}
-      >
-        {searching ? 'Searching…' : 'Search now'}
-      </button>
+      <OperatorControls>
+        <button
+          type="button"
+          className="shrink-0 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+          disabled={searching}
+          onClick={onSearchNow}
+        >
+          {searching ? 'Searching…' : 'Search now'}
+        </button>
+      </OperatorControls>
     </li>
   );
 }
@@ -445,15 +448,17 @@ export default function InProgress() {
                 Quality upgrades <span className="text-[var(--text-tertiary)]">({upgrades.length})</span>
               </h2>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Search className="h-4 w-4" aria-hidden="true" />}
-              disabled={searchingKey !== null}
-              onClick={() => void runSearchNow()}
-            >
-              {searchingKey === 'all' ? 'Searching…' : 'Search all upgrades'}
-            </Button>
+            <OperatorControls>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Search className="h-4 w-4" aria-hidden="true" />}
+                disabled={searchingKey !== null}
+                onClick={() => void runSearchNow()}
+              >
+                {searchingKey === 'all' ? 'Searching…' : 'Search all upgrades'}
+              </Button>
+            </OperatorControls>
           </div>
           <p className="text-sm text-[var(--text-secondary)]">
             Titles already in the library that sit below the profile cutoff — Sonarr/Radarr

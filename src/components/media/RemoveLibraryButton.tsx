@@ -1,5 +1,6 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { Button } from '../ui/Button';
 
@@ -16,13 +17,21 @@ export function RemoveLibraryButton({
   hasFile?: boolean;
   onRemoved?: () => void;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [open, setOpen] = useState(false);
   const [deleteFiles, setDeleteFiles] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!canOperate) {
+      setOpen(false);
+      setDeleteFiles(false);
+    }
+  }, [canOperate]);
+
   async function confirm() {
-    if (!id || busy) return;
+    if (!canOperate || !id || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -34,6 +43,8 @@ export function RemoveLibraryButton({
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   if (!open) {
     return (

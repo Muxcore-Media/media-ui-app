@@ -37,6 +37,34 @@ Within Acquisition, adding, enabling/disabling, and removing indexers requires
 `admin`, matching the BFF's indexer mutation rules. Managers retain readiness and
 catalog reads without those controls.
 
+Consumer detail and activity controls also follow the BFF's T-M5-12 operator
+boundary. The current session roles update these controls without replacing the
+page or its personal state:
+
+| BFF mutation family | Consumer controls | Roles |
+| --- | --- | --- |
+| Library DELETE, file DELETE, metadata refresh POST | Remove title/files, refresh metadata | admin, manager |
+| Library/season/episode/album/work/issue PATCH | Monitor and quality profile | admin, manager |
+| Library PATCH containing `root_folder_path` | Root folder and Assign default | admin |
+| Series override PUT/DELETE, rename POST | Grab override and Rename | admin, manager |
+| Wanted add/remove, releases grab/block/search-now, activity retry, import POST | Wanted, upgrades, calendar/missing search, interactive Grab/Block, retry and manual import | admin, manager |
+| Blocklist clear POST | Unblock and Clear all | admin, manager |
+| Live TV timers POST, session stop POST | Schedule and Stop (including one's own native session) | admin, manager |
+| Debrid add POST, subtitle download POST | Add to debrid and player subtitle Download | admin, manager |
+
+Release search/results, activity reads, recordings, cloud-library Play, existing
+subtitle tracks, personal watched/queue/favorite state, and ordinary requests
+remain available subject to their existing feature and server checks. The
+`approver` role retains individual request decisions but gains no acquisition
+controls. Delay-profile and TRaSH-sync actions retain their existing Settings
+role gates. No new backend permission or operator-settings migration is added.
+
+Fresh identity with no cached role hides operator actions until the session
+refresh succeeds. The existing session cache remains cosmetic: cached operator
+roles may show controls while a refresh is pending or transiently fails; a
+completed downgrade, explicit authentication denial, sign-out or cross-tab
+update removes them. A downgrade also closes a pending library-removal form.
+
 These are UI presentation and routing guards. Server authorization is unchanged
 and remains authoritative, including stricter permissions on some mutations.
 FR-ADM-010 remains partial until operator controls migrate to admin-ui.
@@ -127,6 +155,10 @@ respects reduced motion; the browser projects request that preference.
 The tests in `e2e/` intercept BFF
 HTTP calls with local fixtures; unexpected API calls and external requests fail.
 No live indexers, media sources, credentials, or backend services are used.
+Operator scenarios cover delayed/current identities, member personal-state and playback
+affordances, manager monitoring, admin-only root assignment, session-stop controls,
+debrid cloud playback and Live TV timers at all four viewport widths. Unknown
+operator HTTP calls fail the fixture, and allowed monitoring checks its actual PATCH.
 Indexer action scenarios verify manager reads and admin mutations on fresh direct
 Settings navigation. Delayed identity scenarios cover fresh roles, cached-role
 downgrades, expired sessions, userdata failures, unsaved personal form state, and

@@ -79,6 +79,7 @@ describe('ComicSeries page', () => {
   });
 
   it('can unmonitor the series', async () => {
+    setCurrentRoles(['admin']);
     render(
       <MemoryRouter initialEntries={['/comics/s1']}>
         <Routes>
@@ -93,6 +94,7 @@ describe('ComicSeries page', () => {
   });
 
   it('removes the series from the library', async () => {
+    setCurrentRoles(['admin']);
     render(
       <MemoryRouter initialEntries={['/comics/s1']}>
         <Routes>

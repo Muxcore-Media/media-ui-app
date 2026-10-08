@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { setCurrentRoles } from '../../lib/session';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { RootFolderSelect } from './RootFolderSelect';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const listRoots = vi.fn();
 const pickRoot = vi.fn();

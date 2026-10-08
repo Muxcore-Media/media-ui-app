@@ -56,6 +56,7 @@ const routes = [
   ['Home', '/', '[data-testid="home-page"] h1'],
   ['Movies', '/movies', 'label[for="movies-genre"]'],
   ['Movie detail', '/movies/fixture-movie-1', '[data-testid="movie-detail-page"]'],
+  ['Member movie detail', '/movies/fixture-movie-1', '[data-testid="movie-detail-page"]'],
   ['Display settings', '/settings/display', '#settings-display-heading'],
   ['Playback settings', '/settings/playback', '#settings-playback-heading'],
   ['Invite', '/invite/fixture-invite', '[data-testid="invite-join-form"]'],
@@ -66,6 +67,13 @@ for (const theme of ['dark', 'light'] as const) {
   for (const [name, path, ready] of routes) {
     test(`${name} has no definite text contrast failures in ${theme}`, async ({ page }, info) => {
       await themeFixture(page, theme);
+      // The destructive-control paint check needs the role that can see it.
+      // Keep a separate member detail audit for the ordinary household surface.
+      if (name === 'Movie detail') {
+        await page.route(`${ORIGIN}/api/session`, (route) => route.fulfill({
+          json: { user_id: 'fixture-operator', roles: ['admin'] },
+        }));
+      }
       await page.goto(path);
       await expect(page.locator(ready)).toBeVisible();
       const results = await audit(page, theme, info);

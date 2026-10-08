@@ -1,3 +1,4 @@
+import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import { renameChangedCount, type RenamePreviewItem } from '../../lib/rename';
@@ -9,12 +10,14 @@ export function PreviewRename({
   kind: 'movie' | 'tv';
   id: string;
 }) {
+  const { canOperate } = useOperatorAccess();
   const [available, setAvailable] = useState<boolean | null>(null);
   const [items, setItems] = useState<RenamePreviewItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!canOperate) return;
     let cancelled = false;
     void api
       .previewRename(kind === 'movie' ? { movieId: id } : { tvId: id })
@@ -29,7 +32,7 @@ export function PreviewRename({
     return () => {
       cancelled = true;
     };
-  }, [kind, id]);
+  }, [kind, id, canOperate]);
 
   async function onRename() {
     setBusy(true);
@@ -47,6 +50,8 @@ export function PreviewRename({
       setBusy(false);
     }
   }
+
+  if (!canOperate) return null;
 
   if (available === false || available === null) return null;
   if (items.length === 0) return null;

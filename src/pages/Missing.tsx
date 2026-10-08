@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Search } from 'lucide-react';
@@ -28,15 +29,17 @@ function MissingRow({
           {item.kind === 'movie' ? item.year || 'Movie' : missingEpisodeLabel(item)}
         </p>
       </div>
-      <button
-        type="button"
-        className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)] disabled:opacity-50"
-        disabled={busy}
-        onClick={onSearch}
-      >
-        <Search className="h-3.5 w-3.5" aria-hidden="true" />
-        Search now
-      </button>
+      <OperatorControls>
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)] disabled:opacity-50"
+          disabled={busy}
+          onClick={onSearch}
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden="true" />
+          Search now
+        </button>
+      </OperatorControls>
     </li>
   );
 }
@@ -121,6 +124,7 @@ export default function Missing() {
           Upcoming calendar
         </Link>
       </header>
+      <OperatorNotice />
       {loading ? (
         <div aria-busy="true">
           <LoadingStatus label="Loading missing titles" />

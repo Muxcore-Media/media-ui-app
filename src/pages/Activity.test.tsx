@@ -1,7 +1,10 @@
+import { setCurrentRoles } from '../lib/session';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Activity from './Activity';
+
+beforeEach(() => setCurrentRoles(['admin']));
 
 const listActivity = vi.fn();
 const listWanted = vi.fn();
@@ -59,6 +62,23 @@ describe('Activity page', () => {
     removeWanted.mockResolvedValue({ removed: true, queue_id: 'q-miss' });
     addWanted.mockResolvedValue({ added: true, queue_id: 'w_movie_m1' });
     blockRelease.mockResolvedValue({ success: true });
+  });
+
+  it.each(['user', 'viewer', 'approver'])('keeps %s activity readable without acquisition actions', async (role) => {
+    setCurrentRoles([role]);
+    listWanted.mockResolvedValue({ available: true, items: [{ id: 'w1', item_type: 'movie', item_id: 'm1', title: 'Missing film', monitored: true, missing: true }] });
+    listActivity.mockResolvedValue({ available: true, items: [{ id: 'h1', title: 'Failed film', status: 'import_failed', stuck: true, wanted_item_id: 'w1', guid: 'g1' }] });
+    listImportCandidates.mockResolvedValue({ available: true, items: [{ path: '/fixture/film.mkv', title: 'Import fixture' }] });
+    renderPage();
+    expect(await screen.findByText('Missing film')).toBeInTheDocument();
+    expect(screen.getByText('Failed film')).toBeInTheDocument();
+    expect(screen.getByText('Import fixture')).toBeInTheDocument();
+    expect(screen.queryByTestId('wanted-add-form')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Search|Remove|Retry import|Block|Import/ })).not.toBeInTheDocument();
+    expect(addWanted).not.toHaveBeenCalled();
+    expect(searchNow).not.toHaveBeenCalled();
+    expect(importPath).not.toHaveBeenCalled();
+    expect(retryImport).not.toHaveBeenCalled();
   });
 
   it('shows empty state when nothing is downloading', async () => {

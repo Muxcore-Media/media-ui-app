@@ -1,3 +1,4 @@
+import { OperatorControls, OperatorNotice } from '../components/OperatorControls';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Ban, Clock3, Download, FolderInput, RotateCcw, Search, Trash2, TriangleAlert } from 'lucide-react';
@@ -54,41 +55,43 @@ function HistoryRow({
         ) : null}
       </div>
       {stuck ? (
-        <div className="flex shrink-0 flex-wrap gap-1">
-          {canRetry ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-              disabled={busy}
-              onClick={onRetry}
-            >
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              Retry import
-            </button>
-          ) : null}
-          {canSearch ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-              disabled={busy}
-              onClick={onSearch}
-            >
-              <Search className="h-3.5 w-3.5" aria-hidden="true" />
-              Search now
-            </button>
-          ) : null}
-          {rec.guid && rec.wanted_item_id ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
-              disabled={busy}
-              onClick={onBlock}
-            >
-              <Ban className="h-3.5 w-3.5" aria-hidden="true" />
-              Block
-            </button>
-          ) : null}
-        </div>
+        <OperatorControls>
+          <div className="flex shrink-0 flex-wrap gap-1">
+            {canRetry ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+                disabled={busy}
+                onClick={onRetry}
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                Retry import
+              </button>
+            ) : null}
+            {canSearch ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+                disabled={busy}
+                onClick={onSearch}
+              >
+                <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                Search now
+              </button>
+            ) : null}
+            {rec.guid && rec.wanted_item_id ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
+                disabled={busy}
+                onClick={onBlock}
+              >
+                <Ban className="h-3.5 w-3.5" aria-hidden="true" />
+                Block
+              </button>
+            ) : null}
+          </div>
+        </OperatorControls>
       ) : null}
     </li>
   );
@@ -124,27 +127,29 @@ function WantedRow({
         </p>
         <Badge tone="warning">Missing</Badge>
       </div>
-      <div className="flex shrink-0 flex-wrap gap-1">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-          disabled={busy}
-          onClick={onSearch}
-        >
-          <Search className="h-3.5 w-3.5" aria-hidden="true" />
-          Search now
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
-          disabled={busy}
-          aria-label={`Remove ${item.title} from wanted`}
-          onClick={onRemove}
-        >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-          Remove
-        </button>
-      </div>
+      <OperatorControls>
+        <div className="flex shrink-0 flex-wrap gap-1">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+            disabled={busy}
+            onClick={onSearch}
+          >
+            <Search className="h-3.5 w-3.5" aria-hidden="true" />
+            Search now
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated-2)] hover:text-[var(--danger-color)]"
+            disabled={busy}
+            aria-label={`Remove ${item.title} from wanted`}
+            onClick={onRemove}
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Remove
+          </button>
+        </div>
+      </OperatorControls>
     </li>
   );
 }
@@ -218,21 +223,24 @@ export default function Activity() {
             download folder — the same daily queue as Sonarr/Radarr.
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<Search className="h-4 w-4" aria-hidden="true" />}
-          disabled={busyKey !== null}
-          onClick={() =>
-            void run('all', async () => {
-              await api.searchNow();
-            }, 'Wanted search started.')
-          }
-        >
-          Search all wanted
-        </Button>
+        <OperatorControls>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Search className="h-4 w-4" aria-hidden="true" />}
+            disabled={busyKey !== null}
+            onClick={() =>
+              void run('all', async () => {
+                await api.searchNow();
+              }, 'Wanted search started.')
+            }
+          >
+            Search all wanted
+          </Button>
+        </OperatorControls>
       </header>
 
+      <OperatorNotice />
       {loading && (
         <div data-testid="activity-loading" aria-busy="true">
           <LoadingStatus label="Loading downloads" />
@@ -252,79 +260,81 @@ export default function Activity() {
       ) : null}
 
       {!loading ? (
-        <form
-          className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 sm:grid-cols-[8rem_1fr_10rem_auto]"
-          data-testid="wanted-add-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const fd = new FormData(event.currentTarget);
-            const itemType = String(fd.get('item_type') || 'movie').trim();
-            const itemId = String(fd.get('item_id') || '').trim();
-            const title = String(fd.get('title') || '').trim();
-            const year = Number(fd.get('year') || 0);
-            if (!itemId) return;
-            void run(
-              'add-wanted',
-              async () => {
-                await api.addWanted({
-                  itemType,
-                  itemId,
-                  title: title || itemId,
-                  year: Number.isFinite(year) ? year : 0,
-                });
-              },
-              'Added to wanted.',
-            );
-          }}
-        >
-          <label className="block text-xs text-[var(--text-secondary)]">
-            Type
-            <select name="item_type" defaultValue="movie" className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]">
-              <option value="movie">Movie</option>
-              <option value="tv">TV</option>
-              <option value="music">Music</option>
-              <option value="book">Book</option>
-              <option value="comic">Comic</option>
-              <option value="audiobook">Audiobook</option>
-            </select>
-          </label>
-          <label className="block text-xs text-[var(--text-secondary)]">
-            Title
-            <input
-              name="title"
-              placeholder="Dune"
-              className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
-            />
-          </label>
-          <label className="block text-xs text-[var(--text-secondary)]">
-            Library id
-            <input
-              name="item_id"
-              required
-              placeholder="m1"
-              className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
-            />
-          </label>
-          <div className="flex items-end gap-2">
-            <label className="block min-w-[5rem] flex-1 text-xs text-[var(--text-secondary)]">
-              Year
+        <OperatorControls>
+          <form
+            className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 sm:grid-cols-[8rem_1fr_10rem_auto]"
+            data-testid="wanted-add-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const fd = new FormData(event.currentTarget);
+              const itemType = String(fd.get('item_type') || 'movie').trim();
+              const itemId = String(fd.get('item_id') || '').trim();
+              const title = String(fd.get('title') || '').trim();
+              const year = Number(fd.get('year') || 0);
+              if (!itemId) return;
+              void run(
+                'add-wanted',
+                async () => {
+                  await api.addWanted({
+                    itemType,
+                    itemId,
+                    title: title || itemId,
+                    year: Number.isFinite(year) ? year : 0,
+                  });
+                },
+                'Added to wanted.',
+              );
+            }}
+          >
+            <label className="block text-xs text-[var(--text-secondary)]">
+              Type
+              <select name="item_type" defaultValue="movie" className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]">
+                <option value="movie">Movie</option>
+                <option value="tv">TV</option>
+                <option value="music">Music</option>
+                <option value="book">Book</option>
+                <option value="comic">Comic</option>
+                <option value="audiobook">Audiobook</option>
+              </select>
+            </label>
+            <label className="block text-xs text-[var(--text-secondary)]">
+              Title
               <input
-                name="year"
-                type="number"
-                min={1900}
-                max={2100}
+                name="title"
+                placeholder="Dune"
                 className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
               />
             </label>
-            <button
-              type="submit"
-              disabled={busyKey !== null}
-              className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-            >
-              Add to wanted
-            </button>
-          </div>
-        </form>
+            <label className="block text-xs text-[var(--text-secondary)]">
+              Library id
+              <input
+                name="item_id"
+                required
+                placeholder="m1"
+                className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
+              />
+            </label>
+            <div className="flex items-end gap-2">
+              <label className="block min-w-[5rem] flex-1 text-xs text-[var(--text-secondary)]">
+                Year
+                <input
+                  name="year"
+                  type="number"
+                  min={1900}
+                  max={2100}
+                  className="mt-1 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1.5 text-sm text-[var(--text-primary)]"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={busyKey !== null}
+                className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                Add to wanted
+              </button>
+            </div>
+          </form>
+        </OperatorControls>
       ) : null}
 
       {empty && (
@@ -413,23 +423,25 @@ export default function Activity() {
                       </p>
                     ) : null}
                   </div>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
-                    disabled={busyKey !== null}
-                    onClick={() =>
-                      void run(
-                        row.path,
-                        async () => {
-                          await api.importPath(importPathBody(row));
-                        },
-                        'Imported into the library.',
-                      )
-                    }
-                  >
-                    <FolderInput className="h-3.5 w-3.5" aria-hidden="true" />
-                    Import
-                  </button>
+                  <OperatorControls>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-[var(--radius-md)] px-2 py-1 text-xs font-semibold text-[var(--accent-text)] hover:bg-[var(--bg-elevated-2)]"
+                      disabled={busyKey !== null}
+                      onClick={() =>
+                        void run(
+                          row.path,
+                          async () => {
+                            await api.importPath(importPathBody(row));
+                          },
+                          'Imported into the library.',
+                        )
+                      }
+                    >
+                      <FolderInput className="h-3.5 w-3.5" aria-hidden="true" />
+                      Import
+                    </button>
+                  </OperatorControls>
                 </li>
               );
             })}

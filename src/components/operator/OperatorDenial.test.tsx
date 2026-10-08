@@ -6,10 +6,12 @@ import { clearCurrentSession, getCurrentRoles, setCurrentRoles, setCurrentUserId
 import { DeleteEpisodeFileButton } from '../media/DeleteEpisodeFileButton';
 import { DeleteMovieFileButton } from '../media/DeleteMovieFileButton';
 import { MonitorButton } from '../media/MonitorButton';
+import { PreviewRename } from '../media/PreviewRename';
 import { QualityProfileSelect } from '../media/QualityProfileSelect';
 import { RefreshMetadataButton } from '../media/RefreshMetadataButton';
 import { RemoveLibraryButton } from '../media/RemoveLibraryButton';
 import { RootFolderSelect } from '../media/RootFolderSelect';
+import { SeriesOverrideCard } from '../media/SeriesOverrideCard';
 import { ErrorBanner } from '../ui/ErrorBanner';
 
 // A stale cached role shows an operator control that the BFF then refuses (T-M5-12, C-30). The
@@ -119,6 +121,47 @@ describe('operator role denial in action controls', () => {
 });
 
 describe('stale cached role against the real client', () => {
+  it.each([
+    { action: 'Rename 1 file', method: 'POST', path: '/api/rename', testId: 'rename-error', formId: 'preview-rename', element: <PreviewRename kind="movie" id="m1" /> },
+    { action: 'Save override', method: 'PUT', path: '/api/tv/s1/override', testId: 'series-override-error', formId: 'series-override', element: <SeriesOverrideCard seriesId="s1" /> },
+    { action: 'Use household delay', method: 'DELETE', path: '/api/tv/s1/override', testId: 'series-override-error', formId: 'series-override', element: <SeriesOverrideCard seriesId="s1" /> },
+  ])('retains the $action denial after removing the downgraded operator form', async ({ action, method, path, testId, formId, element }) => {
+    setCurrentUserId('u-member');
+    setCurrentRoles(['manager']);
+    const calls: string[] = [];
+    const unexpected: string[] = [];
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const verb = init?.method || 'GET';
+      calls.push(`${verb} ${url}`);
+      if (verb === method && url === path) return json({ code: 'operator.forbidden', error: 'private server diagnostic' }, 403);
+      if (verb === 'GET' && url === '/api/session') return json({ user_id: 'u-member', roles: ['viewer'] });
+      if (verb === 'GET' && url === '/api/rename/preview?movie_id=m1') return json({
+        available: true,
+        items: [{ file_id: 'f1', current_path: '/fixture/old.mkv', new_path: '/fixture/new.mkv', new_filename: 'new.mkv', changed: true }],
+      });
+      if (verb === 'GET' && url === '/api/tv/s1/override') return json({
+        available: true, found: true,
+        override: { series_id: 's1', delay_minutes: 15, preferred_groups: [], ignored_groups: [] },
+      });
+      unexpected.push(`${verb} ${url}`);
+      return json({ error: 'No fixture for this request' }, 501);
+    }));
+    render(element);
+    // Wait for the initial read, including the existing override's clear action.
+    await screen.findByRole('button', { name: formId === 'series-override' ? 'Use household delay' : action });
+    fireEvent.click(screen.getByRole('button', { name: action }));
+    await waitFor(() => expect(getCurrentRoles()).toEqual(['viewer']));
+    await expectCalmNote(testId);
+    expect(screen.queryByTestId(formId)).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText('private server diagnostic')).toBeNull();
+    expect(calls.filter((call) => !call.startsWith('GET '))).toEqual([`${method} ${path}`]);
+    expect(calls.filter((call) => call === 'GET /api/session')).toHaveLength(1);
+    expect(unexpected).toEqual([]);
+  });
+
   // The control is offered from a cached `manager`; the BFF answers 403 and the session re-read
   // shows the role really is `viewer`. The control goes away, the explanation stays, nothing retries.
   it('hides the control once the session re-read downgrades the role, keeping the note', async () => {

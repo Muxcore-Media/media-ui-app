@@ -69,6 +69,7 @@ If a stale cached role still shows a control, the BFF's 403 `operator.forbidden`
 or `operator.admin_required` (a manager naming `root_folder_path`) is reported as
 a calm status with fixed copy, never retried, and followed by one session re-read
 that removes the control if the role really changed.
+Rename and series-override denials keep that status after the operator form disappears.
 
 These are UI presentation and routing guards. Server authorization is unchanged
 and remains authoritative, including stricter permissions on some mutations.

@@ -328,7 +328,7 @@ export default function Activity() {
               <button
                 type="submit"
                 disabled={busyKey !== null}
-                className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent-color)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-accent)] disabled:opacity-50"
               >
                 Add to wanted
               </button>

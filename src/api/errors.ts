@@ -150,3 +150,64 @@ export function parentalTitleOr(message: string | null | undefined, fallback: st
   const code = parentalCodeFromMessage(message);
   return code ? PARENTAL_COPY[code].title : fallback;
 }
+
+/**
+ * `operator.*` role denials from the BFF operator route gate (T-M5-12, C-30; BFF-API.md
+ * "Operator route roles"). The BFF answers 403 to a session without the admin or manager role on
+ * state-changing operator routes, and 403 `operator.admin_required` when a manager names
+ * `root_folder_path` in a library PATCH. The SPA hides those controls from members using a cached
+ * role that can be stale; this is the calm fallback when a stale control is used anyway.
+ *
+ * Like `ParentalError`, this only reports a server decision. It never grants anything.
+ */
+export const OPERATOR_CODES = ['operator.forbidden', 'operator.admin_required'] as const;
+
+export type OperatorCode = (typeof OPERATOR_CODES)[number];
+
+export const OPERATOR_COPY: Record<OperatorCode, { title: string; message: string }> = {
+  'operator.forbidden': {
+    title: 'Not available for your role',
+    message: "You don't have permission for this action.",
+  },
+  'operator.admin_required': {
+    title: 'Administrator needed',
+    message: "You don't have permission for this action. Changing a root folder needs an administrator.",
+  },
+};
+
+export class OperatorError extends ApiError {
+  readonly operatorCode: OperatorCode;
+  /** Raw `error` text from the BFF. Diagnostic only; the UI shows `message`. */
+  readonly serverMessage?: string;
+
+  constructor(operatorCode: OperatorCode, status: number, serverMessage?: string) {
+    super(OPERATOR_COPY[operatorCode].message, status, operatorCode);
+    this.name = 'OperatorError';
+    this.operatorCode = operatorCode;
+    this.serverMessage = serverMessage;
+  }
+}
+
+export function isOperatorCode(value: unknown): value is OperatorCode {
+  return typeof value === 'string' && (OPERATOR_CODES as readonly string[]).includes(value);
+}
+
+/** Map a 403 BFF error body to an operator code. Other statuses (for example 413) are not role denials. */
+export function operatorCodeFromBody(body: unknown, status: number): OperatorCode | null {
+  if (status !== 403 || !body || typeof body !== 'object') return null;
+  const { code } = body as Record<string, unknown>;
+  return isOperatorCode(code) ? code : null;
+}
+
+/** Recover the operator code from a surfaced `OperatorError.message` (page-level `error` strings). */
+export function operatorCodeFromMessage(message: string | null | undefined): OperatorCode | null {
+  if (!message) return null;
+  for (const code of OPERATOR_CODES) {
+    if (OPERATOR_COPY[code].message === message) return code;
+  }
+  return null;
+}
+
+export function operatorCodeOf(err: unknown): OperatorCode | null {
+  return err instanceof OperatorError ? err.operatorCode : null;
+}

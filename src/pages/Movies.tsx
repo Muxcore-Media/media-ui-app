@@ -141,7 +141,7 @@ export default function Movies() {
               id="movies-genre"
               value={genre}
               onChange={(e) => setGenre(e.target.value)}
-              className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm"
+              className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm text-[var(--text-primary)]"
             >
               <option value="">All</option>
               {genres.map((g) => (
@@ -157,7 +157,7 @@ export default function Movies() {
               id="movies-sort"
               value={sort}
               onChange={(e) => setSort(e.target.value as typeof sort)}
-              className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm"
+              className="block rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated-2)] px-3 py-2 text-sm text-[var(--text-primary)]"
             >
               <option value="title">Title</option>
               <option value="year">Year</option>

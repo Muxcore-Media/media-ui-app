@@ -28,6 +28,8 @@ import type {
 import type { Capabilities, FeatureKey, LibraryKey } from '../lib/capabilities';
 import { DEFAULT_CAPABILITIES } from '../lib/capabilities';
 import { clearCurrentSession } from '../lib/session';
+import { recordRestrictedRoute } from '../lib/restricted-routes';
+import { ApiError, ParentalError, parentalCodeFromBody } from './errors';
 import {
   normalizeAcquisitionStatus,
   normalizeHouseholdIndexer,
@@ -267,6 +269,8 @@ import {
   type ImportPathResult,
 } from '../lib/manual-import';
 
+export { ApiError, ParentalError, PARENTAL_CODES, type ParentalCode } from './errors';
+
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
 
 export const OFFLINE_FETCH_MESSAGE = "You're offline. Check your connection and try again.";
@@ -313,15 +317,26 @@ async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
+    let body: { error?: string; code?: string } | null = null;
     try {
-      const body = (await res.json()) as { error?: string; code?: string };
+      body = (await res.json()) as { error?: string; code?: string };
       if (body?.error) {
         detail = body.code ? `${body.error} (${body.code})` : body.error;
       }
     } catch {
       /* plain-text error bodies are fine */
     }
-    throw new Error(detail);
+    // Server-side parental decisions (ADR-0031) surface as typed errors. The message is the
+    // SPA's own copy, so pages that print `err.message` stay accurate without special cases.
+    const parentalCode = parentalCodeFromBody(body);
+    if (parentalCode) {
+      // An invalid/expired session is an explicit authentication denial: drop cached identity,
+      // as the session refresh does. The page then offers a sign-in link; no redirect loop.
+      if (parentalCode === 'parental.session_invalid') clearCurrentSession();
+      recordRestrictedRoute(path, parentalCode);
+      throw new ParentalError(parentalCode, res.status, body?.code, body?.error);
+    }
+    throw new ApiError(detail, res.status, body?.code);
   }
   return res.json() as Promise<T>;
 }
@@ -3367,6 +3382,7 @@ export async function reportPlaybackSession(
 
 /** User-facing copy for mediauiprox playback resolve failures ({error, code}). */
 export function friendlyPlaybackError(err: unknown): string {
+  if (err instanceof ParentalError) return err.message;
   const raw = err instanceof Error ? err.message : String(err ?? 'Playback failed');
   const codeMatch = raw.match(/\(([^)]+)\)$/);
   const code = codeMatch?.[1];

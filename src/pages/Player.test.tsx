@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Player from './Player';
 import { updatePreferences } from '../lib/userdata';
@@ -112,5 +112,135 @@ describe('Player parental gate (progress resume)', () => {
     await waitFor(() => {
       expect(document.querySelector('video')).not.toBeNull();
     });
+  });
+});
+
+describe('Player server-side parental states (ADR-0031)', () => {
+  const OK_RESOLVE = {
+    stream_url: '/stream/movies/m1',
+    mode: 'direct',
+    resume_enabled: true,
+    transcoder_enabled: false,
+    prefer_direct_play: true,
+    max_bitrate_mbps: '80',
+    trickplay_enabled: false,
+    transcoder_available: false,
+  };
+
+  /** Resolve answers with `first` then `rest`; every other BFF call is a harmless 200. */
+  function stubResolve(...answers: Array<{ status: number; body: unknown }>) {
+    let call = 0;
+    const resolveCalls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/api/playback/resolve')) {
+          resolveCalls.push(url);
+          const answer = answers[Math.min(call++, answers.length - 1)];
+          return Promise.resolve(
+            new Response(JSON.stringify(answer.body), {
+              status: answer.status,
+              headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+            }),
+          );
+        }
+        return Promise.resolve(
+          new Response(JSON.stringify({}), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+        );
+      }),
+    );
+    return resolveCalls;
+  }
+
+  const SRC = '?src=%2Fstream%2Fmovies%2Fm1&title=Fight%20Club&id=m1&kind=movie&back=%2Fmovies%2Fm1';
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('403 parental.blocked shows a clear not-available state and never mounts a video', async () => {
+    stubResolve({
+      status: 403,
+      body: { error: 'blocked', code: 'playback.parental_blocked', parental_code: 'parental.blocked' },
+    });
+    renderPlayer(SRC);
+    const state = await screen.findByTestId('player-parental-state');
+    expect(state).toHaveAttribute('data-parental-code', 'parental.blocked');
+    expect(screen.getByRole('heading', { level: 1, name: 'Not available for this profile' })).toHaveFocus();
+    expect(screen.getByRole('status')).toHaveTextContent(/isn't available for this profile/i);
+    expect(screen.getByRole('link', { name: 'Go back' })).toHaveAttribute('href', '/movies/m1');
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(document.querySelector('video')).toBeNull();
+  });
+
+  it('403 parental.policy_unconfigured asks for an administrator, with no retry', async () => {
+    stubResolve({ status: 403, body: { error: 'x', code: 'parental.policy_unconfigured' } });
+    renderPlayer(SRC);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: "Parental controls aren't set up" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/ask an administrator/i);
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(document.querySelector('video')).toBeNull();
+  });
+
+  it('403 parental.policy_unverifiable tells the user to sign in with a password', async () => {
+    stubResolve({ status: 403, body: { error: 'x', code: 'parental.policy_unverifiable' } });
+    renderPlayer(SRC);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sign in with a password' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/instead of Quick Connect/i);
+    expect(document.querySelector('video')).toBeNull();
+  });
+
+  it('401 parental.session_invalid offers a sign-in link', async () => {
+    stubResolve({ status: 401, body: { error: 'x', code: 'parental.session_invalid' } });
+    renderPlayer(SRC);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sign in again' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+  });
+
+  for (const code of ['parental.policy_unavailable', 'parental.classification_unavailable']) {
+    it(`503 ${code} is a retryable alert, never auto-plays, and retries only on request`, async () => {
+      const resolveCalls = stubResolve(
+        { status: 503, body: { error: 'x', code } },
+        { status: 200, body: OK_RESOLVE },
+      );
+      renderPlayer(SRC);
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(/try again in a moment/i);
+      expect(document.querySelector('video')).toBeNull();
+      // Nothing retries on its own.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(resolveCalls).toHaveLength(1);
+      expect(document.querySelector('video')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      await waitFor(() => expect(document.querySelector('video')).not.toBeNull());
+      expect(resolveCalls).toHaveLength(2);
+    });
+  }
+
+  it('a PIN unlock of the local pre-check cannot lift a server denial', async () => {
+    updatePreferences({
+      parental: { kidsMode: true, maxRating: 'PG', pinHash: '', pinEnabled: false },
+    });
+    stubResolve({ status: 403, body: { error: 'x', code: 'parental.blocked' } });
+    renderPlayer(`${SRC}&content_rating=R`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlock with PIN' }));
+    expect(await screen.findByTestId('player-parental-state')).toHaveAttribute(
+      'data-parental-code',
+      'parental.blocked',
+    );
+    expect(document.querySelector('video')).toBeNull();
+  });
+
+  it('does not fall back to allowed when the policy cannot be checked on a restricted-looking item', async () => {
+    stubResolve({ status: 503, body: { error: 'x', code: 'parental.policy_unavailable' } });
+    renderPlayer(SRC);
+    await screen.findByTestId('player-parental-state');
+    expect(document.querySelector('video')).toBeNull();
   });
 });

@@ -132,6 +132,21 @@ for (const theme of ['dark', 'light'] as const) {
     await expectFilledControlContrast(login);
   });
 
+  test(`Activity add-to-wanted filled control contrast in ${theme}`, async ({ page }, info) => {
+    await themeFixture(page, theme);
+    await page.route(`${ORIGIN}/api/session`, (route) => route.fulfill({
+      json: { user_id: 'fixture-operator', roles: ['manager'] },
+    }));
+    await page.route(/\/api\/(activity|wanted|import\/candidates)(\?|$)/, (route) => route.fulfill({
+      json: { available: true, total: 0, items: [] },
+    }));
+    await page.goto('/activity');
+    const form = page.getByTestId('wanted-add-form');
+    await expect(form).toBeVisible();
+    expect((await audit(page, theme, info)).violations).toEqual([]);
+    await expectFilledControlContrast(form.getByRole('button', { name: 'Add to wanted', exact: true }));
+  });
+
   test(`rendered contrast gate detects a failing control in ${theme}`, async ({ page }, info) => {
     await themeFixture(page, theme);
     await page.goto('/settings/display');

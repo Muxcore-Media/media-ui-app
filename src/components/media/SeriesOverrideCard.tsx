@@ -1,7 +1,9 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { type FormEvent, useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { operatorCodeFromMessage } from '../../api/errors';
 import { parseGroupList } from '../../lib/series-override';
+import { ErrorBanner } from '../ui/ErrorBanner';
 
 export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
   const { canOperate } = useOperatorAccess();
@@ -78,7 +80,8 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
     }
   }
 
-  if (!canOperate) return null;
+  // Keep only the fixed denial copy after a role correction removes the operator form.
+  if (!canOperate) return error && operatorCodeFromMessage(error) ? <ErrorBanner message={error} testId="series-override-error" /> : null;
 
   if (available === false) return null;
 
@@ -92,11 +95,7 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
       <p className="text-sm text-[var(--text-secondary)]">
         Wait longer than the household delay, and prefer or skip release groups for this show only.
       </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorBanner message={error} testId="series-override-error" /> : null}
       <label className="block text-sm text-[var(--text-primary)]">
         <span className="mb-1 block text-xs text-[var(--text-tertiary)]">Wait (minutes)</span>
         <input

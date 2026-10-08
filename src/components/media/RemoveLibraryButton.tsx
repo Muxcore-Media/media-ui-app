@@ -1,7 +1,8 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import { api, friendlyFetchError } from '../../api/client';
+import { ActionNote } from '../operator/ActionNote';
 import { Button } from '../ui/Button';
 
 export function RemoveLibraryButton({
@@ -38,13 +39,14 @@ export function RemoveLibraryButton({
       await api.removeLibraryItem({ kind, id, deleteFiles });
       onRemoved?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not remove from library');
+      setError(friendlyFetchError(err, 'Could not remove from library'));
     } finally {
       setBusy(false);
     }
   }
 
-  if (!canOperate) return null;
+  // After a 403 correction the confirm form closes but the polite explanation stays.
+  if (!canOperate) return <ActionNote message={error} testId="remove-library-note" />;
 
   if (!open) {
     return (
@@ -76,11 +78,7 @@ export function RemoveLibraryButton({
           Also delete files on disk
         </label>
       ) : null}
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <ActionNote message={error} testId="remove-library-note" />
       <div className="flex flex-wrap gap-2">
         <Button variant="danger" disabled={busy} onClick={() => void confirm()}>
           {busy ? 'Removing…' : deleteFiles ? 'Remove and delete files' : 'Remove from library'}

@@ -1,7 +1,9 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { operatorCodeFromMessage } from '../../api/errors';
 import { renameChangedCount, type RenamePreviewItem } from '../../lib/rename';
+import { ErrorBanner } from '../ui/ErrorBanner';
 
 export function PreviewRename({
   kind,
@@ -51,7 +53,8 @@ export function PreviewRename({
     }
   }
 
-  if (!canOperate) return null;
+  // Keep only the fixed denial copy after a role correction removes the operator details.
+  if (!canOperate) return error && operatorCodeFromMessage(error) ? <ErrorBanner message={error} testId="rename-error" /> : null;
 
   if (available === false || available === null) return null;
   if (items.length === 0) return null;
@@ -69,11 +72,7 @@ export function PreviewRename({
           ? `${changed} file${changed === 1 ? '' : 's'} do not match the household naming template.`
           : 'Files already match the household naming template.'}
       </p>
-      {error ? (
-        <p className="text-sm text-[var(--danger-color)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorBanner message={error} testId="rename-error" /> : null}
       <ul className="space-y-2">
         {items.map((row) => (
           <li

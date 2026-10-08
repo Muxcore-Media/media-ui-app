@@ -1,6 +1,7 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
+import { api, friendlyFetchError } from '../../api/client';
+import { ActionNote } from '../operator/ActionNote';
 import { rootLabel, type LibraryRoot } from '../../lib/roots';
 
 export function RootFolderSelect({
@@ -18,6 +19,7 @@ export function RootFolderSelect({
   const [roots, setRoots] = useState<LibraryRoot[]>([]);
   const [picked, setPicked] = useState<LibraryRoot | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const catalogKind =
     kind === 'movie'
       ? 'movies'
@@ -54,22 +56,25 @@ export function RootFolderSelect({
     };
   }, [catalogKind, canOperate]);
 
-  if (!canOperate) return null;
+  if (!canOperate) return <ActionNote message={error} testId="root-folder-note" />;
 
   if (roots.length === 0) return null;
 
   function assign(next: string) {
     if (!next || !id) return;
     setBusy(true);
+    setError(null);
     void api
       .setRootFolder({ kind, id, rootFolderPath: next })
       .then(() => onChange?.(next))
+      .catch((err) => setError(friendlyFetchError(err, 'Could not change root folder')))
       .finally(() => setBusy(false));
   }
 
   const showAssignDefault = !value && Boolean(picked?.path);
 
   return (
+    <div className="space-y-1">
     <div className="inline-flex flex-wrap items-center gap-2 text-sm text-[var(--text-secondary)]">
       <label className="inline-flex items-center gap-2">
         <span className="sr-only">Root folder</span>
@@ -100,6 +105,8 @@ export function RootFolderSelect({
           {picked ? ` (${picked.name || picked.path})` : ''}
         </button>
       ) : null}
+    </div>
+    <ActionNote message={error} testId="root-folder-note" />
     </div>
   );
 }

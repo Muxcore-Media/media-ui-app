@@ -65,6 +65,12 @@ roles may show controls while a refresh is pending or transiently fails; a
 completed downgrade, explicit authentication denial, sign-out or cross-tab
 update removes them. A downgrade also closes a pending library-removal form.
 
+If a stale cached role still shows a control, the BFF's 403 `operator.forbidden`
+or `operator.admin_required` (a manager naming `root_folder_path`) is reported as
+a calm status with fixed copy, never retried, and followed by one session re-read
+that removes the control if the role really changed.
+Rename and series-override denials keep that status after the operator form disappears.
+
 These are UI presentation and routing guards. Server authorization is unchanged
 and remains authoritative, including stricter permissions on some mutations.
 FR-ADM-010 remains partial until operator controls migrate to admin-ui.
@@ -157,7 +163,8 @@ HTTP calls with local fixtures; unexpected API calls and external requests fail.
 No live indexers, media sources, credentials, or backend services are used.
 Operator scenarios cover delayed/current identities, member personal-state and playback
 affordances, manager monitoring, admin-only root assignment, session-stop controls,
-debrid cloud playback and Live TV timers at all four viewport widths. Unknown
+debrid cloud playback and Live TV timers at all four viewport widths; stale-role
+403 scenarios (Monitor, session Stop) run at 375 and 1280. Unknown
 operator HTTP calls fail the fixture, and allowed monitoring checks its actual PATCH.
 Indexer action scenarios verify manager reads and admin mutations on fresh direct
 Settings navigation. Delayed identity scenarios cover fresh roles, cached-role
@@ -197,6 +204,8 @@ existing accent tokens. Danger text and filled danger controls have separate tok
 so light error text can darken while filled controls keep their original red surface.
 The invite success status uses a theme-aware success foreground without changing green fills.
 The anchor reset lives in Tailwind's base layer so explicit foreground utilities win.
+Movies genre and sort controls explicitly use the primary foreground token so native
+select text follows the hydrated theme alongside its background.
 
 ## MVP wiring
 

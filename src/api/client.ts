@@ -27,9 +27,9 @@ import type {
 } from '../types';
 import type { Capabilities, FeatureKey, LibraryKey } from '../lib/capabilities';
 import { DEFAULT_CAPABILITIES } from '../lib/capabilities';
-import { clearCurrentSession } from '../lib/session';
+import { clearCurrentSession, refreshCurrentUserId } from '../lib/session';
 import { recordRestrictedRoute } from '../lib/restricted-routes';
-import { ApiError, ParentalError, parentalCodeFromBody } from './errors';
+import { ApiError, OperatorError, ParentalError, operatorCodeFromBody, parentalCodeFromBody } from './errors';
 import {
   normalizeAcquisitionStatus,
   normalizeHouseholdIndexer,
@@ -269,7 +269,7 @@ import {
   type ImportPathResult,
 } from '../lib/manual-import';
 
-export { ApiError, ParentalError, PARENTAL_CODES, type ParentalCode } from './errors';
+export { ApiError, OperatorError, ParentalError, OPERATOR_CODES, PARENTAL_CODES, type OperatorCode, type ParentalCode } from './errors';
 
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
 
@@ -335,6 +335,15 @@ async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
       if (parentalCode === 'parental.session_invalid') clearCurrentSession();
       recordRestrictedRoute(path, parentalCode);
       throw new ParentalError(parentalCode, res.status, body?.code, body?.error);
+    }
+    // Operator role denials (T-M5-12) mean the cached role the SPA used to show this control was
+    // stale or the control was reached some other way. Report it calmly, never retry, and re-read
+    // the session once so the control disappears if the role really changed. The refresh is
+    // de-duplicated and hits /api/session, which is not an operator route, so it cannot loop.
+    const operatorCode = operatorCodeFromBody(body, res.status);
+    if (operatorCode) {
+      void refreshCurrentUserId();
+      throw new OperatorError(operatorCode, res.status, body?.error);
     }
     throw new ApiError(detail, res.status, body?.code);
   }

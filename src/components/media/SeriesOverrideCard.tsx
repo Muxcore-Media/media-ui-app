@@ -1,6 +1,7 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { type FormEvent, useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { operatorCodeFromMessage } from '../../api/errors';
 import { parseGroupList } from '../../lib/series-override';
 import { ErrorBanner } from '../ui/ErrorBanner';
 
@@ -79,7 +80,8 @@ export function SeriesOverrideCard({ seriesId }: { seriesId: string }) {
     }
   }
 
-  if (!canOperate) return null;
+  // Keep only the fixed denial copy after a role correction removes the operator form.
+  if (!canOperate) return error && operatorCodeFromMessage(error) ? <ErrorBanner message={error} testId="series-override-error" /> : null;
 
   if (available === false) return null;
 

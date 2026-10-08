@@ -1,6 +1,7 @@
 import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { operatorCodeFromMessage } from '../../api/errors';
 import { renameChangedCount, type RenamePreviewItem } from '../../lib/rename';
 import { ErrorBanner } from '../ui/ErrorBanner';
 
@@ -52,7 +53,8 @@ export function PreviewRename({
     }
   }
 
-  if (!canOperate) return null;
+  // Keep only the fixed denial copy after a role correction removes the operator details.
+  if (!canOperate) return error && operatorCodeFromMessage(error) ? <ErrorBanner message={error} testId="rename-error" /> : null;
 
   if (available === false || available === null) return null;
   if (items.length === 0) return null;

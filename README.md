@@ -176,10 +176,22 @@ network failures may retain it. Server authorization remains the BFF's responsib
 Display settings hydrate untouched fields when saved preferences arrive, retaining
 each edited field and its focus until Save. A later save response can refresh
 untouched fields without replacing edits made after submission. An unsaved theme
-choice does not change the applied theme. Other personal Settings forms are unchanged.
-These fixtures cover form hydration after a response, not request ordering: saving
-before the initial userdata read finishes, out-of-order write acknowledgments and
-provider/cross-device durability remain separate work.
+choice does not change the applied theme. Save requires a successful userdata read
+in the current document/session; fields remain editable while loading, and failed
+reads offer Retry without submitting. Existing session invalidation offers an
+explicit reload while retaining the draft. Other personal Settings forms are unchanged.
+
+Preference responses cannot replace newer local saves or a newer accepted response.
+A GET overlapping an unacknowledged preference edit cannot replace it, including
+after a failed PUT; only a matching successful response with valid preferences
+clears that in-memory protection. Missing/invalid preference acknowledgments retain
+it. Preference writes preserve cached unknown sections and nested extras alongside
+existing normalization. These guards affect only preferences: non-preference blob
+ordering and merge behavior are unchanged. They do not order server persistence,
+add compare-and-swap, establish provider/cross-device durability, persist pending
+edits across reloads, or provide complete account isolation. Existing session
+generation guards cover logout and observed cross-tab invalidation; providers may
+still discard unknown fields.
 
 An existing Chromium binary can be selected with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium npm run test:e2e`.

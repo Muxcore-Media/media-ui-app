@@ -1,7 +1,7 @@
 /** Server-authoritative userdata: BFF/userdata-local is source of truth; localStorage is cache/offline. */
 
 import { buildEpisodePlayerHref } from './playHref';
-import { getSessionGeneration, refreshCurrentUserId, setCurrentUserId, userIdFromUnknown } from './session';
+import { getSessionGeneration, refreshCurrentUserId, setCurrentUserId, subscribeSession, userIdFromUnknown } from './session';
 import { clampAudioOffsetMs } from './audio-offset';
 import { clampSubtitleOffsetMs, normalizeSubtitleTextColor } from './subtitle-offset';
 
@@ -361,23 +361,77 @@ function readJSON<T>(key: string, fallback: T): T {
 
 const preferenceListeners = new Set<() => void>();
 let preferenceRevision = 0;
+let preferenceSessionGeneration = getSessionGeneration();
+type PreferenceLoadStatus = 'idle' | 'loading' | 'ready' | 'error';
+let preferenceLoadStatus: PreferenceLoadStatus = 'idle';
+let preferenceEditRevision = 0;
+let pendingPreferenceEdit = false;
+let preferenceRequestSequence = 0;
+let acceptedPreferenceResponse = 0;
+let latestPreferenceRead = 0;
 
-/** Same-document cache changes; observers do not change userdata request ordering. */
+function notifyPreferences(): void {
+  preferenceRevision += 1;
+  preferenceListeners.forEach((listener) => listener());
+}
+
+function currentPreferenceSession(): void {
+  if (preferenceSessionGeneration === getSessionGeneration()) return;
+  preferenceSessionGeneration = getSessionGeneration();
+  preferenceLoadStatus = 'idle';
+  pendingPreferenceEdit = false;
+}
+
+function preferenceRequest() {
+  currentPreferenceSession();
+  return {
+    generation: preferenceSessionGeneration,
+    editRevision: preferenceEditRevision,
+    sequence: ++preferenceRequestSequence,
+    pendingEdit: pendingPreferenceEdit,
+  };
+}
+
+type PreferenceRequest = ReturnType<typeof preferenceRequest>;
+
+function canApplyPreferences(request: PreferenceRequest): boolean {
+  return request.generation === getSessionGeneration()
+    && request.editRevision === preferenceEditRevision
+    && request.sequence > acceptedPreferenceResponse;
+}
+
+function finishPreferenceRead(request: PreferenceRequest, succeeded: boolean): void {
+  if (request.generation !== getSessionGeneration() || request.sequence !== latestPreferenceRead) return;
+  // This gate concerns the initial read, not later background refresh availability.
+  if (preferenceLoadStatus === 'ready') return;
+  preferenceLoadStatus = succeeded ? 'ready' : 'error';
+  notifyPreferences();
+}
+
+/** A successful read in this document/session is required before Display can save. */
+export function getPreferenceLoadStatus(): PreferenceLoadStatus {
+  return preferenceSessionGeneration === getSessionGeneration() ? preferenceLoadStatus : 'idle';
+}
+
+/** Observe preference cache/readiness changes and existing session invalidation. */
 export function subscribePreferences(listener: () => void): () => void {
   preferenceListeners.add(listener);
-  return () => { preferenceListeners.delete(listener); };
+  const unsubscribeSession = subscribeSession(listener);
+  return () => {
+    preferenceListeners.delete(listener);
+    unsubscribeSession();
+  };
 }
 
 /** A stable primitive snapshot for React; getPreferences() returns a fresh object. */
 export function getPreferenceRevision(): number {
-  return preferenceRevision;
+  return preferenceRevision + getSessionGeneration();
 }
 
 function writeJSON(key: string, value: unknown): void {
   localStorage.setItem(key, JSON.stringify(value));
   if (key === KEYS.prefs) {
-    preferenceRevision += 1;
-    preferenceListeners.forEach((listener) => listener());
+    notifyPreferences();
   }
 }
 
@@ -732,7 +786,8 @@ export function getParentalPrefs(): ParentalPrefs {
 
 export function updatePreferences(patch: Partial<UserPreferences>): UserPreferences {
   const cur = getPreferences();
-  const extras = parentalExtras(storedPrefsRecord().parental);
+  const stored = storedPrefsRecord();
+  const extras = parentalExtras(stored.parental);
   const next: UserPreferences = {
     display: { ...cur.display, ...patch.display },
     home: { ...cur.home, ...patch.home },
@@ -752,7 +807,10 @@ export function updatePreferences(patch: Partial<UserPreferences>): UserPreferen
     player: { ...cur.player, ...patch.player },
     parental: normalizeParentalPrefs({ ...cur.parental, ...patch.parental }),
   };
-  writeJSON(KEYS.prefs, { ...next, parental: parentalForStorage(next.parental, extras) });
+  currentPreferenceSession();
+  preferenceEditRevision += 1;
+  pendingPreferenceEdit = true;
+  writeJSON(KEYS.prefs, { ...stored, ...next, parental: parentalForStorage(next.parental, extras) });
   void pushUserdataToServer();
   return next;
 }
@@ -816,9 +874,16 @@ function mergeProgressMaps(
 /** Pull server userdata into localStorage cache. Server wins on progress conflicts. */
 export async function pullUserdataFromServer(): Promise<boolean> {
   const sessionGeneration = getSessionGeneration();
+  const request = preferenceRequest();
+  latestPreferenceRead = request.sequence;
+  if (preferenceLoadStatus !== 'ready') {
+    preferenceLoadStatus = 'loading';
+    notifyPreferences();
+  }
   try {
     const res = await fetch('/api/userdata', { headers: { Accept: 'application/json' } });
     if (!res.ok) {
+      finishPreferenceRead(request, false);
       setMeta({ serverAuthoritative: false });
       return false;
     }
@@ -830,7 +895,8 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     if (blob.favorites && typeof blob.favorites === 'object') {
       writeJSON(KEYS.favorites, blob.favorites);
     }
-    if (blob.prefs && typeof blob.prefs === 'object') {
+    if (asRecord(blob.prefs) && canApplyPreferences(request) && !request.pendingEdit && !pendingPreferenceEdit) {
+      acceptedPreferenceResponse = request.sequence;
       writeJSON(KEYS.prefs, blob.prefs);
       const theme = (blob.prefs as UserPreferences).display?.theme || 'dark';
       applyTheme(theme);
@@ -850,15 +916,18 @@ export async function pullUserdataFromServer(): Promise<boolean> {
       if (blobUserId) setCurrentUserId(blobUserId);
       else await refreshCurrentUserId();
     }
+    finishPreferenceRead(request, Boolean(asRecord(blob)) && (blob.prefs === undefined || Boolean(asRecord(blob.prefs))));
     setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() });
     return true;
   } catch {
+    finishPreferenceRead(request, false);
     setMeta({ serverAuthoritative: false });
     return false;
   }
 }
 
 export async function pushUserdataToServer(): Promise<void> {
+  const request = preferenceRequest();
   try {
     const progress = readJSON<Record<string, ProgressEntry>>(KEYS.progress, {});
     const favorites = readJSON<Record<string, FavoriteEntry>>(KEYS.favorites, {});
@@ -876,7 +945,11 @@ export async function pushUserdataToServer(): Promise<void> {
     // Apply server merge result so local cache matches SoT.
     if (merged.progress) writeJSON(KEYS.progress, merged.progress);
     if (merged.favorites) writeJSON(KEYS.favorites, merged.favorites);
-    if (merged.prefs) writeJSON(KEYS.prefs, merged.prefs);
+    if (asRecord(merged.prefs) && canApplyPreferences(request)) {
+      acceptedPreferenceResponse = request.sequence;
+      pendingPreferenceEdit = false;
+      writeJSON(KEYS.prefs, merged.prefs);
+    }
     if (Array.isArray(merged.playlists)) writeJSON(KEYS.playlists, merged.playlists);
     if (merged.wantToWatch && typeof merged.wantToWatch === 'object') {
       writeJSON(KEYS.wantToWatch, merged.wantToWatch);

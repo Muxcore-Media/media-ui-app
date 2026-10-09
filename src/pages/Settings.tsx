@@ -32,8 +32,10 @@ import { canManageAcquisition, canManageBackups, canManageIndexers, canManageInv
 import {
   applyTheme,
   getPreferences,
+  getPreferenceLoadStatus,
   getPreferenceRevision,
   getUserdataSyncStatus,
+  pullUserdataFromServer,
   subscribePreferences,
   updatePreferences,
   type UserPreferences,
@@ -390,6 +392,7 @@ function ProfilePane() {
 function DisplayPane() {
   useSyncExternalStore(subscribePreferences, getPreferenceRevision, getPreferenceRevision);
   const prefs = getPreferences();
+  const loadStatus = getPreferenceLoadStatus();
   // A present draft field is user-edited, even if its value equals the old cache.
   // Keep numeric input as text so hydration never replaces an in-progress edit.
   const [draft, setDraft] = useState<Partial<{
@@ -399,6 +402,7 @@ function DisplayPane() {
   }>>({});
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (getPreferenceLoadStatus() !== 'ready') return;
     const fd = new FormData(e.target as HTMLFormElement);
     const next = updatePreferences({
       display: {
@@ -452,7 +456,19 @@ function DisplayPane() {
         />
         Show watched indicators
       </label>
-      <button type="submit" className={saveBtnClass}>
+      {loadStatus !== 'ready' && (
+        <p role="status" className="text-sm text-[var(--text-secondary)]">
+          {loadStatus === 'loading' ? 'Loading saved settings before you can save.'
+            : loadStatus === 'idle' ? 'Reload saved settings before saving. Your edits are still here.'
+              : 'Couldn’t load saved settings. Your edits are still here.'}
+        </p>
+      )}
+      {(loadStatus === 'error' || loadStatus === 'idle') && (
+        <button type="button" onClick={() => { void pullUserdataFromServer(); }} className={saveBtnClass}>
+          {loadStatus === 'idle' ? 'Reload saved settings' : 'Retry'}
+        </button>
+      )}
+      <button type="submit" disabled={loadStatus !== 'ready'} className={`${saveBtnClass} disabled:cursor-not-allowed disabled:opacity-50`}>
         Save
       </button>
     </form>

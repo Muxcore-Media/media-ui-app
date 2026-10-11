@@ -131,11 +131,14 @@ test('a failed preference read can be retried without losing edits or submitting
   const pageSize = page.getByLabel('Titles per page', { exact: true });
   const save = page.getByRole('button', { name: 'Save', exact: true });
   await expect(page.getByRole('status').filter({ hasText: 'Couldn’t load saved settings' })).toBeVisible();
+  const syncWarning = page.getByTestId('userdata-sync-warning');
+  await expect(syncWarning).toBeVisible();
   await pageSize.fill('127');
   await expect(save).toBeDisabled();
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
   await expect.poll(() => reads).toBe(2);
   await expect(save).toBeDisabled();
+  await expect(syncWarning).toBeVisible();
   await pageSize.fill('143');
   expect(writes).toEqual([]);
   releaseRetry();
@@ -143,6 +146,7 @@ test('a failed preference read can be retried without losing edits or submitting
   await expect(pageSize).toHaveValue('143');
   await expect(pageSize).toBeFocused();
   await expect(page.getByRole('combobox', { name: 'Theme', exact: true })).toHaveValue('light');
+  await expect(syncWarning).toHaveCount(0);
   expect(writes).toEqual([]);
   await save.click();
   await expect.poll(() => writes.length).toBe(1);
@@ -188,4 +192,39 @@ test('session invalidation offers an explicit preference reload while retaining 
   await save.click();
   await expect.poll(() => writes.length).toBe(1);
   expect(writes[0].prefs).toMatchObject({ display: { libraryPageSize: 127 } });
+});
+
+test('the global sync warning survives a failed Display retry and clears after recovery', async ({ page }) => {
+  let reads = 0;
+  let writes = 0;
+  await page.route(`${ORIGIN}/api/userdata`, (route) => {
+    if (route.request().method() !== 'GET') {
+      writes += 1;
+      return route.fulfill({ json: {} });
+    }
+    reads += 1;
+    return route.fulfill(reads < 3
+      ? { status: 503, json: { error: 'Fixture unavailable' } }
+      : { json: savedUserdata });
+  });
+  await page.goto('/settings/display');
+  const warning = page.getByTestId('userdata-sync-warning');
+  const pageSize = page.getByLabel('Titles per page', { exact: true });
+  const save = page.getByRole('button', { name: 'Save', exact: true });
+  const retry = page.getByRole('button', { name: 'Retry', exact: true });
+  await expect(warning).toBeVisible();
+  await pageSize.fill('127');
+  await retry.click();
+  await expect.poll(() => reads).toBe(2);
+  await expect(retry).toBeVisible();
+  await expect(warning).toBeVisible();
+  await expect(save).toBeDisabled();
+  await expect(pageSize).toHaveValue('127');
+  expect(writes).toBe(0);
+  await retry.click();
+  await expect(save).toBeEnabled();
+  await expect(warning).toHaveCount(0);
+  await expect(pageSize).toHaveValue('127');
+  expect(reads).toBe(3);
+  expect(writes).toBe(0);
 });

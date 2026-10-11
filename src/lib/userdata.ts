@@ -369,6 +369,31 @@ let pendingPreferenceEdit = false;
 let preferenceRequestSequence = 0;
 let acceptedPreferenceResponse = 0;
 let latestPreferenceRead = 0;
+const userdataPullListeners = new Set<() => void>();
+let userdataPullFailed = false;
+let userdataPullGeneration = getSessionGeneration();
+
+/** The current session's latest read outcome; retain failure while a retry is pending. */
+export function getUserdataPullFailed(): boolean {
+  return userdataPullGeneration === getSessionGeneration() && userdataPullFailed;
+}
+
+export function subscribeUserdataPull(listener: () => void): () => void {
+  userdataPullListeners.add(listener);
+  const unsubscribeSession = subscribeSession(listener);
+  return () => {
+    userdataPullListeners.delete(listener);
+    unsubscribeSession();
+  };
+}
+
+function finishUserdataPull(request: PreferenceRequest, succeeded: boolean): void {
+  if (request.generation !== getSessionGeneration() || request.sequence !== latestPreferenceRead) return;
+  const previous = getUserdataPullFailed();
+  userdataPullGeneration = request.generation;
+  userdataPullFailed = !succeeded;
+  if (previous !== userdataPullFailed) userdataPullListeners.forEach((listener) => listener());
+}
 
 function notifyPreferences(): void {
   preferenceRevision += 1;
@@ -884,6 +909,7 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     const res = await fetch('/api/userdata', { headers: { Accept: 'application/json' } });
     if (!res.ok) {
       finishPreferenceRead(request, false);
+      finishUserdataPull(request, false);
       setMeta({ serverAuthoritative: false });
       return false;
     }
@@ -918,9 +944,11 @@ export async function pullUserdataFromServer(): Promise<boolean> {
     }
     finishPreferenceRead(request, Boolean(asRecord(blob)) && (blob.prefs === undefined || Boolean(asRecord(blob.prefs))));
     setMeta({ serverAuthoritative: true, lastPullAt: new Date().toISOString() });
+    finishUserdataPull(request, true);
     return true;
   } catch {
     finishPreferenceRead(request, false);
+    finishUserdataPull(request, false);
     setMeta({ serverAuthoritative: false });
     return false;
   }

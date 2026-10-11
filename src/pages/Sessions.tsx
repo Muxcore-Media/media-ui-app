@@ -15,6 +15,7 @@ export default function Sessions() {
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stopError, setStopError] = useState<string | null>(null);
   const [stopping, setStopping] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
 
@@ -68,6 +69,7 @@ export default function Sessions() {
         </div>
       ) : null}
       {error ? <ErrorBanner message={error} /> : null}
+      {stopError ? <ErrorBanner message={stopError} /> : null}
       {!loading && !available ? (
         <p className="text-sm text-[var(--text-secondary)]">
           Playback monitor is not listing sessions right now.
@@ -126,12 +128,13 @@ export default function Sessions() {
                       disabled={stopping === row.id}
                       aria-label={`Stop ${row.title}`}
                       onClick={() => {
+                        setStopError(null);
                         setStopping(row.id);
                         void api
                           .stopSession(row.id)
                           .then(() => refresh())
                           .catch((err) => {
-                            setError(err instanceof Error ? err.message : 'Could not stop session');
+                            setStopError(err instanceof Error ? err.message : 'Could not stop session');
                           })
                           .finally(() => setStopping(null));
                       }}

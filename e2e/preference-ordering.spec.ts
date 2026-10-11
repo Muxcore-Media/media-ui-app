@@ -131,11 +131,14 @@ test('a failed preference read can be retried without losing edits or submitting
   const pageSize = page.getByLabel('Titles per page', { exact: true });
   const save = page.getByRole('button', { name: 'Save', exact: true });
   await expect(page.getByRole('status').filter({ hasText: 'Couldn’t load saved settings' })).toBeVisible();
+  const syncWarning = page.getByTestId('userdata-sync-warning');
+  await expect(syncWarning).toBeVisible();
   await pageSize.fill('127');
   await expect(save).toBeDisabled();
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
   await expect.poll(() => reads).toBe(2);
   await expect(save).toBeDisabled();
+  await expect(syncWarning).toBeVisible();
   await pageSize.fill('143');
   expect(writes).toEqual([]);
   releaseRetry();
@@ -143,6 +146,7 @@ test('a failed preference read can be retried without losing edits or submitting
   await expect(pageSize).toHaveValue('143');
   await expect(pageSize).toBeFocused();
   await expect(page.getByRole('combobox', { name: 'Theme', exact: true })).toHaveValue('light');
+  await expect(syncWarning).toHaveCount(0);
   expect(writes).toEqual([]);
   await save.click();
   await expect.poll(() => writes.length).toBe(1);

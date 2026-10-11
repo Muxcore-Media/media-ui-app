@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api, OperatorError } from '../../api/client';
 import { OPERATOR_COPY } from '../../api/errors';
 import { clearCurrentSession, getCurrentRoles, setCurrentRoles, setCurrentUserId } from '../../lib/session';
+import { AddWantedButton } from '../media/AddWantedButton';
 import { DeleteEpisodeFileButton } from '../media/DeleteEpisodeFileButton';
 import { DeleteMovieFileButton } from '../media/DeleteMovieFileButton';
 import { MonitorButton } from '../media/MonitorButton';
@@ -121,6 +122,40 @@ describe('operator role denial in action controls', () => {
 });
 
 describe('stale cached role against the real client', () => {
+  it('retains a late Add to wanted denial after the session removes its operator button', async () => {
+    setCurrentUserId('u-member');
+    setCurrentRoles(['manager']);
+    const calls: string[] = [];
+    const unexpected: string[] = [];
+    let finishWanted!: (response: Response) => void;
+    const wantedResponse = new Promise<Response>((resolve) => { finishWanted = resolve; });
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const call = `${init?.method || 'GET'} ${String(input)}`;
+      calls.push(call);
+      if (call === 'POST /api/wanted') return wantedResponse;
+      if (call === 'GET /api/session') return json({ user_id: 'u-member', roles: ['viewer'] });
+      unexpected.push(call);
+      return json({ error: 'No fixture for this request' }, 501);
+    }));
+
+    render(<AddWantedButton itemType="movie" itemId="m1" title="Family Film" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add to wanted' }));
+    expect(screen.getByRole('button', { name: 'Adding…' })).toBeDisabled();
+    expect(calls).toEqual(['POST /api/wanted']);
+    expect(getCurrentRoles()).toEqual(['manager']);
+
+    await act(async () => {
+      finishWanted(json({ code: 'operator.forbidden', error: 'private wanted diagnostic' }, 403));
+    });
+    await waitFor(() => expect(getCurrentRoles()).toEqual(['viewer']));
+    expect(calls).toEqual(['POST /api/wanted', 'GET /api/session']);
+    expect(unexpected).toEqual([]);
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText('private wanted diagnostic')).toBeNull();
+    await expectCalmNote('add-wanted-flash');
+  });
+
   it.each([
     { action: 'Rename 1 file', method: 'POST', path: '/api/rename', testId: 'rename-error', formId: 'preview-rename', element: <PreviewRename kind="movie" id="m1" /> },
     { action: 'Save override', method: 'PUT', path: '/api/tv/s1/override', testId: 'series-override-error', formId: 'series-override', element: <SeriesOverrideCard seriesId="s1" /> },

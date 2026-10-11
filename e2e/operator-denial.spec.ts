@@ -56,31 +56,92 @@ test('a stale-role 403 on Monitor is explained calmly, not retried, and the cont
   await expectNoHorizontalScroll(page);
 });
 
-test('a stale-role 403 on Stop is a calm status, not retried', async ({ page }) => {
+test('a late Add to wanted denial remains after the session removes its operator button', async ({ page }) => {
+  const session = await demotableSession(page);
+  let posts = 0;
+  let finishWanted!: () => void;
+  const wantedResponse = new Promise<void>((resolve) => { finishWanted = resolve; });
+  await page.route(`${ORIGIN}/api/wanted`, async (route) => {
+    expect(route.request().method()).toBe('POST');
+    posts += 1;
+    await wantedResponse;
+    session.roles = ['viewer'];
+    return route.fulfill({ status: 403, json: { error: 'private wanted diagnostic', code: 'operator.forbidden' } });
+  });
+  await page.goto(`/movies/${movies[0].id}`);
+  await expect(page.getByRole('button', { name: 'Add to wanted', exact: true })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  const readsBefore = session.reads;
+  await page.getByRole('button', { name: 'Add to wanted', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Adding…' })).toBeDisabled();
+  await expect.poll(() => posts).toBe(1);
+  expect(session.reads).toBe(readsBefore);
+  finishWanted();
+
+  await expect(page.getByRole('button', { name: /^(Add to wanted|Adding…)$/ })).toHaveCount(0);
+  expect(posts).toBe(1);
+  expect(session.reads - readsBefore).toBe(1);
+  await expect(page.getByText('private wanted diagnostic')).toHaveCount(0);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: `Play ${movies[0].title}`, exact: true })).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  const note = page.getByTestId('add-wanted-flash');
+  await expect(note).toHaveText("You don't have permission for this action.");
+  await expect(note).toHaveAttribute('role', 'status');
+});
+
+test('a late Stop denial remains after the session downgrades and the next poll completes', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-11T12:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-11T12:00:01Z'));
   const session = await demotableSession(page);
   await page.route(`${ORIGIN}/api/capabilities`, (route) => route.fulfill({ json: {
     ...DEFAULT_CAPABILITIES,
     features: { ...DEFAULT_CAPABILITIES.features, playbackMonitor: true },
   } }));
-  await page.route(`${ORIGIN}/api/sessions`, (route) => route.fulfill({ json: {
-    available: true,
-    items: [{ id: 's1', title: 'Dune', user: 'sam', href: `/movies/${movies[0].id}` }],
-  } }));
+  let listReads = 0;
+  await page.route(`${ORIGIN}/api/sessions`, (route) => {
+    listReads += 1;
+    return route.fulfill({ json: {
+      available: true,
+      items: [{ id: 's1', title: listReads === 1 ? 'Dune' : 'Arrival', user: 'sam', href: `/movies/${movies[0].id}` }],
+    } });
+  });
   await page.route(`${ORIGIN}/api/sessions/events`, (route) => route.fulfill({ contentType: 'text/event-stream', body: ': fixture\n\n' }));
   let stops = 0;
-  await page.route(`${ORIGIN}/api/sessions/s1/stop`, (route) => {
+  let finishStop!: () => void;
+  const stopResponse = new Promise<void>((resolve) => { finishStop = resolve; });
+  await page.route(`${ORIGIN}/api/sessions/s1/stop`, async (route) => {
+    expect(route.request().method()).toBe('POST');
     stops += 1;
+    await stopResponse;
     session.roles = ['viewer'];
-    return route.fulfill(FORBIDDEN);
+    return route.fulfill({ status: 403, json: { error: 'private stop diagnostic', code: 'operator.forbidden' } });
   });
   await page.goto('/sessions');
+  await expect(page.getByRole('button', { name: 'Stop Dune' })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  const readsBefore = session.reads;
   await page.getByRole('button', { name: 'Stop Dune' }).click();
+  await expect(page.getByRole('button', { name: 'Stop Dune' })).toBeDisabled();
+  await expect.poll(() => stops).toBe(1);
+  expect(session.reads).toBe(readsBefore);
+  finishStop();
   const notice = page.getByTestId('operator-notice');
   await expect(notice).toContainText("You don't have permission for this action.");
   await expect(notice).toHaveAttribute('role', 'status');
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Stop Dune' })).toHaveCount(0);
+  await page.clock.fastForward(8000);
+  // A changed title proves React applied the successful poll before checking retained feedback.
+  await expect(page.getByText('Arrival', { exact: true })).toBeVisible();
+  expect(listReads).toBe(2);
+  expect(session.reads - readsBefore).toBe(1);
+  await expect(page.getByRole('button', { name: /^Stop / })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Open', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open', exact: true })).toHaveAttribute('href', `/movies/${movies[0].id}`);
+  await expect(page.getByText('private stop diagnostic')).toHaveCount(0);
   expect(stops).toBe(1);
   await expectNoHorizontalScroll(page);
+  await expect(notice).toContainText("You don't have permission for this action.");
+  await expect(notice).toHaveAttribute('role', 'status');
 });

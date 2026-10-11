@@ -2,6 +2,7 @@ import { useOperatorAccess } from '../../hooks/useOperatorAccess';
 import { Clock3 } from 'lucide-react';
 import { useState } from 'react';
 import { api } from '../../api/client';
+import { operatorCodeFromMessage } from '../../api/errors';
 import { Button } from '../ui/Button';
 
 export function AddWantedButton({
@@ -47,20 +48,24 @@ export function AddWantedButton({
     }
   }
 
-  if (!canOperate) return null;
+  const denied = operatorCodeFromMessage(flash) !== null;
+  // A role correction removes the button while retaining only fixed denial copy.
+  if (!canOperate && !denied) return null;
 
   return (
     <div className="space-y-1">
-      <Button
-        variant="secondary"
-        icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}
-        disabled={busy || !itemId}
-        onClick={() => void add()}
-      >
-        {busy ? 'Adding…' : 'Add to wanted'}
-      </Button>
+      {canOperate ? (
+        <Button
+          variant="secondary"
+          icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}
+          disabled={busy || !itemId}
+          onClick={() => void add()}
+        >
+          {busy ? 'Adding…' : 'Add to wanted'}
+        </Button>
+      ) : null}
       {flash ? (
-        <p className="text-xs text-[var(--text-tertiary)]" data-testid="add-wanted-flash">
+        <p role={denied ? 'status' : undefined} className="text-xs text-[var(--text-tertiary)]" data-testid="add-wanted-flash">
           {flash}
         </p>
       ) : null}

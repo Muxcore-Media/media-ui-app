@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import CapabilitiesProvider from './components/CapabilitiesProvider';
 import Layout from './components/Layout';
@@ -16,7 +16,7 @@ import {
   SettingsSkeleton,
   ShelfSkeleton,
 } from './components/ui/Skeleton';
-import { applyTheme, getPreferences, pullUserdataFromServer } from './lib/userdata';
+import { applyTheme, getPreferences, getUserdataPullFailed, pullUserdataFromServer, subscribeUserdataPull } from './lib/userdata';
 import { featureEnabled, libraryEnabled, useCapabilities } from './lib/capabilities';
 import { useReadyNotifications } from './lib/useReadyNotifications';
 import { getSessionSnapshot, refreshCurrentUserId, subscribeSession } from './lib/session';
@@ -605,7 +605,7 @@ function AppRoutes() {
 }
 
 export default function App() {
-  const [userdataSyncFailed, setUserdataSyncFailed] = useState(false);
+  const userdataSyncFailed = useSyncExternalStore(subscribeUserdataPull, getUserdataPullFailed, getUserdataPullFailed);
   // Re-render active permission consumers without replacing the router or page state.
   useSyncExternalStore(subscribeSession, getSessionSnapshot, getSessionSnapshot);
 
@@ -614,8 +614,7 @@ export default function App() {
     // Identity must load even when userdata contains an ID or cannot be fetched.
     // The userdata fallback still awaits this shared request for parental PIN salts.
     void refreshCurrentUserId();
-    void pullUserdataFromServer().then((ok) => {
-      setUserdataSyncFailed(!ok);
+    void pullUserdataFromServer().then(() => {
       applyTheme(getPreferences().display.theme);
     });
   }, []);

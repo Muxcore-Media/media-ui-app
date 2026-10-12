@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Search from './Search';
 import { CapabilitiesContext, DEFAULT_CAPABILITIES, type Capabilities } from '../lib/capabilities';
+import { recordRestrictedRoute, resetRestrictedRoutes } from '../lib/restricted-routes';
+
+afterEach(() => {
+  act(() => resetRestrictedRoutes());
+});
 
 const listMovies = vi.fn();
 const listTVShows = vi.fn();
@@ -176,6 +181,7 @@ describe('Search accessibility', () => {
     listMovies.mockReset();
     listTVShows.mockReset();
     search.mockReset();
+    requestMovie.mockReset();
     listMovies.mockResolvedValue({ items: [] });
     listTVShows.mockResolvedValue({ items: [] });
   });
@@ -198,5 +204,28 @@ describe('Search accessibility', () => {
     search.mockImplementation(() => new Promise(() => {}));
     renderSearch('/search?q=Fight');
     expect(screen.getByRole('status', { name: 'Searching' })).toBeInTheDocument();
+  });
+
+  it('offers query entry that uses the URL query and preserves the selected scope', async () => {
+    search.mockResolvedValue([]);
+    renderSearch('/search?q=Fight&scope=movies');
+    await screen.findByTestId('search-empty');
+    const input = screen.getByRole('textbox', { name: 'Search' });
+    expect(input).toHaveValue('Fight');
+    fireEvent.change(input, { target: { value: 'Journey' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await waitFor(() => expect(search).toHaveBeenLastCalledWith('Journey'));
+    expect(screen.getByRole('radio', { name: 'Movies' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'false');
+    expect(requestMovie).not.toHaveBeenCalled();
+  });
+
+  it('removes page query entry when the current session search route is refused', () => {
+    renderSearch('/search');
+    expect(screen.getByRole('textbox', { name: 'Search' })).toBeInTheDocument();
+    act(() => recordRestrictedRoute('/api/search?q=Journey', 'parental.restricted_route'));
+    expect(screen.queryByRole('textbox', { name: 'Search' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
   });
 });

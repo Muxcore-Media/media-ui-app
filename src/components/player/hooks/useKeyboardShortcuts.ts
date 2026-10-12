@@ -72,6 +72,9 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers) {
       // Leave overlay-specific keys alone once a menu/help/drawer is open.
       if (h.anyOverlayOpen) return;
 
+      // Space activates a focused native button through its own click handler.
+      if (e.code === 'Space' && tag === 'BUTTON') return;
+
       switch (e.code) {
         case 'Space':
         case 'KeyK':

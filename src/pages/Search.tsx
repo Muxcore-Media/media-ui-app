@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon } from 'lucide-react';
 import { api, searchResultKey } from '../api/client';
 import MediaCard from '../components/MediaCard';
+import HeaderSearch from '../components/layout/HeaderSearch';
 import RequestableCard from '../components/search/RequestableCard';
 import { PosterGridSkeleton } from '../components/media/PosterGrid';
 import { Badge } from '../components/ui/Badge';
@@ -10,6 +11,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { LoadingStatus } from '../components/ui/LoadingStatus';
 import { useCapabilities } from '../lib/capabilities';
+import { useRestrictedEntryPoints } from '../lib/restricted-routes';
 import {
   groupLibraryHits,
   parseSearchScope,
@@ -26,6 +28,7 @@ import type { Movie, SearchResult, TVShow } from '../types';
 
 export default function Search() {
   const { caps } = useCapabilities();
+  const restricted = useRestrictedEntryPoints();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get('q')?.trim() || '';
@@ -136,6 +139,8 @@ export default function Search() {
         </p>
       </div>
 
+      {!restricted.has('/search') && <HeaderSearch className="sm:hidden" />}
+
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Search filters">
         {scopeOptions.map((opt) => (
           <button
@@ -157,7 +162,7 @@ export default function Search() {
 
       {!canSearch && (
         <p className="text-sm text-[var(--text-secondary)]">
-          Use the search bar in the header and enter at least two characters.
+          Enter at least two characters in the search field.
         </p>
       )}
 

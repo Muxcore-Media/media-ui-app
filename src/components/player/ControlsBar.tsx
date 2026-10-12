@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Airplay,
   Cast,
@@ -75,7 +75,8 @@ type Props = {
   onSubtitlePrefs: (patch: Partial<UserPreferences['subtitles']>) => void;
   audioOffsetMs: number;
   onAudioOffset: (ms: number) => void;
-  onSettingsOpenChange?: (open: boolean) => void;
+  settingsOpen: boolean;
+  onSettingsOpenChange: (open: boolean) => void;
   aspectMode: AspectMode;
   onAspectMode: (mode: AspectMode) => void;
   /** Previous/next chapter navigation (container chapters, else intro/outro segment boundaries). */
@@ -86,15 +87,21 @@ type Props = {
 };
 
 export default function ControlsBar(props: Props) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { settingsOpen } = props;
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const wasSettingsOpen = useRef(settingsOpen);
   const VolumeIcon =
     props.muted || props.volume === 0 ? VolumeX : props.volume < 0.5 ? Volume1 : Volume2;
 
+  useEffect(() => {
+    if (wasSettingsOpen.current && !settingsOpen) {
+      settingsButtonRef.current?.focus();
+    }
+    wasSettingsOpen.current = settingsOpen;
+  }, [settingsOpen]);
+
   function toggleSettings() {
-    setSettingsOpen((o) => {
-      props.onSettingsOpenChange?.(!o);
-      return !o;
-    });
+    props.onSettingsOpenChange(!settingsOpen);
   }
 
   return (
@@ -224,6 +231,7 @@ export default function ControlsBar(props: Props) {
 
             <div className="relative">
               <button
+                ref={settingsButtonRef}
                 type="button"
                 aria-label="Settings"
                 aria-expanded={settingsOpen}
@@ -234,10 +242,7 @@ export default function ControlsBar(props: Props) {
               </button>
               {settingsOpen ? (
                 <SettingsMenu
-                  onClose={() => {
-                    setSettingsOpen(false);
-                    props.onSettingsOpenChange?.(false);
-                  }}
+                  onClose={() => props.onSettingsOpenChange(false)}
                   playMode={props.playMode}
                   transcoderAvailable={props.transcoderAvailable}
                   quality={props.quality}

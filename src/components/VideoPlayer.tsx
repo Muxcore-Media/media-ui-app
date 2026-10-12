@@ -812,6 +812,7 @@ export default function VideoPlayer({
           onSubtitlePrefs={handleSubtitlePrefs}
           audioOffsetMs={audioOffsetMs}
           onAudioOffset={handleAudioOffset}
+          settingsOpen={settingsOpen}
           onSettingsOpenChange={setSettingsOpen}
           aspectMode={aspectMode}
           onAspectMode={handleAspectMode}

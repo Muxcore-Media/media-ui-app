@@ -143,3 +143,75 @@ test('Global Space still starts and pauses real fixture media with no focused bu
   await expect(video).toHaveJSProperty('muted', false);
   await expectNoOverflow(page);
 });
+
+for (const escapeTarget of ['trigger', 'menu button'] as const) {
+  test(`Settings Escape from the ${escapeTarget} closes the menu and leaves focus on Settings`, async ({ page }) => {
+    const video = await openPlayer(page);
+    const settings = page.getByRole('button', { name: 'Settings', exact: true });
+    const menu = page.getByTestId('player-settings-menu');
+    await settings.focus();
+    await page.keyboard.press('Space');
+    await expect(menu).toBeVisible();
+    await expect(settings).toHaveAttribute('aria-expanded', 'true');
+    await expect(settings).toBeFocused();
+    if (escapeTarget === 'menu button') {
+      const speed = menu.getByRole('button', { name: /^Speed/ });
+      await speed.focus();
+      await expect(speed).toBeFocused();
+    }
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', true);
+
+    await page.keyboard.press('Escape');
+    // Removal matters: the mismatched parent state can fade the OSD while the
+    // child popup remains mounted and reports itself as expanded.
+    await expect.soft(menu).toHaveCount(0);
+    await expect.soft(settings).toHaveAttribute('aria-expanded', 'false');
+    await expect.soft(settings).toBeFocused();
+    await expect(video).toHaveJSProperty('paused', true);
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', false);
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', true);
+    await expectNoOverflow(page);
+  });
+}
+
+for (const closeTarget of ['trigger', 'close button'] as const) {
+  test(`Settings ${closeTarget} closes and reopens the menu while K follows the open state`, async ({ page }) => {
+    const video = await openPlayer(page);
+    const settings = page.getByRole('button', { name: 'Settings', exact: true });
+    const menu = page.getByTestId('player-settings-menu');
+    await settings.focus();
+    await page.keyboard.press('Space');
+    await expect(menu).toBeVisible();
+    await expect(settings).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', true);
+
+    if (closeTarget === 'close button') {
+      const close = page.getByRole('button', { name: 'Close settings', exact: true });
+      await close.focus();
+      await expect(close).toBeFocused();
+    }
+    await page.keyboard.press('Enter');
+    await expect(menu).toHaveCount(0);
+    await expect(settings).toHaveAttribute('aria-expanded', 'false');
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', false);
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', true);
+
+    await settings.focus();
+    await page.keyboard.press('Space');
+    await expect(menu).toBeVisible();
+    await expect(settings).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('k');
+    await expect(video).toHaveJSProperty('paused', true);
+    await page.keyboard.press('Space');
+    await expect(menu).toHaveCount(0);
+    await expect(settings).toHaveAttribute('aria-expanded', 'false');
+    await expect(settings).toBeFocused();
+    await expectNoOverflow(page);
+  });
+}

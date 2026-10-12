@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 import { updatePreferences, upsertProgress } from '../lib/userdata';
@@ -137,6 +138,87 @@ describe('VideoPlayer OSD', () => {
     fireEvent.click(within(menu).getByText('Speed'));
     expect(within(menu).getByText('1× (Normal)')).toBeInTheDocument();
   });
+
+  it.each(['trigger', 'menu button'] as const)(
+    'Settings Escape from the %s closes the menu and leaves focus on Settings',
+    async (escapeTarget) => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+        </MemoryRouter>,
+      );
+      const video = await waitForResolvedVideo();
+      fireLoadedMetadata(video, 60);
+      const play = vi.fn(() => Promise.resolve());
+      Object.defineProperty(video, 'play', { configurable: true, value: play });
+      const settings = screen.getByRole('button', { name: 'Settings' });
+      settings.focus();
+      await user.keyboard('[Space]');
+      const menu = screen.getByTestId('player-settings-menu');
+      expect(settings).toHaveAttribute('aria-expanded', 'true');
+      expect(settings).toHaveFocus();
+      if (escapeTarget === 'menu button') {
+        const speed = within(menu).getByRole('button', { name: /^Speed/ });
+        speed.focus();
+        expect(speed).toHaveFocus();
+      }
+      await user.keyboard('k');
+      expect(play).not.toHaveBeenCalled();
+
+      await user.keyboard('[Escape]');
+      expect.soft(screen.queryByTestId('player-settings-menu')).not.toBeInTheDocument();
+      expect.soft(settings).toHaveAttribute('aria-expanded', 'false');
+      expect.soft(settings).toHaveFocus();
+      await user.keyboard('k');
+      expect(play).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(['trigger', 'close button'] as const)(
+    'Settings %s closes and reopens the menu while K follows the open state',
+    async (closeTarget) => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+        </MemoryRouter>,
+      );
+      const video = await waitForResolvedVideo();
+      fireLoadedMetadata(video, 60);
+      const play = vi.fn(() => Promise.resolve());
+      Object.defineProperty(video, 'play', { configurable: true, value: play });
+      const settings = screen.getByRole('button', { name: 'Settings' });
+      settings.focus();
+      await user.keyboard('[Space]');
+      expect(screen.getByTestId('player-settings-menu')).toBeInTheDocument();
+      expect(settings).toHaveAttribute('aria-expanded', 'true');
+      await user.keyboard('k');
+      expect(play).not.toHaveBeenCalled();
+
+      if (closeTarget === 'close button') {
+        const close = screen.getByRole('button', { name: 'Close settings' });
+        close.focus();
+        expect(close).toHaveFocus();
+      }
+      await user.keyboard('[Enter]');
+      expect(screen.queryByTestId('player-settings-menu')).not.toBeInTheDocument();
+      expect(settings).toHaveAttribute('aria-expanded', 'false');
+      await user.keyboard('k');
+      expect(play).toHaveBeenCalledTimes(1);
+
+      settings.focus();
+      await user.keyboard('[Space]');
+      expect(screen.getByTestId('player-settings-menu')).toBeInTheDocument();
+      expect(settings).toHaveAttribute('aria-expanded', 'true');
+      await user.keyboard('k');
+      expect(play).toHaveBeenCalledTimes(1);
+      await user.keyboard('[Space]');
+      expect(screen.queryByTestId('player-settings-menu')).not.toBeInTheDocument();
+      expect(settings).toHaveAttribute('aria-expanded', 'false');
+      expect(settings).toHaveFocus();
+    },
+  );
 
   it('shows friendly message and a retry action when playback resolve fails', async () => {
     stubFetch({ resolveFail: true });

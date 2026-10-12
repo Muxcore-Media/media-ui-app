@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
@@ -92,6 +93,157 @@ function fireLoadedMetadata(video: HTMLVideoElement, duration: number) {
 beforeEach(() => {
   localStorage.clear();
   stubFetch();
+});
+
+describe('VideoPlayer source startup', () => {
+  it('omits the unresolved source attribute on the initial commit, then attaches the resolved URL', async () => {
+    const initialSources: Array<string | null | undefined> = [];
+    function InitialCommitProbe() {
+      // A normal render assertion runs after passive loading has removed the
+      // initial video. Snapshot the committed DOM before that effect runs.
+      useLayoutEffect(() => {
+        initialSources.push(document.querySelector('video')?.getAttribute('src'));
+      }, []);
+      return <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />;
+    }
+    render(<MemoryRouter><InitialCommitProbe /></MemoryRouter>);
+    const video = await waitForResolvedVideo();
+    expect(video).toHaveAttribute('src', RESOLVED_STREAM_URL);
+    // null means the inert initial video exists without a src attribute.
+    expect(initialSources).toEqual([null]);
+  });
+
+  it('retains the 1000ms retry invocation for a valid direct source media error', async () => {
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo();
+    const resolveCalls = () => vi.mocked(fetch).mock.calls.filter(
+      ([input]) => String(input).includes('/api/playback/resolve'),
+    ).length;
+    expect(resolveCalls()).toBe(1);
+    Object.defineProperty(video, 'error', { configurable: true, value: { code: 2 } });
+    vi.useFakeTimers();
+    try {
+      fireEvent.error(video);
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(999));
+      expect(resolveCalls()).toBe(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(resolveCalls()).toBe(2);
+      // This verifies retry invocation, not recovery after a same-URL remount.
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('VideoPlayer keyboard focus visibility', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function renderPlayingPlayer() {
+    render(
+      <MemoryRouter>
+        <VideoPlayer src="/stream/movies/m1" title="Test" mediaId="m1" />
+      </MemoryRouter>,
+    );
+    const video = await waitForResolvedVideo();
+    fireLoadedMetadata(video, 60);
+    const play = vi.fn(() => Promise.resolve());
+    const pause = vi.fn();
+    Object.defineProperties(video, {
+      paused: { configurable: true, value: false },
+      play: { configurable: true, value: play },
+      pause: { configurable: true, value: pause },
+    });
+    fireEvent.play(video);
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+    const player = screen.getByTestId('video-player');
+    fireEvent.mouseMove(player);
+    return {
+      video, play, pause, player,
+      user: userEvent.setup(),
+      top: screen.getByTestId('player-top-bar'),
+      bottom: screen.getByTestId('player-osd-overlay'),
+      mute: screen.getByRole('button', { name: 'Mute' }),
+    };
+  }
+
+  async function tabTo(user: ReturnType<typeof userEvent.setup>, target: HTMLElement) {
+    for (let i = 0; i < 20 && document.activeElement !== target; i += 1) {
+      await user.tab();
+    }
+    expect(target).toHaveFocus();
+  }
+
+  it('keeps Player chrome visible while Mute retains keyboard focus past the idle timer', async () => {
+    const { user, mute, top, bottom, player, video, play, pause } = await renderPlayingPlayer();
+    await tabTo(user, mute);
+    // Keep native keyboard actions on real timers; fake only the idle interval.
+    vi.useFakeTimers();
+    fireEvent.mouseMove(player);
+    act(() => vi.advanceTimersByTime(4000));
+    expect(mute).toHaveFocus();
+    // jsdom has no Tailwind rendering; the browser cases assert computed opacity.
+    expect.soft(top).toHaveClass('opacity-100');
+    expect.soft(bottom).toHaveClass('opacity-100');
+    expect(video.paused).toBe(false);
+    expect(play).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('player-settings-menu')).not.toBeInTheDocument();
+  });
+
+  it('reveals idle-hidden Player chrome when Tab enters the Back link', async () => {
+    const { user, top, bottom, player, video } = await renderPlayingPlayer();
+    vi.useFakeTimers();
+    fireEvent.mouseMove(player);
+    act(() => vi.advanceTimersByTime(4000));
+    expect(top).toHaveClass('opacity-0');
+    expect(bottom).toHaveClass('opacity-0');
+    vi.useRealTimers();
+    const back = screen.getByRole('link', { name: 'Back' });
+    await tabTo(user, back);
+    expect.soft(top).toHaveClass('opacity-100');
+    expect.soft(bottom).toHaveClass('opacity-100');
+    expect(back).toHaveFocus();
+    expect(video.paused).toBe(false);
+  });
+
+  it('preserves native actions and focus movement, then hides after blur and reveals on pointer movement', async () => {
+    const { user, mute, top, bottom, player, video, play, pause } = await renderPlayingPlayer();
+    await tabTo(user, mute);
+    await user.keyboard('[Space]');
+    expect(video.muted).toBe(true);
+    await user.keyboard('[Enter]');
+    expect(video.muted).toBe(false);
+    await user.tab({ shift: true });
+    expect(screen.getByRole('button', { name: 'Forward 10 seconds' })).toHaveFocus();
+    await user.tab();
+    expect(mute).toHaveFocus();
+    expect(top).toHaveClass('opacity-100');
+    expect(bottom).toHaveClass('opacity-100');
+    expect(video.paused).toBe(false);
+    expect(play).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
+
+    vi.useFakeTimers();
+    fireEvent.mouseMove(player);
+    act(() => mute.blur());
+    expect(document.body).toHaveFocus();
+    act(() => vi.advanceTimersByTime(4000));
+    expect(top).toHaveClass('opacity-0');
+    expect(bottom).toHaveClass('opacity-0');
+    fireEvent.mouseMove(player);
+    expect(top).toHaveClass('opacity-100');
+    expect(bottom).toHaveClass('opacity-100');
+    act(() => vi.advanceTimersByTime(4000));
+    expect(top).toHaveClass('opacity-0');
+    expect(bottom).toHaveClass('opacity-0');
+  });
 });
 
 describe('VideoPlayer empty shell', () => {

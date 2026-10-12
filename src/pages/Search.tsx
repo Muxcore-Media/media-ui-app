@@ -58,6 +58,7 @@ export default function Search() {
 
   useEffect(() => {
     if (!canSearch) {
+      setLoading(false);
       setLibrary([]);
       setRemote([]);
       setRemoteParental(null);

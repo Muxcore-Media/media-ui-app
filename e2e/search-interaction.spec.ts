@@ -85,3 +85,54 @@ test('A restricted search response removes query entry at every width', async ({
   await expect(page.getByTestId('header-search')).toHaveCount(0);
   await expect(page.getByRole('link', { name: new RegExp(movies[0].title) }).first()).toBeVisible();
 });
+
+for (const outcome of ['success', 'failure'] as const) {
+  test(`Clearing a pending search stops loading before its late ${outcome}`, async ({ page }) => {
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let started!: () => void;
+    const requestStarted = new Promise<void>((resolve) => { started = resolve; });
+    const requests: string[] = [];
+    await page.route(`${ORIGIN}/api/search**`, (route) => route.fulfill({ json: { results: [] } }));
+    await page.route(`${ORIGIN}/api/movies?**`, async (route) => {
+      requests.push(route.request().url());
+      started();
+      await held;
+      await route.fulfill(outcome === 'success'
+        ? { json: { items: movies, total: movies.length } }
+        : { status: 503, json: { error: 'Old search failed' } });
+    });
+
+    try {
+      await page.goto('/search?scope=movies');
+      const input = page.getByRole('textbox', { name: 'Search', exact: true });
+      await input.fill('Journey');
+      await input.press('Enter');
+      await requestStarted;
+      const pageContent = page.getByTestId('search-page');
+      await expect(pageContent.getByRole('status', { name: 'Searching' })).toHaveCount(1);
+      await expect(pageContent.getByTestId('poster-skeleton')).toHaveCount(6);
+
+      // Exercise the actual header/page input's debounced clear without submitting.
+      await input.fill('');
+      await expect(page).toHaveURL('/search?scope=movies');
+      await expect(input).toHaveValue('');
+      await expect(input).toBeFocused();
+      await expect(page.getByRole('radio', { name: 'Movies', exact: true })).toHaveAttribute('aria-checked', 'true');
+      await expect.soft(pageContent.getByRole('status', { name: 'Searching' })).toHaveCount(0);
+      await expect.soft(pageContent.getByTestId('poster-skeleton')).toHaveCount(0);
+
+      const completed = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/movies');
+      release();
+      await (await completed).finished();
+      await expect(pageContent.getByRole('status', { name: 'Searching' })).toHaveCount(0);
+      await expect(pageContent.getByTestId('poster-skeleton')).toHaveCount(0);
+      await expect(pageContent.getByRole('link', { name: new RegExp(movies[0].title) })).toHaveCount(0);
+      await expect(pageContent.getByRole('alert')).toHaveCount(0);
+      await expect(input).toBeFocused();
+      expect(requests).toHaveLength(1);
+    } finally {
+      release();
+    }
+  });
+}
